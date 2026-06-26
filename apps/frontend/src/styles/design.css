@@ -1,0 +1,339 @@
+/* src/styles/design.css — Q/Lab Design System */
+
+/* ── Tokens ────────────────────────────────────────────────────────────────── */
+:root {
+  /* ==========================================================================
+     Brand & Accent (O Âmbar/Dourado Cervejeiro)
+     ========================================================================== */
+  --clr-primary: #D97706;
+  /* O tom de ouro central dos links e do ícone Q */
+  --clr-primary-dark: #B45309;
+  /* Para hover em botões primários */
+  --clr-primary-light: #FEF3C7;
+  /* Fundo de badges sutis de destaque */
+  --clr-primary-ring: rgba(217, 119, 6, 0.15);
+  /* Ring suave de foco */
+
+  /* ==========================================================================
+     Status & Alert (Respeitando as regras de Engenharia/Shewhart)
+     ========================================================================== */
+  /* Danger (Não Conformidades) */
+  --clr-danger: #DC2626;
+  /* Texto e bolinhas críticas de NC */
+  --clr-danger-bg: #FEE2E2;
+  /* Fundo pastel sutil para badges de NC */
+
+  /* Success (Dentro do Padrão / Metas) */
+  --clr-success: #16A34A;
+  /* Verde para o status Conforme */
+  --clr-success-bg: #DCFCE7;
+  /* Fundo de linhas/badges em conformidade */
+
+  /* Warning / Metas */
+  --clr-warning: #F59E0B;
+  --clr-meta-line: #22C55E;
+  /* Linha verde tracejada de meta de 98% */
+
+  /* ==========================================================================
+     Neutrals & Layout Claro (O segredo do contraste "Creme/Areia")
+     ========================================================================== */
+  --clr-bg: #FAF8F4;
+  /* Fundo creme geral da aplicação (Stone/Amber blend) */
+  --clr-surface: #FFFFFF;
+  /* Fundo branco puro dos cards de KPI e categorias */
+  --clr-surface-2: #F4F1EA;
+  /* Tons cinza-quentes para inputs de busca e tabelas */
+  --clr-border: #E7E5E4;
+  /* Bordas finas dos cards (Stone-200) */
+  --clr-border-strong: #D6D3D1;
+  /* Linhas de grade e divisores proeminentes (Stone-300) */
+
+  /* Tipografia sobre fundo claro */
+  --clr-text: #1C1917;
+  /* Texto principal (Stone-900) - Títulos, KPIs e nomes */
+  --clr-text-2: #57534E;
+  /* Subtextos médios (Stone-600) - Ex: "312 amostras" */
+  --clr-text-3: #78716C;
+  /* Textos de apoio leves (Stone-500) - Ex: total consolidado */
+  --clr-overlay: rgba(28, 25, 23, 0.4);
+  /* Overlay escurecido quente para os drawers */
+
+  /* ==========================================================================
+     Dark Elements (Header, Caixa de IA e Componentes Maciços)
+     ========================================================================== */
+  --clr-nav-bg: #1C1917;
+  /* Marrom ultra escuro (Stone-900) do Header e Bloco IA */
+  --clr-nav-border: #292524;
+  /* Divisor interno discreto do header (Stone-800) */
+  --clr-nav-text: #FAF8F4;
+  /* Texto principal claro dentro de blocos escuros */
+  --clr-nav-text-2: #A8A29E;
+  /* Subtexto cinza (Stone-400) dentro do bloco de IA */
+
+
+  /* Spacing */
+  --sp-xs: 4px;
+  --sp-sm: 8px;
+  --sp-md: 12px;
+  --sp-base: 16px;
+  --sp-lg: 24px;
+  --sp-xl: 32px;
+  --sp-2xl: 48px;
+
+  /* Radii */
+  --r-sm: 6px;
+  --r-md: 8px;
+  --r-lg: 12px;
+  --r-xl: 16px;
+  --r-2xl: 20px;
+  --r-full: 9999px;
+
+  /* Shadows */
+  --shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.05);
+  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.08), 0 1px 2px rgba(0, 0, 0, 0.04);
+  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.08), 0 2px 4px rgba(0, 0, 0, 0.04);
+  --shadow-lg: 0 10px 28px rgba(0, 0, 0, 0.10), 0 4px 8px rgba(0, 0, 0, 0.05);
+  --shadow-xl: 0 20px 48px rgba(0, 0, 0, 0.14), 0 8px 16px rgba(0, 0, 0, 0.06);
+  --shadow-nav: 0 1px 0 rgba(0, 0, 0, 0.06), 0 2px 8px rgba(0, 0, 0, 0.04);
+
+  /* Typography */
+  --font: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  --fw-normal: 400;
+  --fw-medium: 500;
+  --fw-semibold: 600;
+  --fw-bold: 700;
+  --fw-extrabold: 800;
+
+  /* Transitions */
+  --t-fast: 120ms ease;
+  --t-normal: 200ms ease;
+  --t-slow: 320ms ease;
+}
+
+/* ── Light mode (via data-theme ou padrão) ────────────────────────────────── */
+/* ── Light mode (via data-theme ou padrão) ────────────────────────────────── */
+[data-theme="light"] {
+  /* Brand — âmbar/dourado cervejeiro */
+  --clr-primary: #D97706;
+  /* O tom de ouro central dos links e do ícone Q */
+  --clr-primary-dark: #B45309;
+  /* Para hover em botões primários */
+  --clr-primary-light: #FEF3C7;
+  /* Fundo de badges sutis de destaque */
+  --clr-primary-ring: rgba(217, 119, 6, 0.15);
+  /* Ring suave de foco */
+
+  /* Danger — Não Conformidades (NC) */
+  --clr-danger: #DC2626;
+  /* Texto e bolinhas críticas de NC */
+  --clr-danger-bg: #FEE2E2;
+  /* Fundo pastel sutil para badges de NC */
+
+  /* Success — Dentro do Padrão / Metas */
+  --clr-success: #16A34A;
+  /* Verde para o status Conforme */
+  --clr-success-bg: #DCFCE7;
+  /* Fundo de linhas/badges em conformidade */
+
+  /* Warning / Metas */
+  --clr-warning: #F59E0B;
+  --clr-meta-line: #22C55E;
+  /* Linha verde tracejada de meta de 98% */
+
+  /* Neutrals — O segredo do contraste "Creme/Areia" do gabarito */
+  --clr-bg: #FAF8F4;
+  /* Fundo creme geral da aplicação */
+  --clr-surface: #FFFFFF;
+  /* Fundo branco puro dos cards de KPI e categorias */
+  --clr-surface-2: #F4F1EA;
+  /* Tons cinza-quentes para inputs de busca e tabelas */
+  --clr-border: #E7E5E4;
+  /* Bordas finas dos cards (Stone-200) */
+  --clr-border-strong: #D6D3D1;
+  /* Linhas de grade e divisores proeminentes (Stone-300) */
+
+  /* Tipografia sobre o fundo claro */
+  --clr-text: #1C1917;
+  /* Texto principal (Stone-900) - Títulos, KPIs e nomes */
+  --clr-text-2: #57534E;
+  /* Subtextos médios (Stone-600) - Ex: "312 amostras" */
+  --clr-text-3: #78716C;
+  /* Textos de apoio leves (Stone-500) - Ex: total consolidado */
+  --clr-overlay: rgba(28, 25, 23, 0.4);
+  /* Overlay escurecido quente para os drawers */
+
+  /* Navbar & Blocos Maciços (O contraste invertido do Header e Bloco da IA) */
+  --clr-nav-bg: #1C1917;
+  /* Marrom ultra escuro (Stone-900) para manter o topo e IA pretos */
+  --clr-nav-border: #292524;
+  /* Divisor interno discreto do header (Stone-800) */
+  --clr-nav-text: #FAF8F4;
+  /* Texto principal claro dentro de blocos escuros */
+  --clr-nav-text-2: #A8A29E;
+  /* Subtexto cinza (Stone-400) dentro do bloco de IA */
+}
+
+/* ── Global Reset ──────────────────────────────────────────────────────────── */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: var(--font);
+  font-size: 15px;
+  line-height: 1.5;
+  color: var(--clr-text);
+  background: var(--clr-bg);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  transition: background var(--t-normal), color var(--t-normal);
+}
+
+/* ── Spinner animation ─────────────────────────────────────────────────────── */
+@keyframes qlab-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* ── Scrollbar ─────────────────────────────────────────────────────────────── */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--clr-border-strong);
+  border-radius: var(--r-full);
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--clr-text-3);
+}
+
+/* ── Focus visible ─────────────────────────────────────────────────────────── */
+:focus-visible {
+  outline: 2px solid var(--clr-primary);
+  outline-offset: 2px;
+}
+
+/* ── Form elements base ────────────────────────────────────────────────────── */
+.qlab-input {
+  display: block;
+  width: 100%;
+  padding: 10px 12px;
+  font-family: var(--font);
+  font-size: 15px;
+  font-weight: var(--fw-normal);
+  color: var(--clr-text);
+  background: var(--clr-surface);
+  border: 1.5px solid var(--clr-border);
+  border-radius: var(--r-md);
+  box-shadow: var(--shadow-xs);
+  transition: border-color var(--t-fast), box-shadow var(--t-fast);
+  box-sizing: border-box;
+  appearance: none;
+  -webkit-appearance: none;
+}
+
+.qlab-input::placeholder {
+  color: var(--clr-text-3);
+}
+
+.qlab-input:focus {
+  outline: none;
+  border-color: var(--clr-primary);
+  box-shadow: 0 0 0 3px var(--clr-primary-ring), var(--shadow-xs);
+}
+
+.qlab-input:disabled {
+  background: var(--clr-surface-2);
+  color: var(--clr-text-3);
+  cursor: not-allowed;
+}
+
+/* ── Label ─────────────────────────────────────────────────────────────────── */
+.qlab-label {
+  display: block;
+  font-size: 12px;
+  font-weight: var(--fw-semibold);
+  color: var(--clr-text-2);
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  margin-bottom: 5px;
+}
+
+/* ── Card ──────────────────────────────────────────────────────────────────── */
+.qlab-card {
+  background: var(--clr-surface);
+  border: 1px solid var(--clr-border);
+  border-radius: var(--r-xl);
+  box-shadow: var(--shadow-sm);
+}
+
+/* ── Button base ───────────────────────────────────────────────────────────── */
+.qlab-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--sp-sm);
+  padding: 10px 18px;
+  font-family: var(--font);
+  font-size: 14px;
+  font-weight: var(--fw-semibold);
+  border-radius: var(--r-md);
+  border: none;
+  cursor: pointer;
+  transition: background var(--t-fast), box-shadow var(--t-fast), transform var(--t-fast), opacity var(--t-fast);
+  white-space: nowrap;
+}
+
+.qlab-btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
+.qlab-btn:not(:disabled):active {
+  transform: translateY(1px);
+}
+
+.qlab-btn-primary {
+  background: var(--clr-primary);
+  color: #fff;
+  box-shadow: 0 1px 3px rgba(79, 70, 229, 0.3);
+}
+
+.qlab-btn-primary:not(:disabled):hover {
+  background: var(--clr-primary-dark);
+  box-shadow: 0 4px 12px rgba(79, 70, 229, 0.35);
+  transform: translateY(-1px);
+}
+
+.qlab-btn-ghost {
+  background: var(--clr-surface);
+  color: var(--clr-text);
+  border: 1.5px solid var(--clr-border);
+  box-shadow: var(--shadow-xs);
+}
+
+.qlab-btn-ghost:not(:disabled):hover {
+  background: var(--clr-surface-2);
+  border-color: var(--clr-border-strong);
+}
+
+.qlab-btn-danger {
+  background: var(--clr-danger);
+  color: #fff;
+}
+
+.qlab-btn-danger:not(:disabled):hover {
+  background: #B91C1C;
+}

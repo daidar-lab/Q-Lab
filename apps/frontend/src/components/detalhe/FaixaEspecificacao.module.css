@@ -1,0 +1,97 @@
+.card {
+  background: var(--clr-surface);
+  border: 1px solid var(--clr-border);
+  border-radius: var(--r-xl);
+  padding: var(--sp-base);
+  box-shadow: var(--shadow-sm);
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-md);
+  transition: transform var(--t-fast), box-shadow var(--t-fast);
+}
+
+.card:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-md);
+}
+
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-family: var(--font);
+}
+
+.header strong {
+  font-size: 15px;
+  color: var(--clr-text);
+  font-weight: var(--fw-semibold);
+}
+
+.valorAtual {
+  font-size: 16px;
+  font-weight: var(--fw-bold);
+  color: var(--clr-primary);
+}
+
+.regua {
+  position: relative;
+  height: 8px;
+  background: var(--clr-surface-2);
+  border-radius: var(--r-full);
+  margin: var(--sp-sm) 0;
+}
+
+.faixaVerde {
+  position: absolute;
+  left: 20%;
+  right: 20%;
+  top: 0;
+  bottom: 0;
+  background: var(--clr-success);
+  opacity: 0.3;
+  border-radius: var(--r-full);
+}
+
+.ponto {
+  position: absolute;
+  top: 50%;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: var(--clr-primary);
+  border: 2px solid var(--clr-surface);
+  transform: translate(-50%, -50%);
+  box-shadow: var(--shadow-xs);
+  transition: left var(--t-normal);
+}
+
+.limites {
+  display: flex;
+  justify-content: space-between;
+  font-size: 12px;
+  color: var(--clr-text-3);
+  font-weight: var(--fw-medium);
+}
+
+.barraProporcao {
+  height: 8px;
+  background: var(--clr-danger-bg);
+  border-radius: var(--r-full);
+  overflow: hidden;
+  position: relative;
+}
+
+.barraPreenchida {
+  height: 100%;
+  background: var(--clr-success);
+  border-radius: var(--r-full);
+  transition: width var(--t-normal);
+}
+
+.aviso {
+  font-size: 12px;
+  color: var(--clr-text-3);
+  margin: 0;
+  font-style: italic;
+}

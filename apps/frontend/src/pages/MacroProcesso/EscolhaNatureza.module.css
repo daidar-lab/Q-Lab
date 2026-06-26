@@ -1,0 +1,106 @@
+.page {
+  padding: var(--sp-lg);
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-xl);
+  max-width: 800px;
+  margin: 0 auto;
+}
+
+.voltar {
+  align-self: flex-start;
+  background: none;
+  border: none;
+  color: var(--clr-text-2);
+  font-family: var(--font);
+  font-size: 14px;
+  font-weight: var(--fw-semibold);
+  cursor: pointer;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  gap: var(--sp-xs);
+  transition: color var(--t-fast);
+}
+
+.voltar:hover {
+  color: var(--clr-primary);
+}
+
+.header {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-xs);
+}
+
+.subtitulo {
+  font-size: 12px;
+  font-weight: var(--fw-semibold);
+  color: var(--clr-primary);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.titulo {
+  font-size: 28px;
+  font-weight: var(--fw-extrabold);
+  color: var(--clr-text);
+  margin: 0;
+}
+
+.descricao {
+  font-size: 15px;
+  color: var(--clr-text-2);
+  margin: 0;
+}
+
+/* ── Cards de opção ────────────────────────────────────────────── */
+
+.opcoes {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: var(--sp-lg);
+}
+
+.cardOpcao {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--sp-sm);
+  background: var(--clr-surface);
+  border: 1px solid var(--clr-border);
+  border-radius: var(--r-xl);
+  padding: var(--sp-xl);
+  cursor: pointer;
+  text-align: left;
+  font-family: var(--font);
+  transition: transform var(--t-fast), box-shadow var(--t-fast), border-color var(--t-fast);
+  box-shadow: var(--shadow-sm);
+}
+
+.cardOpcao:hover {
+  transform: translateY(-3px);
+  box-shadow: var(--shadow-md);
+  border-color: var(--clr-primary);
+}
+
+.icone {
+  font-size: 32px;
+  line-height: 1;
+  margin-bottom: var(--sp-xs);
+}
+
+.iconeProduto {}
+.iconeProcesso {}
+
+.cardTitulo {
+  font-size: 18px;
+  font-weight: var(--fw-bold);
+  color: var(--clr-text);
+}
+
+.cardDescricao {
+  font-size: 13px;
+  color: var(--clr-text-2);
+  line-height: 1.5;
+}

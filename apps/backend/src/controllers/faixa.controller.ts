@@ -1,0 +1,270 @@
+import type { Request, Response, NextFunction } from 'express';
+import { getExplosaoFaixas, getProdutosPorFaixa, getHistoricoProdutosFaixa, getProdutosSemFaixa, getHistoricoProdutosSemFaixa } from '../services/faixa.service';
+
+/**
+ * Validates date string in YYYY-MM-DD format
+ */
+function isValidDate(dateStr: string): boolean {
+    return /^\d{4}-\d{2}-\d{2}$/.test(dateStr) && !isNaN(Date.parse(dateStr));
+}
+
+/**
+ * GET /api/analitica/detalhe/faixas
+ */
+export async function handleGetFaixas(
+    req: Request,
+    res: Response,
+    next: NextFunction
+): Promise<void> {
+    try {
+        const { id, codEnsaio, dataInicio, dataFim } = req.query;
+
+        if (!id || typeof id !== 'string') {
+            res.status(400).json({ erro: 'O parâmetro "id" (código do centro de custo) é obrigatório.' });
+            return;
+        }
+
+        if (!codEnsaio || typeof codEnsaio !== 'string') {
+            res.status(400).json({ erro: 'O parâmetro "codEnsaio" é obrigatório.' });
+            return;
+        }
+
+        if (!dataInicio || typeof dataInicio !== 'string' || !isValidDate(dataInicio)) {
+            res.status(400).json({ erro: 'O parâmetro "dataInicio" deve estar no formato YYYY-MM-DD.' });
+            return;
+        }
+
+        if (!dataFim || typeof dataFim !== 'string' || !isValidDate(dataFim)) {
+            res.status(400).json({ erro: 'O parâmetro "dataFim" deve estar no formato YYYY-MM-DD.' });
+            return;
+        }
+
+        const result = await getExplosaoFaixas(id, codEnsaio, dataInicio, dataFim);
+        res.json(result);
+    } catch (err) {
+        next(err);
+    }
+}
+
+/**
+ * GET /api/analitica/detalhe/faixas/produtos
+ */
+/**
+ * GET /api/analitica/detalhe/faixas/produtos
+ */
+export async function handleGetProdutosPorFaixa(
+    req: Request,
+    res: Response,
+    next: NextFunction
+): Promise<void> {
+    try {
+        const { id, codEnsaio, lie, lse, dataInicio, dataFim } = req.query;
+
+        if (id === undefined || id === null || typeof id !== 'string') {
+            res.status(400).json({ erro: 'O parâmetro "id" é obrigatório e deve ser texto.' });
+            return;
+        }
+
+        if (!codEnsaio || typeof codEnsaio !== 'string') {
+            res.status(400).json({ erro: 'O parâmetro "codEnsaio" é obrigatório.' });
+            return;
+        }
+
+        if (lie === undefined || lie === null || typeof lie !== 'string') {
+            res.status(400).json({ erro: 'O parâmetro "lie" é obrigatório.' });
+            return;
+        }
+
+        if (lse === undefined || lse === null || typeof lse !== 'string') {
+            res.status(400).json({ erro: 'O parâmetro "lse" é obrigatório.' });
+            return;
+        }
+
+        const parsedLie = Number(lie.replace(',', '.'));
+        const parsedLse = Number(lse.replace(',', '.'));
+
+        if (isNaN(parsedLie)) {
+            res.status(400).json({ erro: 'O parâmetro "lie" deve ser um valor numérico válido.' });
+            return;
+        }
+
+        if (isNaN(parsedLse)) {
+            res.status(400).json({ erro: 'O parâmetro "lse" deve ser um valor numérico válido.' });
+            return;
+        }
+
+        if (!dataInicio || typeof dataInicio !== 'string' || !isValidDate(dataInicio)) {
+            res.status(400).json({ erro: 'O parâmetro "dataInicio" deve estar no formato YYYY-MM-DD.' });
+            return;
+        }
+
+        if (!dataFim || typeof dataFim !== 'string' || !isValidDate(dataFim)) {
+            res.status(400).json({ erro: 'O parâmetro "dataFim" deve estar no formato YYYY-MM-DD.' });
+            return;
+        }
+
+        // AJUSTE SEGURO: Enviamos o 'id' e o 'codEnsaio' explicitamente para o service.
+        // Certifique-se de que a assinatura do seu getProdutosPorFaixa no service receba (id, codEnsaio, lie, lse, dataInicio, dataFim)
+        const result = await getProdutosPorFaixa(id, codEnsaio, parsedLie, parsedLse, dataInicio, dataFim);
+        res.json(result);
+    } catch (err) {
+        next(err);
+    }
+}
+/**
+ * GET /api/analitica/detalhe/faixas/produtos/historico
+ */
+export async function handleGetHistoricoProdutosFaixa(
+    req: Request,
+    res: Response,
+    next: NextFunction
+): Promise<void> {
+    try {
+        const { id, codEnsaio, lie, lse, dataInicio, dataFim, produtos } = req.query;
+
+        if (!id || typeof id !== 'string') {
+            res.status(400).json({ erro: 'O parâmetro "id" (código do centro de custo) é obrigatório.' });
+            return;
+        }
+
+        if (!codEnsaio || typeof codEnsaio !== 'string') {
+            res.status(400).json({ erro: 'O parâmetro "codEnsaio" é obrigatório.' });
+            return;
+        }
+
+        if (lie === undefined || lie === null || typeof lie !== 'string') {
+            res.status(400).json({ erro: 'O parâmetro "lie" é obrigatório e deve ser um número válido.' });
+            return;
+        }
+
+        if (lse === undefined || lse === null || typeof lse !== 'string') {
+            res.status(400).json({ erro: 'O parâmetro "lse" é obrigatório e deve ser um número válido.' });
+            return;
+        }
+
+        const parsedLie = Number(lie.replace(',', '.'));
+        const parsedLse = Number(lse.replace(',', '.'));
+
+        if (isNaN(parsedLie)) {
+            res.status(400).json({ erro: 'O parâmetro "lie" deve ser um valor numérico válido.' });
+            return;
+        }
+
+        if (isNaN(parsedLse)) {
+            res.status(400).json({ erro: 'O parâmetro "lse" deve ser um valor numérico válido.' });
+            return;
+        }
+
+        if (!dataInicio || typeof dataInicio !== 'string' || !isValidDate(dataInicio)) {
+            res.status(400).json({ erro: 'O parâmetro "dataInicio" deve estar no formato YYYY-MM-DD.' });
+            return;
+        }
+
+        if (!dataFim || typeof dataFim !== 'string' || !isValidDate(dataFim)) {
+            res.status(400).json({ erro: 'O parâmetro "dataFim" deve estar no formato YYYY-MM-DD.' });
+            return;
+        }
+
+        // produtos can be passed as comma-separated or array
+        let parsedProdutos: string[] = [];
+        if (typeof produtos === 'string') {
+            parsedProdutos = produtos.split(',').filter(Boolean);
+        } else if (Array.isArray(produtos)) {
+            parsedProdutos = produtos.map(p => String(p));
+        }
+
+        if (parsedProdutos.length === 0) {
+            res.json([]);
+            return;
+        }
+
+        const result = await getHistoricoProdutosFaixa(id, codEnsaio, parsedLie, parsedLse, dataInicio, dataFim, parsedProdutos);
+        res.json(result);
+    } catch (err) {
+        next(err);
+    }
+}
+
+/**
+ * GET /api/analitica/detalhe/faixas/sem-faixa/produtos
+ * Fallback para ensaios sem especificação numérica (processo ou produto sem LIE/LSE)
+ */
+export async function handleGetProdutosSemFaixa(
+    req: Request,
+    res: Response,
+    next: NextFunction
+): Promise<void> {
+    try {
+        const { id, codEnsaio, dataInicio, dataFim } = req.query;
+
+        if (!id || typeof id !== 'string') {
+            res.status(400).json({ erro: 'O parâmetro "id" é obrigatório.' });
+            return;
+        }
+        if (!codEnsaio || typeof codEnsaio !== 'string') {
+            res.status(400).json({ erro: 'O parâmetro "codEnsaio" é obrigatório.' });
+            return;
+        }
+        if (!dataInicio || typeof dataInicio !== 'string' || !isValidDate(dataInicio)) {
+            res.status(400).json({ erro: 'O parâmetro "dataInicio" deve estar no formato YYYY-MM-DD.' });
+            return;
+        }
+        if (!dataFim || typeof dataFim !== 'string' || !isValidDate(dataFim)) {
+            res.status(400).json({ erro: 'O parâmetro "dataFim" deve estar no formato YYYY-MM-DD.' });
+            return;
+        }
+
+        const result = await getProdutosSemFaixa(id, codEnsaio, dataInicio, dataFim);
+        res.json(result);
+    } catch (err) {
+        next(err);
+    }
+}
+
+/**
+ * GET /api/analitica/detalhe/faixas/sem-faixa/historico
+ * Histórico cronológico para ensaios sem LIE/LSE — conformidade como 1/0
+ */
+export async function handleGetHistoricoProdutosSemFaixa(
+    req: Request,
+    res: Response,
+    next: NextFunction
+): Promise<void> {
+    try {
+        const { id, codEnsaio, dataInicio, dataFim, produtos } = req.query;
+
+        if (!id || typeof id !== 'string') {
+            res.status(400).json({ erro: 'O parâmetro "id" é obrigatório.' });
+            return;
+        }
+        if (!codEnsaio || typeof codEnsaio !== 'string') {
+            res.status(400).json({ erro: 'O parâmetro "codEnsaio" é obrigatório.' });
+            return;
+        }
+        if (!dataInicio || typeof dataInicio !== 'string' || !isValidDate(dataInicio)) {
+            res.status(400).json({ erro: 'O parâmetro "dataInicio" deve estar no formato YYYY-MM-DD.' });
+            return;
+        }
+        if (!dataFim || typeof dataFim !== 'string' || !isValidDate(dataFim)) {
+            res.status(400).json({ erro: 'O parâmetro "dataFim" deve estar no formato YYYY-MM-DD.' });
+            return;
+        }
+
+        let parsedProdutos: string[] = [];
+        if (typeof produtos === 'string') {
+            parsedProdutos = produtos.split(',').filter(Boolean);
+        } else if (Array.isArray(produtos)) {
+            parsedProdutos = produtos.map(p => String(p));
+        }
+
+        if (parsedProdutos.length === 0) {
+            res.json([]);
+            return;
+        }
+
+        const result = await getHistoricoProdutosSemFaixa(id, codEnsaio, dataInicio, dataFim, parsedProdutos);
+        res.json(result);
+    } catch (err) {
+        next(err);
+    }
+}

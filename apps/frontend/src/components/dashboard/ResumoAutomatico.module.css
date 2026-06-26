@@ -1,0 +1,71 @@
+/* apps/frontend/src/components/dashboard/ResumoAutomatico.module.css */
+
+.card {
+  background: linear-gradient(135deg, #0f1117 0%, #1a1d2e 60%, #111827 100%);
+  border: 1px solid rgba(139, 92, 246, 0.25);
+  border-radius: 12px;
+  padding: 20px 24px;
+  position: relative;
+  overflow: hidden;
+}
+
+.card::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(ellipse at top left, rgba(139, 92, 246, 0.08) 0%, transparent 70%);
+  pointer-events: none;
+}
+
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #a78bfa;
+  background: rgba(139, 92, 246, 0.12);
+  border: 1px solid rgba(139, 92, 246, 0.3);
+  border-radius: 20px;
+  padding: 3px 10px;
+  margin-bottom: 12px;
+}
+
+.badge::before {
+  content: '✦';
+  font-size: 0.6rem;
+  opacity: 0.8;
+}
+
+.texto {
+  margin: 0;
+  font-size: 0.9rem;
+  line-height: 1.65;
+  color: #c9d1e0;
+}
+
+/* Estado de loading */
+.card.loading {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 60px;
+  color: #6b7280;
+  font-size: 0.875rem;
+}
+
+.spinner {
+  width: 16px;
+  height: 16px;
+  border: 2px solid rgba(139, 92, 246, 0.2);
+  border-top-color: #8b5cf6;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+  flex-shrink: 0;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}

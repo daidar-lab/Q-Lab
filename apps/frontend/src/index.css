@@ -1,0 +1,8 @@
+/* src/index.css — apenas reset mínimo; o design system vive em styles/design.css */
+@import './styles/design.css';
+
+#root {
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+}

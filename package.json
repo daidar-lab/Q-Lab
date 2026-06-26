@@ -1,0 +1,21 @@
+{
+    "name": "qlab",
+    "version": "1.0.0",
+    "private": true,
+    "workspaces": [
+        "apps/*",
+        "packages/*"
+    ],
+    "scripts": {
+        "dev:backend": "npm run dev --workspace=apps/backend",
+        "dev:frontend": "npm run dev --workspace=apps/frontend",
+        "dev": "concurrently \"npm run dev:backend\" \"npm run dev:frontend\""
+    },
+    "devDependencies": {
+        "@types/bcryptjs": "^2.4.6",
+        "concurrently": "^8.2.2"
+    },
+    "dependencies": {
+        "bcryptjs": "^3.0.3"
+    }
+}
