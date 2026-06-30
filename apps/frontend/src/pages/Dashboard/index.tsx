@@ -66,6 +66,7 @@ export default function DashboardPage() {
         {kpis && [
           { label: 'AMOSTRAS ANALISADAS', value: kpis.amostras.valor.toLocaleString('pt-BR'), delta: formatDelta(kpis.amostras.deltaPct) },
           { label: 'ENSAIOS REALIZADOS', value: kpis.ensaios.valor.toLocaleString('pt-BR'), delta: formatDelta(kpis.ensaios.deltaPct) },
+          { label: 'ENSAIOS INFORMATIVOS', value: kpis.informativos.valor.toLocaleString('pt-BR'), delta: formatDelta(kpis.informativos.deltaPct) },
           { label: 'NÃO CONFORMIDADES', value: kpis.naoConformidades.valor.toLocaleString('pt-BR'), delta: formatDelta(kpis.naoConformidades.deltaPct, true) },
           {
             label: 'CONFORMIDADE', value: `${kpis.conformidade.valor}%`,

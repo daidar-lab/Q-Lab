@@ -11,6 +11,12 @@ import detalheRoutes from './routes/detalhe.routes';
 import faixaRoutes from './routes/faixa.routes';
 import resumoDashboardRoutes from './routes/resumo-dashboard.routes';
 import macroProcessoRoutes from './routes/macroProcesso.routes';
+import envaseRoutes from './routes/envase.routes';
+import cipRoutes from './routes/cip.routes';
+import fermentoRoutes from './routes/fermento.routes';
+import fisicoRoutes from './routes/fisico.routes';
+import processoRoutes from './routes/processo.routes';
+import microbiologiaRoutes from './routes/microbiologia.routes';
 import { errorMiddleware } from './middlewares/error.middleware';
 
 const app = express();
@@ -35,6 +41,12 @@ app.use('/api/analitica/detalhe', faixaRoutes);
 app.use('/api/detalhe', detalheRoutes);
 app.use('/api/resumo-dashboard', resumoDashboardRoutes);
 app.use('/api/macro-processo', macroProcessoRoutes);
+app.use('/qlab/envase', envaseRoutes);
+app.use('/qlab/cip', cipRoutes);
+app.use('/qlab/fermento', fermentoRoutes);
+app.use('/qlab/fisico', fisicoRoutes);
+app.use('/qlab/processo', processoRoutes);
+app.use('/qlab', microbiologiaRoutes);
 
 // ─── Health check ─────────────────────────────────────────────────────────────
 

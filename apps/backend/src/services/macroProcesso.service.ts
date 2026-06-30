@@ -1,5 +1,3 @@
-// apps/backend/src/services/macroProcesso.service.ts
-
 import { blabQuery, TABELA_FATO_PRINCIPAL } from '../db/blab.pool';
 import { prefixoPorMacroProcesso, LISTA_MACRO_PROCESSOS } from '../configs/macro-processo';
 import { ENSAIOS_DE_PROCESSO, NaturezaEnsaio } from '../configs/classificacao-ensaios';
@@ -13,8 +11,7 @@ interface DetalheMacroProcessoParams {
 
 // 1. Lista os macro processos disponíveis com contagem de NC (para o card do dashboard)
 export async function getListaMacroProcessos(params: { dataInicio: string; dataFim: string }) {
-  // Fazemos uma única query que traz a contagem agrupada por macro processo através de condicionais
-  // Para manter a máxima performance, mapeamos os prefixos direto no SQL
+  // Otimizado: Filtro inicial amplo com LIKE 'LCQ%' e correção cirúrgica para ignorar 'NÃO AVALIADO'
   const rows = await blabQuery<any>(`
     SELECT 
       CASE 
@@ -35,25 +32,13 @@ export async function getListaMacroProcessos(params: { dataInicio: string; dataF
       END AS macro_processo,
       ensaio,
       COUNT(*) AS n_amostras,
-      SUM(CASE WHEN conformidade != 'CONFORME' THEN 1 ELSE 0 END) AS n_nao_conforme
+      -- Corrigido: Apenas 'NÃO CONFORME' deve somar como quebra de qualidade real
+      SUM(CASE WHEN conformidade = 'NÃO CONFORME' THEN 1 ELSE 0 END) AS n_nao_conforme
     FROM ${TABELA_FATO_PRINCIPAL}
     WHERE D_E_L_E_T IS NULL
+      AND conformidade != 'NÃO AVALIADO' -- Garante consistência com os detalhes da analítica
       AND data_resultado BETWEEN ? AND ?
-      AND (
-        lote_de_controle_de_qualidade LIKE 'LCQCP%' OR
-        lote_de_controle_de_qualidade LIKE 'LCQMB%' OR
-        lote_de_controle_de_qualidade LIKE 'LCQCA%' OR
-        lote_de_controle_de_qualidade LIKE 'LCQTE%' OR
-        lote_de_controle_de_qualidade LIKE 'LCQD%'  OR
-        lote_de_controle_de_qualidade LIKE 'LCQR%'  OR
-        lote_de_controle_de_qualidade LIKE 'LCQC%'  OR
-        lote_de_controle_de_qualidade LIKE 'LCQE%'  OR
-        lote_de_controle_de_qualidade LIKE 'LCQP%'  OR
-        lote_de_controle_de_qualidade LIKE 'LCQM%'  OR
-        lote_de_controle_de_qualidade LIKE 'LCQF%'  OR
-        lote_de_controle_de_qualidade LIKE 'LCQB%'  OR
-        lote_de_controle_de_qualidade LIKE 'LCQFI%'
-      )
+      AND lote_de_controle_de_qualidade LIKE 'LCQ%'
     GROUP BY macro_processo, ensaio
     HAVING macro_processo IS NOT NULL
   `, [params.dataInicio, params.dataFim]);
@@ -81,7 +66,6 @@ export async function getListaMacroProcessos(params: { dataInicio: string; dataF
       }
     }
 
-    // Se n_amostras for 0, por padrão consideramos produto
     if (n_amostras === 0) {
       tem_produto = true;
     }
@@ -122,12 +106,13 @@ export async function getDetalheMacroProcesso(params: DetalheMacroProcessoParams
   const [resumoRow] = await blabQuery<any>(`
     SELECT
       ROUND(SUM(conformidade = 'CONFORME') * 100.0 / COUNT(*), 1)      AS pct_conforme,
-      SUM(conformidade != 'CONFORME')                                    AS n_nao_conforme,
-      COUNT(DISTINCT CASE WHEN conformidade != 'CONFORME'
+      SUM(conformidade = 'NÃO CONFORME')                               AS n_nao_conforme,
+      COUNT(DISTINCT CASE WHEN conformidade = 'NÃO CONFORME'
         THEN lote_de_controle_de_qualidade END)                          AS lotes_afetados,
       COUNT(DISTINCT lote_de_controle_de_qualidade)                      AS total_lotes
     FROM ${TABELA_FATO_PRINCIPAL}
     WHERE D_E_L_E_T IS NULL
+      AND conformidade != 'NÃO AVALIADO'
       AND lote_de_controle_de_qualidade LIKE ?
       AND data_resultado BETWEEN ? AND ?
       ${filtroEnsaio}
@@ -137,11 +122,12 @@ export async function getDetalheMacroProcesso(params: DetalheMacroProcessoParams
   const serie = await blabQuery<any>(`
     SELECT
       DATE_FORMAT(data_resultado, '%Y-%m')                               AS periodo,
-      ROUND(SUM(conformidade = 'CONFORME') * 100.0 / COUNT(*), 1)       AS pct_conforme,
+      ROUND(SUM(conformidade = 'CONFORME') * 100.0 / COUNT(*), 1)        AS pct_conforme,
       COUNT(*)                                                           AS total,
       SUM(conformidade = 'CONFORME')                                     AS n_conforme
     FROM ${TABELA_FATO_PRINCIPAL}
     WHERE D_E_L_E_T IS NULL
+      AND conformidade != 'NÃO AVALIADO'
       AND lote_de_controle_de_qualidade LIKE ?
       AND data_resultado BETWEEN ? AND ?
       ${filtroEnsaio}
@@ -150,10 +136,6 @@ export async function getDetalheMacroProcesso(params: DetalheMacroProcessoParams
   `, baseParams);
 
   // ── Faixas de especificação por ensaio ───────────────────────────────────────
-  // Usa CASE WHEN no SELECT (sem filtros rígidos de NULL/REGEXP no WHERE)
-  // para incluir todos os ensaios — mesmo os sem lie/lse (ensaios de processo
-  // que só têm conformidade textual). O frontend renderiza em modo 'percentual'
-  // quando lie/lse são nulos.
   const faixasRaw = await blabQuery<any>(`
     SELECT
       cod_ensaio,
@@ -171,9 +153,10 @@ export async function getDetalheMacroProcesso(params: DetalheMacroProcessoParams
         THEN CAST(REPLACE(lse, ',', '.') AS DECIMAL(10,4))
       END)                                                               AS lse,
       COUNT(*)                                                           AS n_amostras,
-      ROUND(SUM(conformidade = 'CONFORME') * 100.0 / COUNT(*), 1)       AS pct_conforme
+      ROUND(SUM(conformidade = 'CONFORME') * 100.0 / COUNT(*), 1)        AS pct_conforme
     FROM ${TABELA_FATO_PRINCIPAL}
     WHERE D_E_L_E_T IS NULL
+      AND conformidade != 'NÃO AVALIADO'
       AND lote_de_controle_de_qualidade LIKE ?
       AND data_resultado BETWEEN ? AND ?
       ${filtroEnsaio}
@@ -182,7 +165,6 @@ export async function getDetalheMacroProcesso(params: DetalheMacroProcessoParams
     LIMIT 20
   `, baseParams);
 
-  // Resolve modo de exibição para cada faixa (igual ao padrão do detalhe.service.ts)
   const faixas = faixasRaw.map((f: any) => {
     const temLimites = f.lie !== null && f.lse !== null;
     return {

@@ -24,6 +24,16 @@ interface Props {
     codEnsaioAtual?: string;
 }
 
+function parseBR(value?: string | number) {
+    if (value === null || value === undefined) return null;
+    if (typeof value === 'number') return value;
+
+    const num = Number(value.replace(',', '.'));
+    return isNaN(num) ? null : num;
+}
+
+
+
 export function AmostraDetalheDrawer({ open, onClose, codAmostra, codEnsaioAtual }: Props) {
     const [ensaios, setEnsaios] = useState<AmostraEnsaioRow[]>([]);
     const [carregando, setCarregando] = useState<boolean>(false);
@@ -131,7 +141,7 @@ export function AmostraDetalheDrawer({ open, onClose, codAmostra, codEnsaioAtual
 
                 {!carregando && !erro && ensaios.length > 0 && (
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', flex: 1 }}>
-                        
+
                         {/* Metadados gerais (pega do primeiro item) */}
                         {(() => {
                             const sample = ensaios[0];
@@ -189,11 +199,11 @@ export function AmostraDetalheDrawer({ open, onClose, codAmostra, codEnsaioAtual
                                         style={{
                                             padding: '14px 16px',
                                             borderRadius: '12px',
-                                            border: isDestaque 
-                                                ? '2px solid var(--clr-primary, #3b82f6)' 
+                                            border: isDestaque
+                                                ? '2px solid var(--clr-primary, #3b82f6)'
                                                 : '1px solid var(--clr-border, #e4e4e7)',
-                                            background: isDestaque 
-                                                ? 'rgba(59, 130, 246, 0.03)' 
+                                            background: isDestaque
+                                                ? 'rgba(59, 130, 246, 0.03)'
                                                 : 'var(--clr-surface, #ffffff)',
                                             boxShadow: isDestaque ? '0 4px 12px rgba(59, 130, 246, 0.08)' : 'none',
                                             display: 'flex',
@@ -249,9 +259,9 @@ export function AmostraDetalheDrawer({ open, onClose, codAmostra, codEnsaioAtual
                                             {(item.lie || item.lse) && (
                                                 <div style={{ borderLeft: '1px solid #e4e4e7', paddingLeft: '20px' }}>
                                                     <span>Esp: </span>
-                                                    <span style={{ fontWeight: 600 }}>
-                                                        {item.lie ? Number(item.lie).toFixed(2) : '—'} a {item.lse ? Number(item.lse).toFixed(2) : '—'}
-                                                    </span>
+                                                    {item.lie ? parseBR(item.lie)?.toFixed(2).replace('.', ',') : '—'}
+                                                    {' '}a{' '}
+                                                    {item.lse ? parseBR(item.lse)?.toFixed(2).replace('.', ',') : '—'}
                                                 </div>
                                             )}
                                         </div>

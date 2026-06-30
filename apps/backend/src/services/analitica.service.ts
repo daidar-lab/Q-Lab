@@ -396,6 +396,7 @@ export async function numericoComparacao(params: any) {
         MIN(CAST(REPLACE(lse,',','.') AS DECIMAL(10,4)))               AS lse
       FROM DW_FAT_RESULTADO
       WHERE D_E_L_E_T IS NULL
+        AND conformidade != 'NÃO AVALIADO'
         AND valor REGEXP '^-?[0-9]+([.,][0-9]+)?$'
         AND LENGTH(data_resultado) = 10
         AND data_resultado REGEXP '^[0-9]{4}-[0-9]{2}-[0-9]{2}$'
@@ -521,6 +522,7 @@ export async function numericoComparacao(params: any) {
         MIN(CAST(REPLACE(lse,',','.') AS DECIMAL(10,4)))               AS lse
       FROM DW_FAT_RESULTADO
       WHERE D_E_L_E_T IS NULL
+        AND conformidade != 'NÃO AVALIADO'
         AND valor REGEXP '^-?[0-9]+([.,][0-9]+)?$'
         AND LENGTH(data_resultado) = 10
         AND data_resultado REGEXP '^[0-9]{4}-[0-9]{2}-[0-9]{2}$'
@@ -722,6 +724,7 @@ export async function categoricoComparacao(params: any) {
         ROUND(SUM(conformidade = 'CONFORME') * 1.0 / COUNT(*) * 100, 1) AS pct_conforme
       FROM DW_FAT_RESULTADO
       WHERE D_E_L_E_T IS NULL
+        AND conformidade != 'NÃO AVALIADO'
         AND LENGTH(data_resultado) = 10
         AND data_resultado REGEXP '^[0-9]{4}-[0-9]{2}-[0-9]{2}$'
         ${commonSql}
@@ -831,16 +834,16 @@ export async function getAmostrasPorBin(ctx: ContextoAnalise, binInicio: number,
 
 export interface FiltroPeriodo {
   dataInicio: string;
-  dataFim:    string;
+  dataFim: string;
 }
 
-// 1. KPIs globais — amostras, ensaios, NCs, conformidade do período + comparação com período anterior
+// 1. KPIs globais — corrigidos para isolar ensaios informativos ("NÃO AVALIADO")
 export async function getKpisDashboard(periodo: FiltroPeriodo) {
   const inicio = new Date(periodo.dataInicio);
-  const fim    = new Date(periodo.dataFim);
-  const dias   = Math.ceil((fim.getTime() - inicio.getTime()) / 86400000);
+  const fim = new Date(periodo.dataFim);
+  const dias = Math.ceil((fim.getTime() - inicio.getTime()) / 86400000);
 
-  const fimAnterior    = new Date(inicio.getTime() - 86400000);
+  const fimAnterior = new Date(inicio.getTime() - 86400000);
   const inicioAnterior = new Date(fimAnterior.getTime() - dias * 86400000);
   const fmt = (d: Date) => d.toISOString().slice(0, 10);
 
@@ -848,6 +851,7 @@ export async function getKpisDashboard(periodo: FiltroPeriodo) {
     periodo: 'atual' | 'anterior';
     amostras: number;
     ensaios: number;
+    informativos: number;
     nao_conformidades: number;
     pct_conformidade: number;
   }>(`
@@ -855,13 +859,18 @@ export async function getKpisDashboard(periodo: FiltroPeriodo) {
       CASE
         WHEN data_resultado BETWEEN ? AND ? THEN 'atual'
         ELSE 'anterior'
-      END                                                                   AS periodo,
-      COUNT(DISTINCT cod_amostra)                                          AS amostras,
-      COUNT(*)                                                             AS ensaios,
-      SUM(conformidade != 'CONFORME')                                      AS nao_conformidades,
-      ROUND(SUM(conformidade = 'CONFORME') * 100.0 / COUNT(*), 1)         AS pct_conformidade
+      END                                                                 AS periodo,
+      COUNT(DISTINCT cod_amostra)                                         AS amostras,
+      COUNT(*)                                                            AS ensaios,
+      SUM(conformidade = 'NÃO AVALIADO')                                  AS informativos,
+      SUM(conformidade = 'NÃO CONFORME')                                  AS nao_conformidades,
+      ROUND(
+        SUM(conformidade = 'CONFORME') * 100.0 / 
+        NULLIF(COUNT(*) - SUM(conformidade = 'NÃO AVALIADO'), 0), 
+        1
+      )                                                                   AS pct_conformidade
     FROM DW_FAT_RESULTADO
-    WHERE D_E_L_E_T IS NULL
+    WHERE D_E_L_E_T IS NULL 
       AND (
         data_resultado BETWEEN ? AND ?
         OR data_resultado BETWEEN ? AND ?
@@ -873,22 +882,22 @@ export async function getKpisDashboard(periodo: FiltroPeriodo) {
     fmt(inicioAnterior), fmt(fimAnterior),      // WHERE anterior
   ]);
 
-  const atual    = rows.find(r => r.periodo === 'atual');
+  const atual = rows.find(r => r.periodo === 'atual');
   const anterior = rows.find(r => r.periodo === 'anterior');
 
   function delta(a: number | undefined, b: number | undefined) {
-    if (!a || !b) return null;
+    if (a === undefined || b === undefined || b === 0) return null;
     return Number((((a - b) / b) * 100).toFixed(1));
   }
 
   return {
-    amostras:          { valor: atual?.amostras ?? 0,          deltaPct: delta(atual?.amostras, anterior?.amostras) },
-    ensaios:           { valor: atual?.ensaios ?? 0,           deltaPct: delta(atual?.ensaios, anterior?.ensaios) },
-    naoConformidades:  { valor: atual?.nao_conformidades ?? 0, deltaPct: delta(atual?.nao_conformidades, anterior?.nao_conformidades) },
-    conformidade:      { valor: atual?.pct_conformidade ?? 0,  meta: 98.0 },
+    amostras: { valor: Number(atual?.amostras ?? 0), deltaPct: delta(atual?.amostras, anterior?.amostras) },
+    ensaios: { valor: Number(atual?.ensaios ?? 0), deltaPct: delta(atual?.ensaios, anterior?.ensaios) },
+    informativos: { valor: Number(atual?.informativos ?? 0), deltaPct: delta(atual?.informativos, anterior?.informativos) },
+    naoConformidades: { valor: Number(atual?.nao_conformidades ?? 0), deltaPct: delta(atual?.nao_conformidades, anterior?.nao_conformidades) },
+    conformidade: { valor: Number(atual?.pct_conformidade ?? 0), meta: 98.0 },
   };
 }
-
 // 2. Ranking por processo (centro de custo)
 export async function getRankingProcessos(periodo: FiltroPeriodo, limit = 10) {
   const rows = await blabQuery<any>(`
@@ -899,6 +908,7 @@ export async function getRankingProcessos(periodo: FiltroPeriodo, limit = 10) {
       SUM(CASE WHEN conformidade != 'CONFORME' THEN 1 ELSE 0 END)         AS nc
     FROM DW_FAT_RESULTADO
     WHERE D_E_L_E_T IS NULL
+    and (conformidade = 'CONFORME' OR conformidade = 'NÃO CONFORME')
       AND cod_centro_de_custo IS NOT NULL
       AND data_resultado BETWEEN ? AND ?
     GROUP BY cod_centro_de_custo, centro_de_custo
@@ -907,10 +917,10 @@ export async function getRankingProcessos(periodo: FiltroPeriodo, limit = 10) {
   `, [periodo.dataInicio, periodo.dataFim, limit]);
 
   return rows.map(r => ({
-    id:       Number(r.id),
-    nome:     r.nome,
+    id: Number(r.id),
+    nome: r.nome,
     amostras: Number(r.amostras),
-    nc:       Number(r.nc),
+    nc: Number(r.nc),
   }));
 }
 
@@ -924,6 +934,7 @@ export async function getRankingProdutos(periodo: FiltroPeriodo, limit = 10) {
       SUM(CASE WHEN conformidade != 'CONFORME' THEN 1 ELSE 0 END)         AS nc
     FROM DW_FAT_RESULTADO
     WHERE D_E_L_E_T IS NULL
+      AND (conformidade = 'CONFORME' OR conformidade = 'NÃO CONFORME')
       AND cod_produto IS NOT NULL
       AND data_resultado BETWEEN ? AND ?
     GROUP BY cod_produto, produto
@@ -932,10 +943,10 @@ export async function getRankingProdutos(periodo: FiltroPeriodo, limit = 10) {
   `, [periodo.dataInicio, periodo.dataFim, limit]);
 
   return rows.map(r => ({
-    id:       Number(r.id),
-    nome:     r.nome,
+    id: Number(r.id),
+    nome: r.nome,
     amostras: Number(r.amostras),
-    nc:       Number(r.nc),
+    nc: Number(r.nc),
   }));
 }
 
@@ -949,6 +960,7 @@ export async function getRankingEnsaios(periodo: FiltroPeriodo, limit = 10) {
       SUM(CASE WHEN conformidade != 'CONFORME' THEN 1 ELSE 0 END)         AS nc
     FROM DW_FAT_RESULTADO
     WHERE D_E_L_E_T IS NULL
+      AND (conformidade = 'CONFORME' OR conformidade = 'NÃO CONFORME')
       AND cod_ensaio IS NOT NULL
       AND data_resultado BETWEEN ? AND ?
     GROUP BY cod_ensaio, ensaio
@@ -957,9 +969,9 @@ export async function getRankingEnsaios(periodo: FiltroPeriodo, limit = 10) {
   `, [periodo.dataInicio, periodo.dataFim, limit]);
 
   return rows.map(r => ({
-    id:       Number(r.id),
-    nome:     r.nome,
+    id: Number(r.id),
+    nome: r.nome,
     amostras: Number(r.amostras),
-    nc:       Number(r.nc),
+    nc: Number(r.nc),
   }));
 }
