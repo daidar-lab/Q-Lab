@@ -46,6 +46,7 @@ export async function getMaturacao(params: MaturacaoParams) {
     WHERE lote_de_controle_de_qualidade IN (${placeholders})
     AND D_E_L_E_T IS NULL
     AND valor IS NOT NULL AND valor != ''
+    AND (conformidade = 'CONFORME' OR conformidade = 'NÃO CONFORME')
     ORDER BY lote_de_controle_de_qualidade, cod_amostra, cod_ensaio`,
     [...codLotes]
   );

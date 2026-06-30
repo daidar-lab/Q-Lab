@@ -3,9 +3,9 @@ import { blabQuery } from '../../db/blab.pool';
 export type TipoFisico = 'embalagem' | 'materia-prima' | 'quimicos';
 
 const eventoMap: Record<TipoFisico, string> = {
-  'embalagem':     'embalagem',
+  'embalagem': 'embalagem',
   'materia-prima': 'matéria prima',
-  'quimicos':      'Químicos',
+  'quimicos': 'Químicos',
 };
 
 interface FisicoParams {
@@ -85,6 +85,7 @@ export async function getFisico(params: FisicoParams) {
     AND data_resultado BETWEEN ? AND ?
     AND D_E_L_E_T IS NULL
     AND valor IS NOT NULL AND valor != ''
+    AND (conformidade = 'CONFORME' OR conformidade = 'NÃO CONFORME')
     ORDER BY cod_amostra, cod_ensaio`,
     [...codAmostras, data_inicial, data_final]
   );

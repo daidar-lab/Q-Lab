@@ -19,6 +19,7 @@ export async function getArCo2(params: ArCo2Params) {
     AND valor IS NOT NULL AND valor != ''
     AND cod_produto IN (153, 160)
     AND cod_laboratorio NOT IN (5, 17, 6, 20)
+    AND (conformidade = 'CONFORME' OR conformidade = 'NÃO CONFORME')
     ORDER BY cod_amostra, cod_ensaio`,
     [data_inicial, data_final]
   );

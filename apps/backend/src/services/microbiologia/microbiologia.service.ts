@@ -5,12 +5,12 @@ import { blabQuery, TABELA_FATO_PRINCIPAL } from '../../db/blab.pool';
 // ─── Tipos ────────────────────────────────────────────────────────────────────
 
 interface ParamsDataRange {
-  data_inicial: string; // YYYYMMDD
-  data_final: string;   // YYYYMMDD
+    data_inicial: string; // YYYYMMDD
+    data_final: string;   // YYYYMMDD
 }
 
 interface ParamsResultadosMicro extends ParamsDataRange {
-  cod_filial: number;
+    cod_filial: number;
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -20,10 +20,10 @@ interface ParamsResultadosMicro extends ParamsDataRange {
 // ─────────────────────────────────────────────────────────────────────────────
 
 export async function getEstabilidadeBiologicaMicro(params: ParamsDataRange) {
-  const { data_inicial, data_final } = params;
+    const { data_inicial, data_final } = params;
 
-  return blabQuery<any>(
-    `SELECT
+    return blabQuery<any>(
+        `SELECT
         cod_amostra,
         data_resultado,
         hora_resultado,
@@ -49,8 +49,8 @@ export async function getEstabilidadeBiologicaMicro(params: ParamsDataRange) {
     AND valor IS NOT NULL AND valor != ''
     AND cod_skip_lote NOT IN ('36', '54')
     ORDER BY cod_amostra, cod_ensaio`,
-    [data_inicial, data_final],
-  );
+        [data_inicial, data_final],
+    );
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -60,10 +60,10 @@ export async function getEstabilidadeBiologicaMicro(params: ParamsDataRange) {
 // ─────────────────────────────────────────────────────────────────────────────
 
 export async function getEstabilidadeBiologicaEnvase(params: ParamsDataRange) {
-  const { data_inicial, data_final } = params;
+    const { data_inicial, data_final } = params;
 
-  return blabQuery<any>(
-    `SELECT
+    return blabQuery<any>(
+        `SELECT
         cod_amostra,
         data_resultado,
         hora_resultado,
@@ -87,10 +87,11 @@ export async function getEstabilidadeBiologicaEnvase(params: ParamsDataRange) {
     WHERE data_resultado BETWEEN ? AND ?
     AND D_E_L_E_T IS NULL
     AND valor IS NOT NULL AND valor != ''
+    AND (conformidade = 'CONFORME' OR conformidade = 'NÃO CONFORME')
     AND cod_skip_lote IN ('36', '54')
     ORDER BY cod_amostra, cod_ensaio`,
-    [data_inicial, data_final],
-  );
+        [data_inicial, data_final],
+    );
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -100,36 +101,36 @@ export async function getEstabilidadeBiologicaEnvase(params: ParamsDataRange) {
 // ─────────────────────────────────────────────────────────────────────────────
 
 export async function getResultadosMicrobiologicos(params: ParamsResultadosMicro) {
-  const { cod_filial, data_inicial, data_final } = params;
+    const { cod_filial, data_inicial, data_final } = params;
 
-  // QUERY 1 — Âncora: resolve cod_lote_de_controle_de_qualidade[] via FAT_MICROBIOLOGIA
-  const ancora = await blabQuery<{ cod_lote_de_controle_de_qualidade: string }>(
-    `SELECT DISTINCT
+    // QUERY 1 — Âncora: resolve cod_lote_de_controle_de_qualidade[] via FAT_MICROBIOLOGIA
+    const ancora = await blabQuery<{ cod_lote_de_controle_de_qualidade: string }>(
+        `SELECT DISTINCT
         MIC.cod_lote_de_controle_de_qualidade
     FROM FAT_MICROBIOLOGIA MIC
     WHERE MIC.cod_filial = ?
     AND MIC.data_evento BETWEEN ? AND ?
     AND MIC.D_E_L_E_T IS NULL`,
-    [cod_filial, data_inicial, data_final],
-  );
+        [cod_filial, data_inicial, data_final],
+    );
 
-  if (!ancora || ancora.length === 0) {
-    return [];
-  }
+    if (!ancora || ancora.length === 0) {
+        return [];
+    }
 
-  const codLotes = ancora
-    .map((r) => r.cod_lote_de_controle_de_qualidade)
-    .filter((v): v is string => typeof v === 'string' && v !== '');
+    const codLotes = ancora
+        .map((r) => r.cod_lote_de_controle_de_qualidade)
+        .filter((v): v is string => typeof v === 'string' && v !== '');
 
-  if (codLotes.length === 0) {
-    return [];
-  }
+    if (codLotes.length === 0) {
+        return [];
+    }
 
-  const placeholders = codLotes.map(() => '?').join(', ');
+    const placeholders = codLotes.map(() => '?').join(', ');
 
-  // QUERY 2 — Final contra DW_FAT_RESULTADO
-  return blabQuery<any>(
-    `SELECT
+    // QUERY 2 — Final contra DW_FAT_RESULTADO
+    return blabQuery<any>(
+        `SELECT
         cod_amostra,
         data_resultado,
         hora_resultado,
@@ -150,11 +151,12 @@ export async function getResultadosMicrobiologicos(params: ParamsResultadosMicro
     FROM ${TABELA_FATO_PRINCIPAL}
     WHERE lote_de_controle_de_qualidade IN (${placeholders})
     AND D_E_L_E_T IS NULL
+    AND (conformidade = 'CONFORME' OR conformidade = 'NÃO CONFORME')
     AND valor IS NOT NULL AND valor != ''
     AND cod_produto NOT IN (14, 15)
     ORDER BY lote_de_controle_de_qualidade, cod_amostra, cod_ensaio`,
-    [...codLotes],
-  );
+        [...codLotes],
+    );
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -164,10 +166,10 @@ export async function getResultadosMicrobiologicos(params: ParamsResultadosMicro
 // ─────────────────────────────────────────────────────────────────────────────
 
 export async function getAguaDeEnxague(params: ParamsDataRange) {
-  const { data_inicial, data_final } = params;
+    const { data_inicial, data_final } = params;
 
-  return blabQuery<any>(
-    `SELECT
+    return blabQuery<any>(
+        `SELECT
         cod_amostra,
         data_resultado,
         hora_resultado,
@@ -186,10 +188,11 @@ export async function getAguaDeEnxague(params: ParamsDataRange) {
     WHERE data_resultado BETWEEN ? AND ?
     AND D_E_L_E_T IS NULL
     AND valor IS NOT NULL AND valor != ''
+    AND (conformidade = 'CONFORME' OR conformidade = 'NÃO CONFORME')
     AND cod_produto = 15
     ORDER BY cod_amostra, cod_ensaio`,
-    [data_inicial, data_final],
-  );
+        [data_inicial, data_final],
+    );
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -199,10 +202,10 @@ export async function getAguaDeEnxague(params: ParamsDataRange) {
 // ─────────────────────────────────────────────────────────────────────────────
 
 export async function getSwab(params: ParamsDataRange) {
-  const { data_inicial, data_final } = params;
+    const { data_inicial, data_final } = params;
 
-  return blabQuery<any>(
-    `SELECT
+    return blabQuery<any>(
+        `SELECT
         cod_amostra,
         data_resultado,
         hora_resultado,
@@ -221,8 +224,9 @@ export async function getSwab(params: ParamsDataRange) {
     WHERE data_resultado BETWEEN ? AND ?
     AND D_E_L_E_T IS NULL
     AND valor IS NOT NULL AND valor != ''
+    AND (conformidade = 'CONFORME' OR conformidade = 'NÃO CONFORME')
     AND cod_produto = 14
     ORDER BY cod_amostra, cod_ensaio`,
-    [data_inicial, data_final],
-  );
+        [data_inicial, data_final],
+    );
 }

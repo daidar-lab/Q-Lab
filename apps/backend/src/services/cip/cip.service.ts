@@ -4,7 +4,7 @@ export type TipoCip = 'envasamento' | 'processo';
 
 const labMap: Record<TipoCip, number[]> = {
   envasamento: [4, 16, 25],
-  processo:    [1, 15, 25],
+  processo: [1, 15, 25],
 };
 
 interface GetCipParams {
@@ -116,6 +116,7 @@ export async function getCip(params: GetCipParams) {
     WHERE data_resultado BETWEEN ? AND ?
     AND D_E_L_E_T IS NULL
     AND valor IS NOT NULL AND valor != ''
+    AND (conformidade = 'CONFORME' OR conformidade = 'NÃO CONFORME')
     AND cod_amostra IN (${codAmostrasPlaceholders})`,
     [data_inicial, data_final, ...codAmostras]
   );

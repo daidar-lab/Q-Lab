@@ -17,7 +17,7 @@ export async function getFermentacao(params: FermentacaoParams) {
   WHERE FER.cod_filial = ?
   AND FER.data BETWEEN ? AND ?
   AND FER.D_E_L_E_T IS NULL`;
-  
+
   const queryParams: any[] = [cod_filial, data_inicial, data_final];
 
   if (fermentadores && fermentadores.length > 0) {
@@ -46,6 +46,7 @@ export async function getFermentacao(params: FermentacaoParams) {
     WHERE lote_de_controle_de_qualidade IN (${placeholders})
     AND D_E_L_E_T IS NULL
     AND valor IS NOT NULL AND valor != ''
+    AND (conformidade = 'CONFORME' OR conformidade = 'NÃO CONFORME')
     ORDER BY lote_de_controle_de_qualidade, cod_amostra, cod_ensaio`,
     [...codLotes]
   );

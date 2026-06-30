@@ -78,6 +78,7 @@ export async function getAnaliseAuxiliar(params: AnaliseAuxiliarParams) {
     WHERE data_resultado BETWEEN ? AND ?
     AND D_E_L_E_T IS NULL
     AND valor IS NOT NULL AND valor != ''
+    AND (conformidade = 'CONFORME' OR conformidade = 'NÃO CONFORME')
     AND cod_amostra IN (${placeholders})`,
         [data_inicial, data_final, ...codAmostras]
     );

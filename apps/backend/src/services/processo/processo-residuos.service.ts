@@ -18,6 +18,7 @@ export async function getResiduos(params: ResiduosParams) {
     WHERE data_resultado BETWEEN ? AND ?
     AND D_E_L_E_T IS NULL
     AND valor IS NOT NULL AND valor != ''
+    AND (conformidade = 'CONFORME' OR conformidade = 'NÃO CONFORME')
     AND cod_produto IN (303, 304)
     ORDER BY cod_amostra, cod_ensaio`,
     [data_inicial, data_final]

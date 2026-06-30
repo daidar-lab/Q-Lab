@@ -71,6 +71,7 @@ export async function getProdutoAcabado(params: ProdutoAcabadoParams) {
         WHERE data_resultado BETWEEN ? AND ?
         AND D_E_L_E_T IS NULL
         AND valor IS NOT NULL AND valor != ''
+        AND (conformidade = 'CONFORME' OR conformidade = 'NÃO CONFORME')
         AND lote_de_controle_de_qualidade IN (${placeholders})
         AND cod_skip_lote IN ('33', '136')`,
         [data_inicial, data_final, ...codLotesStr]
