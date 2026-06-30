@@ -242,24 +242,15 @@ export async function handleKpisDashboard(req: Request, res: Response, next: Nex
   } catch (err) { next(err); }
 }
 
-import { getListaMacroProcessos } from '../services/macroProcesso.service';
-
 export async function handleRankingProcessos(req: Request, res: Response, next: NextFunction) {
   try {
     const { dataInicio, dataFim } = req.query as { dataInicio: string; dataFim: string };
-    const lista = await getListaMacroProcessos({ dataInicio, dataFim });
-    
-    // Mapeia para a interface do dashboard: { id, nome, amostras, nc }
-    const adaptada = lista.map((m, idx) => ({
-      id: idx + 1, // ou m.origem se o front aceitar string, mas como é pra substituir centros de custo de ID numérico no dashboard genérico
-      nome: m.origem,
-      amostras: m.n_amostras,
-      nc: m.n_nao_conforme,
-      tem_produto: m.tem_produto,
-      tem_processo: m.tem_processo,
-    }));
-
-    res.json(adaptada);
+    if (!dataInicio || !dataFim) {
+      res.status(400).json({ erro: 'dataInicio e dataFim são obrigatórios.' });
+      return;
+    }
+    const ranking = await getRankingProcessos({ dataInicio, dataFim });
+    res.json(ranking);
   } catch (err) { next(err); }
 }
 

@@ -22,11 +22,13 @@ export function useDashboard(periodo: FiltroPeriodo) {
     setCarregando(true);
     setErro(null);
 
+    const f = { dataInicio: periodo.dataInicio, dataFim: periodo.dataFim };
+
     Promise.all([
-      api.getKpisDashboard(periodo),
-      api.getRankingProcessos(periodo),
-      api.getRankingProdutos(periodo),
-      api.getRankingEnsaios(periodo),
+      api.getKpisDashboard(f),
+      api.getRankingProcessos(f),
+      api.getRankingProdutos(f),
+      api.getRankingEnsaios(f),
     ])
       .then(([k, p, pr, e]) => {
         setKpis(k);

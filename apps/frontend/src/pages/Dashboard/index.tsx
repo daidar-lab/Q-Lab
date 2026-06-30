@@ -10,15 +10,24 @@ const CATEGORIAS_META = [
   { tipo: 'ensaios', label: 'Ensaios', icon: '⬡' },
 ] as const;
 
+// Agrupamento dos macro-processos para visualização em árvore
+const MACRO_GRUPOS_CONFIG = [
+  { id: 'processo-produtivo', label: 'Processos', subids: ['fermentacao', 'filtracao', 'brassagem', 'maturacao', 'desalcoolizacao', 'captacao', 'tratamento-efluentes'] },
+  { id: 'fisico', label: 'Físico', subids: ['fisico-embalagem', 'fisico-materia-prima', 'fisico-quimicos'] },
+  { id: 'envase', label: 'Envase', subids: ['envase-arrolhamento', 'envase-interunidades'] },
+  { id: 'microbiologia', label: 'Microbiologia', subids: ['microbiologia-estabilidade-micro', 'microbiologia-estabilidade-envase'] },
+  { id: 'cip', label: 'CIP', subids: ['cip'] },
+  { id: 'fermento', label: 'Fermento', subids: ['fermento'] },
+];
+
 export default function DashboardPage() {
   const navigate = useNavigate();
   const { ctx } = useContexto();
   const periodo = { dataInicio: ctx.dataInicio ?? '', dataFim: ctx.dataFim ?? '' };
   const { kpis, processos, produtos, ensaios, carregando, erro } = useDashboard(periodo);
-  const [expandedMacro, setExpandedMacro] = useState<string | null>(null);
-  const [expandedCategories, setExpandedCategories] = useState<Record<string, boolean>>({});
-
   const dadosPorTipo: Record<string, typeof processos> = { processos, produtos, ensaios };
+  const [expandedCategories, setExpandedCategories] = useState<Record<string, boolean>>({});
+  const [expandedMacros, setExpandedMacros] = useState<Record<string, boolean>>({});
 
   const kpiCard: CSSProperties = {
     background: 'var(--clr-surface)', border: '1px solid var(--clr-border)',
@@ -58,6 +67,21 @@ export default function DashboardPage() {
     };
   }
 
+  // Prepara os macro grupos aglutinados a partir da lista plana de processos vinda da API
+  const macroGruposAglutinados = MACRO_GRUPOS_CONFIG.map(grupo => {
+    const subitens = processos.filter(p => grupo.subids.includes(String(p.id)));
+    const amostras = subitens.reduce((s, i) => s + i.amostras, 0);
+    const nc = subitens.reduce((s, i) => s + i.nc, 0);
+    return {
+      id: grupo.id,
+      nome: grupo.label,
+      amostras,
+      nc,
+      subitens
+    };
+  }).filter(g => g.subitens.length > 0 || g.nc > 0 || g.amostras > 0)
+    .sort((a, b) => b.nc - a.nc);
+
   return (
     <div style={{ padding: '28px 24px', maxWidth: '1200px', margin: '0 auto' }}>
 
@@ -67,7 +91,7 @@ export default function DashboardPage() {
           { label: 'AMOSTRAS ANALISADAS', value: kpis.amostras.valor.toLocaleString('pt-BR'), delta: formatDelta(kpis.amostras.deltaPct) },
           { label: 'ENSAIOS REALIZADOS', value: kpis.ensaios.valor.toLocaleString('pt-BR'), delta: formatDelta(kpis.ensaios.deltaPct) },
           { label: 'ENSAIOS INFORMATIVOS', value: kpis.informativos.valor.toLocaleString('pt-BR'), delta: formatDelta(kpis.informativos.deltaPct) },
-          { label: 'NÃO CONFORMIDADES', value: kpis.naoConformidades.valor.toLocaleString('pt-BR'), delta: formatDelta(kpis.naoConformidades.deltaPct, true) },
+          { label: 'NÃO CONFORME', value: kpis.naoConformidades.valor.toLocaleString('pt-BR'), delta: formatDelta(kpis.naoConformidades.deltaPct, true) },
           {
             label: 'CONFORMIDADE', value: `${kpis.conformidade.valor}%`,
             delta: { texto: `— meta ${kpis.conformidade.meta}%`, cor: 'var(--clr-text-3)' }
@@ -84,9 +108,11 @@ export default function DashboardPage() {
           </div>
         ))}
       </div>
+
       <div style={{ marginBottom: '28px' }}>
         <ResumoAutomatico dataInicio={periodo.dataInicio} dataFim={periodo.dataFim} />
       </div>
+
       {/* Categorias com dados reais */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
         <h2 style={{ margin: 0, fontSize: '16px', fontWeight: 700, color: 'var(--clr-text)' }}>Explorar por categoria</h2>
@@ -95,10 +121,11 @@ export default function DashboardPage() {
 
       <div style={{ display: 'flex', gap: '16px', flexWrap: 'wrap' }}>
         {CATEGORIAS_META.map(cat => {
-          const itens = dadosPorTipo[cat.tipo] ?? [];
-          const ncTotal = itens.reduce((s, i) => s + Number(i.nc), 0);
+          const isProcessos = cat.tipo === 'processos';
+          const totalItens = isProcessos ? macroGruposAglutinados : (dadosPorTipo[cat.tipo] ?? []);
+          const ncTotal = totalItens.reduce((s, i) => s + Number(i.nc), 0);
           const isCategoryExpanded = !!expandedCategories[cat.tipo];
-          const visibleItens = isCategoryExpanded ? itens.slice(0, 10) : itens.slice(0, 3);
+          const visibleItens = isCategoryExpanded ? totalItens : totalItens.slice(0, 3);
 
           return (
             <div key={cat.tipo} style={catCard}>
@@ -118,29 +145,17 @@ export default function DashboardPage() {
                 </div>
               )}
 
-              {visibleItens.map((item, i) => {
-                const isExpanded = cat.tipo === 'processos' && expandedMacro === item.nome;
+              {/* Renderização de Processos (Estrutura de Árvore) */}
+              {isProcessos && (visibleItens as typeof macroGruposAglutinados).map((macro, i) => {
+                const isMacroExpanded = !!expandedMacros[macro.id];
                 return (
-                  <div key={item.id}>
+                  <div key={macro.id} style={{ borderBottom: i < visibleItens.length - 1 ? '1px solid var(--clr-border)' : 'none' }}>
                     <div
                       onClick={() => {
-                        if (cat.tipo === 'processos') {
-                          const temProduto = item.tem_produto !== false;
-                          const temProcesso = item.tem_processo === true;
-                          if (temProduto && temProcesso) {
-                            setExpandedMacro(prev => prev === item.nome ? null : item.nome);
-                          } else if (temProcesso) {
-                            navigate(`/detalhe/Macro-Processo/${item.nome}/processo`);
-                          } else {
-                            navigate(`/detalhe/Macro-Processo/${item.nome}/produto`);
-                          }
-                        } else {
-                          navigate(`/detalhe/${cat.tipo}/${item.id}`);
-                        }
+                        setExpandedMacros(prev => ({ ...prev, [macro.id]: !prev[macro.id] }));
                       }}
                       style={{
                         padding: '14px 20px',
-                        borderBottom: (!isExpanded && i < visibleItens.length - 1) ? '1px solid var(--clr-border)' : 'none',
                         display: 'flex', justifyContent: 'space-between', alignItems: 'center',
                         cursor: 'pointer', transition: 'background var(--t-fast)',
                       }}
@@ -148,76 +163,74 @@ export default function DashboardPage() {
                       onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
                     >
                       <div>
-                        <div style={{ fontSize: '14px', fontWeight: 600, color: 'var(--clr-text)' }}>{item.nome}</div>
-                        <div style={{ fontSize: '12px', color: 'var(--clr-text)', marginTop: '2px' }}>{item.amostras} amostras</div>
+                        <div style={{ fontSize: '14px', fontWeight: 700, color: 'var(--clr-text)', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                          <span>{isMacroExpanded ? '▼' : '▶'}</span>
+                          <span>{macro.nome}</span>
+                        </div>
+                        <div style={{ fontSize: '12px', color: 'var(--clr-text-3)', marginTop: '2px', paddingLeft: '14px' }}>
+                          {macro.amostras} amostras
+                        </div>
                       </div>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                        {cat.tipo === 'processos' && (item.tem_produto !== false && item.tem_processo === true) && (
-                          <span style={{
-                            fontSize: '10px',
-                            color: 'var(--clr-text)',
-                            transition: 'transform var(--t-fast)',
-                            transform: isExpanded ? 'rotate(90deg)' : 'rotate(0deg)',
-                            display: 'inline-block',
-                            marginRight: '4px'
-                          }}>
-                            ▶
-                          </span>
-                        )}
-                        <span style={{ minWidth: '28px', textAlign: 'center', fontSize: '13px', fontWeight: 700, color: '#fff', background: item.nc > 10 ? 'var(--clr-danger)' : 'var(--clr-warning)', padding: '2px 8px', borderRadius: 'var(--r-full)' }}>
-                          {item.nc}
-                        </span>
-                      </div>
+                      <span style={{ minWidth: '28px', textAlign: 'center', fontSize: '13px', fontWeight: 700, color: '#fff', background: macro.nc > 10 ? 'var(--clr-danger)' : macro.nc > 0 ? 'var(--clr-warning)' : 'var(--clr-text-3)', padding: '2px 8px', borderRadius: 'var(--r-full)' }}>
+                        {macro.nc}
+                      </span>
                     </div>
 
-                    {isExpanded && (
-                      <div style={{
-                        background: 'var(--clr-border)',
-                        borderBottom: i < visibleItens.length - 1 ? '1px solid var(--clr-border)' : 'none'
-                      }}>
-                        <div
-                          onClick={() => navigate(`/detalhe/macro-processo/${item.nome}/produto`)}
-                          style={{
-                            padding: '10px 20px 10px 36px',
-                            cursor: 'pointer',
-                            fontSize: '13px',
-                            fontWeight: 600,
-                            color: 'var(--clr-text-2)',
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: '8px',
-                            transition: 'background var(--t-fast)',
-                          }}
-                          onMouseEnter={e => (e.currentTarget.style.background = 'var(--clr-surface-3)')}
-                          onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
-                        >
-                          <span style={{ fontSize: '14px' }}></span> Produto
-                        </div>
-                        <div
-                          onClick={() => navigate(`/detalhe/macro-processo/${item.nome}/processo`)}
-                          style={{
-                            padding: '10px 20px 10px 36px',
-                            cursor: 'pointer',
-                            fontSize: '13px',
-                            fontWeight: 600,
-                            color: 'var(--clr-text-2)',
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: '8px',
-                            transition: 'background var(--t-fast)',
-                          }}
-                          onMouseEnter={e => (e.currentTarget.style.background = 'var(--clr-surface-3)')}
-                          onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
-                        >
-                          <span style={{ fontSize: '14px' }}></span> Processo
-                        </div>
+                    {isMacroExpanded && (
+                      <div style={{ background: 'var(--clr-surface-2)', paddingLeft: '16px', borderTop: '1px dashed var(--clr-border)' }}>
+                        {macro.subitens.map((sub, idx) => (
+                          <div
+                            key={String(sub.id)}
+                            onClick={() => navigate(`/detalhe/processos/${sub.id}`)}
+                            style={{
+                              padding: '10px 20px',
+                              borderBottom: idx < macro.subitens.length - 1 ? '1px solid var(--clr-border)' : 'none',
+                              display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                              cursor: 'pointer',
+                            }}
+                            onMouseEnter={e => (e.currentTarget.style.background = 'var(--clr-border)')}
+                            onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
+                          >
+                            <span style={{ fontSize: '13px', fontWeight: 500, color: 'var(--clr-text-2)' }}>{sub.nome}</span>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                              <span style={{ fontSize: '11px', color: 'var(--clr-text-3)' }}>{sub.amostras} amostras</span>
+                              <span style={{ minWidth: '20px', textAlign: 'center', fontSize: '11px', fontWeight: 700, color: '#fff', background: sub.nc > 10 ? 'var(--clr-danger)' : sub.nc > 0 ? 'var(--clr-warning)' : 'var(--clr-text-3)', padding: '1px 6px', borderRadius: 'var(--r-full)' }}>
+                                {sub.nc}
+                              </span>
+                            </div>
+                          </div>
+                        ))}
                       </div>
                     )}
                   </div>
                 );
               })}
 
-              {itens.length > 3 && (
+              {/* Renderização de Outras Categorias (Produtos e Ensaios planos) */}
+              {!isProcessos && visibleItens.map((item, i) => (
+                <div
+                  key={String(item.id)}
+                  onClick={() => navigate(`/detalhe/${cat.tipo}/${item.id}`)}
+                  style={{
+                    padding: '14px 20px',
+                    borderBottom: i < visibleItens.length - 1 ? '1px solid var(--clr-border)' : 'none',
+                    display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                    cursor: 'pointer', transition: 'background var(--t-fast)',
+                  }}
+                  onMouseEnter={e => (e.currentTarget.style.background = 'var(--clr-surface-2)')}
+                  onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
+                >
+                  <div>
+                    <div style={{ fontSize: '14px', fontWeight: 600, color: 'var(--clr-text)' }}>{item.nome}</div>
+                    <div style={{ fontSize: '12px', color: 'var(--clr-text-3)', marginTop: '2px' }}>{item.amostras} amostras</div>
+                  </div>
+                  <span style={{ minWidth: '28px', textAlign: 'center', fontSize: '13px', fontWeight: 700, color: '#fff', background: item.nc > 10 ? 'var(--clr-danger)' : item.nc > 0 ? 'var(--clr-warning)' : 'var(--clr-text-3)', padding: '2px 8px', borderRadius: 'var(--r-full)' }}>
+                    {item.nc}
+                  </span>
+                </div>
+              ))}
+
+              {totalItens.length > 3 && (
                 <div
                   onClick={() => {
                     setExpandedCategories(prev => ({

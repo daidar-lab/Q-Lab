@@ -47,7 +47,7 @@ export async function getEstabilidadeBiologicaMicro(params: ParamsDataRange) {
     WHERE data_resultado BETWEEN ? AND ?
     AND D_E_L_E_T IS NULL
     AND valor IS NOT NULL AND valor != ''
-    AND cod_skip_lote NOT IN ('36', '54')
+    AND (cod_skip_lote NOT IN ('36', '54') OR cod_skip_lote IS NULL)
     ORDER BY cod_amostra, cod_ensaio`,
         [data_inicial, data_final],
     );

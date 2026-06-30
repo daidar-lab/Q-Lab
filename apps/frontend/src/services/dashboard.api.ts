@@ -14,17 +14,17 @@ interface KpiValor {
 interface KpisDashboard {
     amostras: KpiValor;
     ensaios: KpiValor;
+    informativos: KpiValor;
     naoConformidades: KpiValor;
     conformidade: { valor: number; meta: number };
 }
 
+// id é string para processos (ex: 'fermentacao', 'cip') e number para produtos/ensaios
 export interface RankingItem {
-    id: number;
+    id: string | number;
     nome: string;
     amostras: number;
     nc: number;
-    tem_produto?: boolean;
-    tem_processo?: boolean;
 }
 
 export const getKpisDashboard = (f: FiltroPeriodo) =>
