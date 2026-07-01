@@ -837,18 +837,10 @@ export interface FiltroPeriodo {
   dataFim: string;
 }
 
-// 1. KPIs globais — corrigidos para isolar ensaios informativos ("NÃO AVALIADO")
+// 1. KPIs globais — Otimizados: removido o período anterior para economizar processamento
 export async function getKpisDashboard(periodo: FiltroPeriodo) {
-  const inicio = new Date(periodo.dataInicio);
-  const fim = new Date(periodo.dataFim);
-  const dias = Math.ceil((fim.getTime() - inicio.getTime()) / 86400000);
-
-  const fimAnterior = new Date(inicio.getTime() - 86400000);
-  const inicioAnterior = new Date(fimAnterior.getTime() - dias * 86400000);
-  const fmt = (d: Date) => d.toISOString().slice(0, 10);
-
+  // Executa uma query direta e linear (Sem GROUP BY e sem varrer o passado)
   const rows = await blabQuery<{
-    periodo: 'atual' | 'anterior';
     amostras: number;
     ensaios: number;
     informativos: number;
@@ -856,10 +848,6 @@ export async function getKpisDashboard(periodo: FiltroPeriodo) {
     pct_conformidade: number;
   }>(`
     SELECT
-      CASE
-        WHEN data_resultado BETWEEN ? AND ? THEN 'atual'
-        ELSE 'anterior'
-      END                                                                 AS periodo,
       COUNT(DISTINCT cod_amostra)                                         AS amostras,
       COUNT(*)                                                            AS ensaios,
       SUM(conformidade = 'NÃO AVALIADO')                                  AS informativos,
@@ -871,30 +859,16 @@ export async function getKpisDashboard(periodo: FiltroPeriodo) {
       )                                                                   AS pct_conformidade
     FROM DW_FAT_RESULTADO
     WHERE D_E_L_E_T IS NULL 
-      AND (
-        data_resultado BETWEEN ? AND ?
-        OR data_resultado BETWEEN ? AND ?
-      )
-    GROUP BY periodo
-  `, [
-    periodo.dataInicio, periodo.dataFim,        // CASE
-    periodo.dataInicio, periodo.dataFim,        // WHERE atual
-    fmt(inicioAnterior), fmt(fimAnterior),      // WHERE anterior
-  ]);
+      AND data_resultado BETWEEN ? AND ?
+  `, [periodo.dataInicio, periodo.dataFim]);
 
-  const atual = rows.find(r => r.periodo === 'atual');
-  const anterior = rows.find(r => r.periodo === 'anterior');
-
-  function delta(a: number | undefined, b: number | undefined) {
-    if (a === undefined || b === undefined || b === 0) return null;
-    return Number((((a - b) / b) * 100).toFixed(1));
-  }
+  const atual = rows[0]; // Como não tem GROUP BY, sempre retorna exatamente 1 linha
 
   return {
-    amostras: { valor: Number(atual?.amostras ?? 0), deltaPct: delta(atual?.amostras, anterior?.amostras) },
-    ensaios: { valor: Number(atual?.ensaios ?? 0), deltaPct: delta(atual?.ensaios, anterior?.ensaios) },
-    informativos: { valor: Number(atual?.informativos ?? 0), deltaPct: delta(atual?.informativos, anterior?.informativos) },
-    naoConformidades: { valor: Number(atual?.nao_conformidades ?? 0), deltaPct: delta(atual?.nao_conformidades, anterior?.nao_conformidades) },
+    amostras: { valor: Number(atual?.amostras ?? 0), deltaPct: null },
+    ensaios: { valor: Number(atual?.ensaios ?? 0), deltaPct: null },
+    informativos: { valor: Number(atual?.informativos ?? 0), deltaPct: null },
+    naoConformidades: { valor: Number(atual?.nao_conformidades ?? 0), deltaPct: null },
     conformidade: { valor: Number(atual?.pct_conformidade ?? 0), meta: 95.0 },
   };
 }
@@ -989,17 +963,17 @@ export function resolverFiltroPorId(id: string | number): { sql: string; params:
   // ── Grupo B: prefixo de lote_de_controle_de_qualidade ────────────────────
   // Atenção à ordem: mais específico primeiro (LCQFI antes de LCQF, LCQCP antes de LCQC)
   const prefixMap: Record<string, string> = {
-    'filtracao':             'LCQFI',   // deve vir antes de fermentacao
-    'fermentacao':           'LCQF',
-    'brassagem':             'LCQB',
-    'maturacao':             'LCQM',
-    'desalcoolizacao':       'LCQD',
-    'captacao':              'LCQCP',   // deve vir antes de cip
-    'tratamento-efluentes':  'LCQTE',
+    'filtracao': 'LCQFI',   // deve vir antes de fermentacao
+    'fermentacao': 'LCQF',
+    'brassagem': 'LCQB',
+    'maturacao': 'LCQM',
+    'desalcoolizacao': 'LCQD',
+    'captacao': 'LCQCP',   // deve vir antes de cip
+    'tratamento-efluentes': 'LCQTE',
     // 'cip' foi movido para slugDireto (cod_laboratorio) — sem âncora via lote
-    'envase-produto-acabado':'LCQE',
+    'envase-produto-acabado': 'LCQE',
     'microbiologia-resultados': 'LCQMB',
-    'envase-interunidades':  'LCQE',    // mesma âncora do produto acabado, skip_lote diferencia
+    'envase-interunidades': 'LCQE',    // mesma âncora do produto acabado, skip_lote diferencia
   };
 
   if (prefixMap[idStr]) {
@@ -1020,46 +994,46 @@ export function resolverFiltroPorId(id: string | number): { sql: string; params:
 // ─── Labels legíveis por categoria ───────────────────────────────────────────
 const LABELS_CATEGORIA: Record<string, string> = {
   // Fermento
-  'fermento':                        'Fermento',
+  'fermento': 'Fermento',
 
   // Microbiologia
-  'microbiologia-estabilidade-micro':  'Estabilidade Biológica Micro',
+  'microbiologia-estabilidade-micro': 'Estabilidade Biológica Micro',
   'microbiologia-estabilidade-envase': 'Estabilidade Biológica Envase',
-  'microbiologia-resultados':          'Resultados Microbiológicos',
-  'microbiologia-agua-enxague':        'Água de Enxague',
-  'microbiologia-swab':                'SWAB',
+  'microbiologia-resultados': 'Resultados Microbiológicos',
+  'microbiologia-agua-enxague': 'Água de Enxague',
+  'microbiologia-swab': 'SWAB',
 
   // Envase
-  'envase-produto-acabado':            'Produto Acabado',
-  'envase-chopp':                      'Chopp',
-  'envase-arrolhamento':               'Arrolhamento',
-  'envase-assoprador':                 'Assoprador',
-  'envase-lubrificante':               'Lubrificante de Esteira',
-  'envase-recravacao':                 'Recravação',
-  'envase-pasteurizador':              'Pasteurizador',
-  'envase-interunidades':              'Produto Interunidades',
+  'envase-produto-acabado': 'Produto Acabado',
+  'envase-chopp': 'Chopp',
+  'envase-arrolhamento': 'Arrolhamento',
+  'envase-assoprador': 'Assoprador',
+  'envase-lubrificante': 'Lubrificante de Esteira',
+  'envase-recravacao': 'Recravação',
+  'envase-pasteurizador': 'Pasteurizador',
+  'envase-interunidades': 'Produto Interunidades',
 
   // Processo
-  'fermentacao':                       'Fermentação',
-  'filtracao':                         'Filtração',
-  'brassagem':                         'Brassagem',
-  'maturacao':                         'Maturação',
-  'desalcoolizacao':                   'Desalcoolização',
-  'captacao':                          'Captação',
-  'tratamento-efluentes':              'Tratamento de Efluentes',
-  'residuos':                          'Resíduos',
-  'ar-co2':                            'Ar Comprimido e CO2',
-  'co2-beneficiado':                   'CO2 Beneficiado',
+  'fermentacao': 'Fermentação',
+  'filtracao': 'Filtração',
+  'brassagem': 'Brassagem',
+  'maturacao': 'Maturação',
+  'desalcoolizacao': 'Desalcoolização',
+  'captacao': 'Captação',
+  'tratamento-efluentes': 'Tratamento de Efluentes',
+  'residuos': 'Resíduos',
+  'ar-co2': 'Ar Comprimido e CO2',
+  'co2-beneficiado': 'CO2 Beneficiado',
 
   // CIP
-  'cip':                               'CIP',
-  'cip-envasamento':                   'CIP — Envasamento',
-  'cip-processo':                      'CIP — Processo',
+  'cip': 'CIP',
+  'cip-envasamento': 'CIP — Envasamento',
+  'cip-processo': 'CIP — Processo',
 
   // Físico
-  'fisico-embalagem':                  'Físico — Embalagem',
-  'fisico-materia-prima':              'Físico — Matéria-Prima',
-  'fisico-quimicos':                   'Físico — Químicos',
+  'fisico-embalagem': 'Físico — Embalagem',
+  'fisico-materia-prima': 'Físico — Matéria-Prima',
+  'fisico-quimicos': 'Físico — Químicos',
 };
 
 

@@ -108,7 +108,7 @@ export default function DashboardPage() {
   }
 
   function formatDelta(deltaPct: number | null, invertido = false) {
-    if (deltaPct == null) return { texto: '—', cor: 'var(--clr-text-3)' };
+    if (deltaPct == null) return { texto: '', cor: 'var(--clr-text-3)' };
     const positivo = invertido ? deltaPct < 0 : deltaPct > 0;
     const seta = deltaPct > 0 ? '▲' : deltaPct < 0 ? '▼' : '—';
     return {

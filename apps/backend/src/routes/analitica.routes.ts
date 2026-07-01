@@ -17,6 +17,7 @@
 
 import { Router } from 'express';
 import { authMiddleware } from '../middlewares/auth.middleware';
+import { cacheMiddleware } from '../middlewares/cache.middleware';
 import {
     handleRotar,
     handleNumericoSerie,
@@ -39,6 +40,7 @@ import {
 } from '../controllers/analitica.controller';
 
 const router = Router();
+const cache = cacheMiddleware();
 
 router.use(authMiddleware);
 
@@ -65,12 +67,12 @@ router.post('/faixa/comparacao', handleFaixaComparacao);
 router.post('/categorico/comparacao', handleCategoricoComparacao);
 
 // Detalhe de amostra
-router.get('/amostra/:codAmostra', handleDetalheAmostra);
+router.get('/amostra/:codAmostra', cache, handleDetalheAmostra);
 router.post('/amostra/por-bin', handleAmostrasPorBin);
 
-router.get('/dashboard/kpis',               handleKpisDashboard);
-router.get('/dashboard/ranking/processos',  handleRankingProcessos);
-router.get('/dashboard/ranking/produtos',   handleRankingProdutos);
-router.get('/dashboard/ranking/ensaios',    handleRankingEnsaios);
+router.get('/dashboard/kpis',               cache, handleKpisDashboard);
+router.get('/dashboard/ranking/processos',  cache, handleRankingProcessos);
+router.get('/dashboard/ranking/produtos',   cache, handleRankingProdutos);
+router.get('/dashboard/ranking/ensaios',    cache, handleRankingEnsaios);
 
 export default router;

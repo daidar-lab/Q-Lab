@@ -1,50 +1,55 @@
+// src/middlewares/cache.middleware.ts
 import { Request, Response, NextFunction } from 'express';
 import { redisClient } from '../db/redis';
 
-/**
- * Middleware para cachear rotas baseado na URL e Query Parameters
- * @param ttl Segundos que o cache ficará ativo (padrão: 5 minutos)
- */
-export function cacheMiddleware(ttl: number = 300) {
+export function cacheMiddleware() {
     return async (req: Request, res: Response, next: NextFunction): Promise<void> => {
-        // Não cacheamos métodos que alteram dados (POST, PUT, DELETE)
-        if (req.method !== 'GET') {
-            return next();
-        }
+        if (req.method !== 'GET') return next();
 
-        // Cria uma chave única baseada na rota + parâmetros de filtro (ex: dataInicio, dataFim)
         const cacheKey = `api-cache:${req.originalUrl || req.url}`;
 
+        // ─── LÓGICA DE TEMPO INTELIGENTE ───
+        let ttl = 300; // Padrão: 5 minutos para dados recentes
+
+        // Se a requisição tiver um filtro de dataFim (padrão dos seus dashboards)
+        if (req.query.dataFim) {
+            const dataFimFiltro = new Date(req.query.dataFim as string);
+            const hoje = new Date();
+
+            // Zera as horas para comparar apenas os dias
+            hoje.setHours(0, 0, 0, 0);
+            dataFimFiltro.setHours(0, 0, 0, 0);
+
+            // Se o período filtrado já acabou (ex: mês passado), o dado NUNCA mais vai mudar
+            // Então podemos cachear com segurança por 24 horas (86400) ou até mais!
+            if (dataFimFiltro < hoje) {
+                ttl = 86400; // 24 horas
+            }
+        }
+
         try {
-            // 1. Tenta buscar do Redis
             const cachedResponse = await redisClient.get(cacheKey);
 
             if (cachedResponse) {
-                // Cache Hit! Retorna direto pro usuário sem passar pelos controllers/services
-                res.setHeader('X-Cache', 'HIT'); // Header opcional para debug no Insomnia/Postman
+                res.setHeader('X-Cache', 'HIT');
                 res.setHeader('Content-Type', 'application/json');
                 res.send(cachedResponse);
                 return;
             }
 
-            // 2. Cache Miss: Intercepta o método res.json para guardar a resposta no banco
             res.setHeader('X-Cache', 'MISS');
             const originalJson = res.json;
 
             res.json = function (body: any): Response {
-                // Restaura a função original para enviar a resposta pro cliente
                 res.json = originalJson;
-
-                // Salva o resultado no Redis em segundo plano (sem travar a resposta)
                 redisClient.set(cacheKey, JSON.stringify(body), { EX: ttl })
-                    .catch(err => console.error('⚠️ Erro ao salvar cache no middleware:', err));
-
+                    .catch(err => console.error('⚠️ Erro ao salvar cache:', err));
                 return res.json(body);
             };
 
             next();
         } catch (error) {
-            console.error('⚠️ Erro no middleware de cache, seguindo direto para o banco:', error);
+            console.error('⚠️ Erro no cache:', error);
             next();
         }
     };

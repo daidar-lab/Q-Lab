@@ -18,6 +18,7 @@
 
 import { Router } from 'express';
 import { authMiddleware } from '../middlewares/auth.middleware';
+import { cacheMiddleware } from '../middlewares/cache.middleware';
 import {
     handleGetProdutos,
     handleGetCentros,
@@ -29,19 +30,20 @@ import {
 } from '../controllers/opcoes.controller';
 
 const router = Router();
+const cache = cacheMiddleware();
 
 // Todas as rotas protegidas por JWT
 router.use(authMiddleware);
 
 // ── Drill-down ───────────────────────────────────────────────────────────────
-router.get('/produtos', handleGetProdutos);
-router.get('/centros', handleGetCentros);
-router.get('/bens', handleGetBens);
-router.get('/skip-lotes', handleGetSkipLotes);
-router.get('/ensaios', handleGetEnsaios);
+router.get('/produtos',      cache, handleGetProdutos);
+router.get('/centros',       cache, handleGetCentros);
+router.get('/bens',          cache, handleGetBens);
+router.get('/skip-lotes',    cache, handleGetSkipLotes);
+router.get('/ensaios',       cache, handleGetEnsaios);
 
 // ── Entrada direta (busca LIKE) ───────────────────────────────────────────────
-router.get('/buscar/ensaios', handleBuscarEnsaios);
-router.get('/buscar/produtos', handleBuscarProdutos);
+router.get('/buscar/ensaios',  cache, handleBuscarEnsaios);
+router.get('/buscar/produtos', cache, handleBuscarProdutos);
 
 export default router;
