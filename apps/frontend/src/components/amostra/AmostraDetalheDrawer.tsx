@@ -1,4 +1,4 @@
-import React, { useEffect, useState, type CSSProperties } from 'react';
+import { useEffect, useState, type CSSProperties } from 'react';
 import { detalheApi } from '../../services/detalhe.api';
 
 interface AmostraEnsaioRow {
@@ -98,8 +98,16 @@ export function AmostraDetalheDrawer({ open, onClose, codAmostra, codEnsaioAtual
     };
 
     return (
-        <div style={overlay} onClick={e => e.target === e.currentTarget && onClose()}>
-            <div style={drawer}>
+        <div
+            style={overlay}
+            onClick={e => {
+                e.stopPropagation();
+                if (e.target === e.currentTarget) {
+                    onClose();
+                }
+            }}
+        >
+            <div style={drawer} onClick={e => e.stopPropagation()}>
                 {/* Header */}
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', borderBottom: '1px solid #e4e4e7', paddingBottom: '16px' }}>
                     <div>

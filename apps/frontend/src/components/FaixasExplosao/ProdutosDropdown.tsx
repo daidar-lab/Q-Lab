@@ -147,9 +147,6 @@ export const ProdutosDropdown: React.FC<ProdutosDropdownProps> = ({
                     className={styles.checkbox}
                   />
                 </td>
-                <td className={`${styles.td} ${styles.sku}`}>
-                  {p.cod_produto}
-                </td>
                 <td className={`${styles.td} ${styles.productName}`}>
                   {p.produto}
                 </td>

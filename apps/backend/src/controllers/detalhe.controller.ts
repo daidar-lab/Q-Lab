@@ -22,7 +22,7 @@ export async function getDetalhe(req: Request, res: Response, next: NextFunction
 
         const data = await DetalheService.getDetalheCompleto({
             tipo: tipoNormalizado,
-            id: Number(id),
+            id: isNaN(Number(id)) ? id : Number(id),
             dataInicio: String(dataInicio),
             dataFim: String(dataFim),
         });

@@ -1,4 +1,5 @@
 import { blabQuery } from '../db/blab.pool';
+import { resolverFiltroPorId } from './analitica.service';
 
 export interface FaixaExplosaoRow {
     lie: number;
@@ -37,22 +38,18 @@ export interface HistoricoProdutoRow {
 }
 
 // ─── Discriminador de contexto ────────────────────────────────────────────────
-// 'centro' → filtra por cod_centro_de_custo (fluxo original)
-// 'lcq'    → filtra por lote_de_controle_de_qualidade LIKE (fluxo macro processo)
+// Resolve o filtro usando a nova função resolverFiltroPorId exportada.
+// Mantém suporte a prefixos legados 'LCQ...'.
 
-type ModoFiltro = { tipo: 'centro'; id: string } | { tipo: 'lcq'; prefixo: string };
-
-function resolverFiltroContexto(modo: ModoFiltro): { sql: string; params: unknown[] } {
-    if (modo.tipo === 'centro') {
-        return { sql: 'AND dw.cod_centro_de_custo = ?', params: [modo.id] };
+function resolverFiltroContexto(id: string): { sql: string; params: unknown[] } {
+    if (id.startsWith('LCQ')) {
+        return { sql: 'AND dw.lote_de_controle_de_qualidade LIKE ?', params: [`${id}%`] };
     }
-    return { sql: 'AND dw.lote_de_controle_de_qualidade LIKE ?', params: [`${modo.prefixo}%`] };
-}
-
-function resolverModo(id: string): ModoFiltro {
-    // Se o id começa com 'LCQ', é prefixo de macro processo
-    if (id.startsWith('LCQ')) return { tipo: 'lcq', prefixo: id };
-    return { tipo: 'centro', id };
+    const filtro = resolverFiltroPorId(id);
+    return {
+        sql: `AND (${filtro.sql})`,
+        params: filtro.params,
+    };
 }
 
 /**
@@ -64,7 +61,7 @@ export async function getExplosaoFaixas(
     dataInicio: string,
     dataFim: string
 ): Promise<FaixaExplosaoRow[]> {
-    const { sql: filtroCtx, params: paramsCtx } = resolverFiltroContexto(resolverModo(id));
+    const { sql: filtroCtx, params: paramsCtx } = resolverFiltroContexto(id);
 
     return blabQuery(`
     SELECT
@@ -99,7 +96,7 @@ export async function getProdutosPorFaixa(
     dataInicio: string,
     dataFim: string
 ): Promise<ProdutoFaixaRow[]> {
-    const { sql: filtroCtx, params: paramsCtx } = resolverFiltroContexto(resolverModo(id));
+    const { sql: filtroCtx, params: paramsCtx } = resolverFiltroContexto(id);
 
     return blabQuery(`
     SELECT
@@ -120,6 +117,19 @@ export async function getProdutosPorFaixa(
   `, [...paramsCtx, codEnsaio, lie, lse, dataInicio, dataFim]) as Promise<ProdutoFaixaRow[]>;
 }
 
+function parseValor(raw: string): number {
+    if (!raw) return 0;
+    const clean = raw.trim().replace(/,/g, '.');
+    if (clean.includes('-')) {
+        const parts = clean.split('-').map(p => parseFloat(p.trim()));
+        if (parts.length === 2 && !isNaN(parts[0]) && !isNaN(parts[1])) {
+            return (parts[0] + parts[1]) / 2;
+        }
+    }
+    const val = parseFloat(clean);
+    return isNaN(val) ? 0 : val;
+}
+
 /**
  * Query 3: Histórico de Amostras por SKU na Faixa
  */
@@ -131,13 +141,13 @@ export async function getHistoricoProdutosFaixa(
     dataInicio: string,
     dataFim: string,
     codProdutos: string[]
-): Promise<HistoricoProdutoRow[]> {
+): Promise<any[]> {
     if (codProdutos.length === 0) return [];
 
-    const { sql: filtroCtx, params: paramsCtx } = resolverFiltroContexto(resolverModo(id));
+    const { sql: filtroCtx, params: paramsCtx } = resolverFiltroContexto(id);
     const placeholders = codProdutos.map(() => '?').join(',');
 
-    return blabQuery(`
+    const rows = await blabQuery(`
     SELECT
       dw.cod_produto,
       dw.produto,
@@ -146,7 +156,7 @@ export async function getHistoricoProdutosFaixa(
       dw.data_resultado,
       COALESCE(dw.hora_resultado, '00:00:00')                              AS hora_resultado,
       CONCAT(dw.data_resultado, ' ', COALESCE(dw.hora_resultado, '00:00:00')) AS timestamp,
-      CAST(REPLACE(dw.valor, ',', '.') AS DECIMAL(10,4))                  AS valor
+      dw.valor                                                            AS valor_raw
     FROM DW_FAT_RESULTADO dw
     WHERE dw.D_E_L_E_T IS NULL
       ${filtroCtx}
@@ -156,9 +166,21 @@ export async function getHistoricoProdutosFaixa(
       AND dw.data_resultado BETWEEN ? AND ?
       AND dw.cod_produto IN (${placeholders})
       AND dw.valor IS NOT NULL
-      AND dw.valor REGEXP '^-?[0-9]+([.,][0-9]+)?$'
+      AND dw.valor REGEXP '^-?[0-9]+([.,][0-9]+)?( *- *-?[0-9]+([.,][0-9]+)?)?$'
     ORDER BY dw.data_resultado ASC, dw.hora_resultado ASC
-  `, [...paramsCtx, codEnsaio, lie, lse, dataInicio, dataFim, ...codProdutos]) as Promise<HistoricoProdutoRow[]>;
+  `, [...paramsCtx, codEnsaio, lie, lse, dataInicio, dataFim, ...codProdutos]) as any[];
+
+  return rows.map(r => ({
+      cod_produto: r.cod_produto,
+      produto: r.produto,
+      cod_amostra: r.cod_amostra,
+      numero_de_controle: r.numero_de_controle,
+      data_resultado: r.data_resultado,
+      hora_resultado: r.hora_resultado,
+      timestamp: r.timestamp,
+      valor: parseValor(r.valor_raw),
+      valor_original: r.valor_raw,
+  }));
 }
 
 /**
@@ -171,7 +193,7 @@ export async function getProdutosSemFaixa(
     dataInicio: string,
     dataFim: string
 ): Promise<ProdutoFaixaRow[]> {
-    const { sql: filtroCtx, params: paramsCtx } = resolverFiltroContexto(resolverModo(id));
+    const { sql: filtroCtx, params: paramsCtx } = resolverFiltroContexto(id);
 
     return blabQuery(`
     SELECT
@@ -203,7 +225,7 @@ export async function getHistoricoProdutosSemFaixa(
 ): Promise<HistoricoSemFaixaRow[]> {
     if (codProdutos.length === 0) return [];
 
-    const { sql: filtroCtx, params: paramsCtx } = resolverFiltroContexto(resolverModo(id));
+    const { sql: filtroCtx, params: paramsCtx } = resolverFiltroContexto(id);
     const placeholders = codProdutos.map(() => '?').join(',');
 
     return blabQuery(`

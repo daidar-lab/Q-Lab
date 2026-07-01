@@ -31,14 +31,14 @@ export default function SerieConformidade({ dados, limites }: SerieConformidadeP
       const partes = item.periodo.split(' ');
       if (partes.length === 2) {
         const [data, hora] = partes;
-        const [ano, mes, dia] = data.split('-');
+        const [mes, dia] = data.split('-');
         if (dia && mes) {
           periodoFormatado = `${dia}/${mes} ${hora}`;
         }
       }
     } else if (granularidade === 'day') {
       // Exemplo: '2026-06-22' -> '22/06'
-      const [ano, mes, dia] = item.periodo.split('-');
+      const [mes, dia] = item.periodo.split('-');
       if (dia && mes) {
         periodoFormatado = `${dia}/${mes}`;
       }
@@ -105,7 +105,7 @@ export default function SerieConformidade({ dados, limites }: SerieConformidadeP
                 borderRadius: 'var(--r-md, 8px)',
                 color: 'var(--clr-text, #1C1917)'
               }}
-              formatter={(value: any, name: string, props: any) => {
+              formatter={(value: any, name: string) => {
                 if (name === 'pct_conforme') {
                   return [`${value}%`, 'Conformidade'];
                 }

@@ -36,6 +36,7 @@ interface SamplePoint {
     hora_resultado: string;
     timestamp: string;
     valor: number;
+    valor_original?: string;
 }
 
 // ─── Utilities (resgatadas do AmostraDetalheDrawer) ──────────────────────────
@@ -112,6 +113,7 @@ interface TooltipPayloadItem {
     name: string;
     value: number;
     color: string;
+    payload?: any;
 }
 
 interface CustomTooltipProps {
@@ -143,16 +145,19 @@ function CustomTooltip({ active, payload, label, diffDias, rawTimestampMap }: Cu
             <p style={{ margin: '0 0 8px', fontWeight: 700, fontSize: 12, color: 'var(--clr-text-2, #78716c)' }}>
                 {dataFormatada} {diffDias <= 7 ? '' : `— ${hora.slice(0, 5)}`}
             </p>
-            {payload.map((entry) => (
-                <div key={entry.dataKey} style={{ display: 'flex', justifyContent: 'space-between', gap: 16, marginBottom: 4 }}>
-                    <span style={{ color: entry.color, fontWeight: 600 }}>
-                        {entry.name}
-                    </span>
-                    <span style={{ fontWeight: 700 }}>
-                        {typeof entry.value === 'number' ? entry.value.toFixed(4) : entry.value}
-                    </span>
-                </div>
-            ))}
+            {payload.map((entry) => {
+                const originalVal = entry.payload?.[`valor_original_${entry.dataKey}`];
+                return (
+                    <div key={entry.dataKey} style={{ display: 'flex', justifyContent: 'space-between', gap: 16, marginBottom: 4 }}>
+                        <span style={{ color: entry.color, fontWeight: 600 }}>
+                            {entry.name}
+                        </span>
+                        <span style={{ fontWeight: 700 }}>
+                            {originalVal !== undefined ? originalVal : (typeof entry.value === 'number' ? entry.value.toFixed(4) : entry.value)}
+                        </span>
+                    </div>
+                );
+            })}
         </div>
     );
 }
@@ -296,6 +301,7 @@ export const FaixaModal: React.FC<FaixaModalProps> = ({
             .filter(s => s.timestamp === ts)
             .forEach(s => {
                 row[s.cod_produto] = Number(s.valor);
+                row[`valor_original_${s.cod_produto}`] = s.valor_original || String(s.valor);
                 if (s.cod_amostra) {
                     row[`cod_amostra_${s.cod_produto}`] = String(s.cod_amostra);
                 }

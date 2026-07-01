@@ -12,12 +12,62 @@ const CATEGORIAS_META = [
 
 // Agrupamento dos macro-processos para visualização em árvore
 const MACRO_GRUPOS_CONFIG = [
-  { id: 'processo-produtivo', label: 'Processos', subids: ['fermentacao', 'filtracao', 'brassagem', 'maturacao', 'desalcoolizacao', 'captacao', 'tratamento-efluentes'] },
-  { id: 'fisico', label: 'Físico', subids: ['fisico-embalagem', 'fisico-materia-prima', 'fisico-quimicos'] },
-  { id: 'envase', label: 'Envase', subids: ['envase-arrolhamento', 'envase-interunidades'] },
-  { id: 'microbiologia', label: 'Microbiologia', subids: ['microbiologia-estabilidade-micro', 'microbiologia-estabilidade-envase'] },
-  { id: 'cip', label: 'CIP', subids: ['cip'] },
-  { id: 'fermento', label: 'Fermento', subids: ['fermento'] },
+  {
+    id: 'cip',
+    label: 'CIP',
+    subids: ['cip'],
+  },
+  {
+    id: 'envase',
+    label: 'Envase',
+    subids: [
+      'envase-produto-acabado',
+      'envase-chopp',
+      'envase-arrolhamento',
+      'envase-assoprador',
+      'envase-lubrificante',
+      'envase-recravacao',
+      'envase-pasteurizador',
+      'envase-interunidades',
+    ],
+  },
+  {
+    id: 'fermento',
+    label: 'Fermento',
+    subids: ['fermento'],
+  },
+  {
+    id: 'fisico',
+    label: 'Físico',
+    subids: ['fisico-embalagem', 'fisico-materia-prima', 'fisico-quimicos'],
+  },
+  {
+    id: 'microbiologia',
+    label: 'Microbiologia',
+    subids: [
+      'microbiologia-estabilidade-micro',
+      'microbiologia-estabilidade-envase',
+      'microbiologia-resultados',
+      'microbiologia-agua-enxague',
+      'microbiologia-swab',
+    ],
+  },
+  {
+    id: 'processo-produtivo',
+    label: 'Processo',
+    subids: [
+      'fermentacao',
+      'filtracao',
+      'brassagem',
+      'maturacao',
+      'desalcoolizacao',
+      'captacao',
+      'residuos',
+      'ar-co2',
+      'co2-beneficiado',
+      'tratamento-efluentes',
+    ],
+  },
 ];
 
 export default function DashboardPage() {

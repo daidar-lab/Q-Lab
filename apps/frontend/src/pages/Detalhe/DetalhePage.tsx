@@ -13,6 +13,7 @@ import styles from './DetalhePage.module.css';
 
 export default function DetalhePage() {
     const { tipo, id, origem, natureza } = useParams();
+    const tipoNormalizado = tipo?.toLowerCase() ?? '';
     const navigate = useNavigate();
     const { ctx } = useContexto();
     const dataInicio = ctx.dataInicio ?? '';
@@ -36,7 +37,6 @@ export default function DetalhePage() {
             macroProcessoApi.getDetalhe(origem, natureza as 'produto' | 'processo', dataInicio, dataFim)
                 .then((res) => {
                     setDados(res.data);
-                    setPrefixoLcq(res.data.prefixo ?? null);
                 })
                 .finally(() => setCarregando(false));
         } else if (tipo && id) {
@@ -62,7 +62,6 @@ export default function DetalhePage() {
         setFaixaSelecionadaObjeto(faixa);
         setFaixaAtiva(null);
 
-        const tipoNormalizado = tipo?.toLowerCase();
         if (tipoNormalizado === 'ensaio' || tipoNormalizado === 'ensaios') {
             setModalCentroCustoAberto(true);
         } else if (tipoNormalizado === 'produto' || tipoNormalizado === 'produtos') {
@@ -85,6 +84,12 @@ export default function DetalhePage() {
             } finally {
                 setCarregandoCentroCusto(false);
             }
+        } else if (tipoNormalizado === 'processos') {
+            // Sub-processo: opção B — vai direto para o histórico por amostra.
+            // O id já é o slug do sub-processo (ex: 'fermentacao').
+            // O FaixaModal recebe esse slug e o backend resolve o filtro via resolverFiltroPorId.
+            setCentroCustoResolvido(null);
+            setModalFaixaAberto(true);
         } else {
             setCentroCustoResolvido(null);
             setModalFaixaAberto(true);
@@ -117,7 +122,7 @@ export default function DetalhePage() {
                     <strong className={styles.valor}>{dados.resumo.n_nao_conforme}</strong>
                 </div>
                 <div className={styles.card}>
-                    <span className={styles.label}>Lotes afetados</span>
+                    <span className={styles.label}>Evento de qualidade afetados</span>
                     <strong className={styles.valor}>
                         {dados.resumo.lotes_afetados} de {dados.resumo.total_lotes}
                     </strong>
@@ -160,7 +165,18 @@ export default function DetalhePage() {
                 <FaixaModal
                     isOpen={modalFaixaAberto}
                     onClose={() => setModalFaixaAberto(false)}
-                    id={prefixoLcq ?? ((tipo?.toLowerCase() === 'ensaio' || tipo?.toLowerCase() === 'ensaios' || tipo?.toLowerCase() === 'produto' || tipo?.toLowerCase() === 'produtos') ? String(centroCustoResolvido?.id ?? '') : (id ?? ''))}
+                    id={
+                        // processos: usa o slug diretamente
+                        (tipoNormalizado === 'processos')
+                            ? (id ?? '')
+                            // legado: prefixo LCQ ou cod_centro_de_custo
+                            : prefixoLcq ?? (
+                                (tipoNormalizado === 'ensaio' || tipoNormalizado === 'ensaios' ||
+                                    tipoNormalizado === 'produto' || tipoNormalizado === 'produtos')
+                                    ? String(centroCustoResolvido?.id ?? '')
+                                    : (id ?? '')
+                            )
+                    }
                     codEnsaio={faixaSelecionadaObjeto.cod_ensaio}
                     ensaioNome={faixaSelecionadaObjeto.ensaio}
                     dataInicio={dataInicio}
@@ -176,4 +192,4 @@ export default function DetalhePage() {
             )}
         </div>
     );
-}
+}

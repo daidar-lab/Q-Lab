@@ -9,6 +9,7 @@ interface FaixaProps {
         lie: number | null;
         lse: number | null;
         pct_conforme: number;
+        pct_nao_conforme: number;
     };
 }
 
@@ -46,12 +47,13 @@ export default function FaixaEspecificacao({ dados }: FaixaProps) {
         <div className={styles.card}>
             <div className={styles.header}>
                 <strong>{dados.ensaio}</strong>
-                <span className={styles.valorAtual}>{dados.pct_conforme}% Conforme</span>
+                {/* Alterado para mostrar a % de Não Conformidade */}
+                <span className={styles.valorAtual}>{dados.pct_nao_conforme}% Não Conforme</span>
             </div>
             <div className={styles.barraProporcao}>
                 <div
                     className={styles.barraPreenchida}
-                    style={{ width: `${dados.pct_conforme}%` }}
+                    style={{ width: `${dados.pct_nao_conforme}%` }}
                 />
             </div>
             {dados.motivo === 'multiplos_produtos' && (

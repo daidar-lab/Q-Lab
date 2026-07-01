@@ -898,26 +898,170 @@ export async function getKpisDashboard(periodo: FiltroPeriodo) {
     conformidade: { valor: Number(atual?.pct_conformidade ?? 0), meta: 95.0 },
   };
 }
+/**
+ * Traduz um id (numérico ou slug de sub-processo) para o fragmento WHERE
+ * correto no DW_FAT_RESULTADO.
+ *
+ * Retorna { sql, params } prontos para interpolação segura via prepared statements.
+ *
+ * Ordem de resolução:
+ *   1. Slugs Grupo A — filtro direto por coluna do DW (skip_lote, produto, etc.)
+ *   2. Slugs Grupo B — filtro por prefixo de lote_de_controle_de_qualidade
+ *   3. Fallback numérico — cod_centro_de_custo = ? (comportamento original)
+ */
+export function resolverFiltroPorId(id: string | number): { sql: string; params: unknown[] } {
+  const idStr = String(id);
+
+  // ── Grupo A: filtro direto no DW ──────────────────────────────────────────
+  const slugDireto: Record<string, { sql: string; params: unknown[] }> = {
+    'fermento': {
+      sql: `cod_skip_lote IN ('68', '69')`,
+      params: [],
+    },
+    'residuos': {
+      sql: `cod_produto IN (303, 304)`,
+      params: [],
+    },
+    'ar-co2': {
+      sql: `cod_produto IN (153, 160) AND cod_laboratorio NOT IN (5, 17, 6, 20)`,
+      params: [],
+    },
+    'co2-beneficiado': {
+      // CO2 beneficiado é ancorado em FAT_LAUDO — sem filtro direto no DW por produto.
+      // Usar lote prefixo LCQCO2 se existir, caso contrário tratar como sem filtro específico.
+      // ATENÇÃO: validar prefixo real no banco antes de usar em produção.
+      sql: `lote_de_controle_de_qualidade LIKE 'LCQCO2%'`,
+      params: [],
+    },
+    'microbiologia-estabilidade-micro': {
+      sql: `(cod_skip_lote NOT IN ('36', '54') OR cod_skip_lote IS NULL)
+            AND lote_de_controle_de_qualidade LIKE 'LCQMB%'`,
+      params: [],
+    },
+    'microbiologia-estabilidade-envase': {
+      sql: `cod_skip_lote IN ('36', '54')
+            AND lote_de_controle_de_qualidade LIKE 'LCQMB%'`,
+      params: [],
+    },
+    'microbiologia-agua-enxague': {
+      sql: `cod_produto = 15`,
+      params: [],
+    },
+    'microbiologia-swab': {
+      sql: `cod_produto = 14`,
+      params: [],
+    },
+    // Envase auxiliares — ancorados via cod_atributo_da_amostra = 36.
+    // No DW, identificados pelo campo operacao (vindo do ponto de coleta).
+    'envase-arrolhamento': {
+      sql: `operacao LIKE '%ARROLHAMENTO%'`,
+      params: [],
+    },
+    'envase-assoprador': {
+      sql: `operacao LIKE '%ASSOPRADOR%'`,
+      params: [],
+    },
+    'envase-lubrificante': {
+      sql: `operacao LIKE '%LUBRIFICANTE%'`,
+      params: [],
+    },
+    'envase-recravacao': {
+      sql: `operacao LIKE '%RECRAVAÇÃO%'`,
+      params: [],
+    },
+    'envase-pasteurizador': {
+      sql: `operacao LIKE '%PASTEURIZ%'`,
+      params: [],
+    },
+    'envase-chopp': {
+      sql: `cod_centro_de_custo = 450050`,
+      params: [],
+    },
+    // CIP — amostras realizadas nos laboratórios de CIP (não âncora via lote)
+    'cip': {
+      sql: `cod_laboratorio IN (1, 4, 15, 16, 25)`,
+      params: [],
+    },
+  };
+
+  if (slugDireto[idStr]) return slugDireto[idStr];
+
+  // ── Grupo B: prefixo de lote_de_controle_de_qualidade ────────────────────
+  // Atenção à ordem: mais específico primeiro (LCQFI antes de LCQF, LCQCP antes de LCQC)
+  const prefixMap: Record<string, string> = {
+    'filtracao':             'LCQFI',   // deve vir antes de fermentacao
+    'fermentacao':           'LCQF',
+    'brassagem':             'LCQB',
+    'maturacao':             'LCQM',
+    'desalcoolizacao':       'LCQD',
+    'captacao':              'LCQCP',   // deve vir antes de cip
+    'tratamento-efluentes':  'LCQTE',
+    // 'cip' foi movido para slugDireto (cod_laboratorio) — sem âncora via lote
+    'envase-produto-acabado':'LCQE',
+    'microbiologia-resultados': 'LCQMB',
+    'envase-interunidades':  'LCQE',    // mesma âncora do produto acabado, skip_lote diferencia
+  };
+
+  if (prefixMap[idStr]) {
+    return {
+      sql: `lote_de_controle_de_qualidade LIKE ?`,
+      params: [`${prefixMap[idStr]}%`],
+    };
+  }
+
+  // ── Fallback numérico — comportamento original (cod_centro_de_custo) ──────
+  return {
+    sql: `cod_centro_de_custo = ?`,
+    params: [Number(id)],
+  };
+}
+
 // 2. Ranking por processo — 3 queries: âncoras → amostras → DW agregado
 // ─── Labels legíveis por categoria ───────────────────────────────────────────
 const LABELS_CATEGORIA: Record<string, string> = {
-  'fermento': 'Fermento',
-  'microbiologia-estabilidade-micro': 'Estabilidade Biológica Micro',
+  // Fermento
+  'fermento':                        'Fermento',
+
+  // Microbiologia
+  'microbiologia-estabilidade-micro':  'Estabilidade Biológica Micro',
   'microbiologia-estabilidade-envase': 'Estabilidade Biológica Envase',
-  'envase-arrolhamento': 'Envase — Arrolhamento',
-  'envase-interunidades': 'Envase — Interunidades',
-  'fermentacao': 'Fermentação',
-  'filtracao': 'Filtração',
-  'brassagem': 'Brassagem',
-  'maturacao': 'Maturação',
-  'desalcoolizacao': 'Desalcoolização',
-  'captacao': 'Captação',
-  'tratamento-efluentes': 'Tratamento de Efluentes',
-  'cip': 'CIP',
-  'fisico-embalagem': 'Físico — Embalagem',
-  'fisico-materia-prima': 'Físico — Matéria-Prima',
-  'fisico-quimicos': 'Físico — Químicos',
+  'microbiologia-resultados':          'Resultados Microbiológicos',
+  'microbiologia-agua-enxague':        'Água de Enxague',
+  'microbiologia-swab':                'SWAB',
+
+  // Envase
+  'envase-produto-acabado':            'Produto Acabado',
+  'envase-chopp':                      'Chopp',
+  'envase-arrolhamento':               'Arrolhamento',
+  'envase-assoprador':                 'Assoprador',
+  'envase-lubrificante':               'Lubrificante de Esteira',
+  'envase-recravacao':                 'Recravação',
+  'envase-pasteurizador':              'Pasteurizador',
+  'envase-interunidades':              'Produto Interunidades',
+
+  // Processo
+  'fermentacao':                       'Fermentação',
+  'filtracao':                         'Filtração',
+  'brassagem':                         'Brassagem',
+  'maturacao':                         'Maturação',
+  'desalcoolizacao':                   'Desalcoolização',
+  'captacao':                          'Captação',
+  'tratamento-efluentes':              'Tratamento de Efluentes',
+  'residuos':                          'Resíduos',
+  'ar-co2':                            'Ar Comprimido e CO2',
+  'co2-beneficiado':                   'CO2 Beneficiado',
+
+  // CIP
+  'cip':                               'CIP',
+  'cip-envasamento':                   'CIP — Envasamento',
+  'cip-processo':                      'CIP — Processo',
+
+  // Físico
+  'fisico-embalagem':                  'Físico — Embalagem',
+  'fisico-materia-prima':              'Físico — Matéria-Prima',
+  'fisico-quimicos':                   'Físico — Químicos',
 };
+
 
 
 function ph(arr: string[]): string {
@@ -1001,17 +1145,16 @@ export async function getRankingProcessos(
   // ─── QUERY 2 — Resolução de cod_amostra para CIP e Físico ────────────────
   const amostrasPorCat: Record<string, string[]> = {};
 
-  // CIP — via FAT_ATRIBUTOS_DA_AMOSTRA + FAT_AMOSTRA com cod_laboratorio IN (1,4,15,16,25)
-  if (lotesCip.length > 0) {
+  // CIP — identificado por laboratório CIP (cod_laboratorio IN 1,4,15,16,25) + período.
+  // Não depende de lotes da Query 1: roda sempre que o período for válido.
+  {
     const cipRows = await blabQuery<{ cod_amostra: string }>(`
       SELECT DISTINCT CAST(A.cod_amostra AS CHAR) AS cod_amostra
-      FROM FAT_ATRIBUTOS_DA_AMOSTRA FAT
-      INNER JOIN FAT_AMOSTRA A ON A.cod_amostra = FAT.cod_amostra
-      WHERE FAT.valor IN (${ph(lotesCip)})
-      AND A.cod_laboratorio IN (1, 4, 15, 16, 25)
-      AND FAT.D_E_L_E_T IS NULL
+      FROM FAT_AMOSTRA A
+      WHERE A.cod_laboratorio IN (1, 4, 15, 16, 25)
+      AND A.data_da_coleta BETWEEN ? AND ?
       AND A.D_E_L_E_T IS NULL
-    `, [...lotesCip]);
+    `, [di, df]);
     amostrasPorCat['cip'] = cipRows.map(r => String(r.cod_amostra)).filter(Boolean);
   }
 
@@ -1046,8 +1189,58 @@ export async function getRankingProcessos(
     sql: `WHEN cod_skip_lote IN ('36', '54') AND lote_de_controle_de_qualidade LIKE 'LCQMB%' THEN 'microbiologia-estabilidade-envase'`,
     params: [],
   });
-  caseParts.push({ sql: `WHEN operacao LIKE '%ARROLHAMENTO%' THEN 'envase-arrolhamento'`, params: [] });
-  caseParts.push({ sql: `WHEN cod_amostra_interunidade IS NOT NULL THEN 'envase-interunidades'`, params: [] });
+  caseParts.push({
+    sql: `WHEN lote_de_controle_de_qualidade LIKE 'LCQE%' AND cod_skip_lote = '33' THEN 'envase-produto-acabado'`,
+    params: [],
+  });
+  caseParts.push({
+    sql: `WHEN cod_centro_de_custo = 450050 THEN 'envase-chopp'`,
+    params: [],
+  });
+  caseParts.push({
+    sql: `WHEN operacao LIKE '%ARROLHAMENTO%' THEN 'envase-arrolhamento'`,
+    params: [],
+  });
+  caseParts.push({
+    sql: `WHEN operacao LIKE '%ASSOPRADOR%' THEN 'envase-assoprador'`,
+    params: [],
+  });
+  caseParts.push({
+    sql: `WHEN operacao LIKE '%LUBRIFICANTE%' THEN 'envase-lubrificante'`,
+    params: [],
+  });
+  caseParts.push({
+    sql: `WHEN operacao LIKE '%RECRAVAÇÃO%' THEN 'envase-recravacao'`,
+    params: [],
+  });
+  caseParts.push({
+    sql: `WHEN operacao LIKE '%PASTEURIZ%' THEN 'envase-pasteurizador'`,
+    params: [],
+  });
+  caseParts.push({
+    sql: `WHEN cod_amostra_interunidade IS NOT NULL THEN 'envase-interunidades'`,
+    params: [],
+  });
+  caseParts.push({
+    sql: `WHEN cod_produto IN (303, 304) THEN 'residuos'`,
+    params: [],
+  });
+  caseParts.push({
+    sql: `WHEN cod_produto IN (153, 160) AND cod_laboratorio NOT IN (5, 17, 6, 20) THEN 'ar-co2'`,
+    params: [],
+  });
+  caseParts.push({
+    sql: `WHEN cod_produto = 15 THEN 'microbiologia-agua-enxague'`,
+    params: [],
+  });
+  caseParts.push({
+    sql: `WHEN cod_produto = 14 THEN 'microbiologia-swab'`,
+    params: [],
+  });
+  caseParts.push({
+    sql: `WHEN lote_de_controle_de_qualidade LIKE 'LCQMB%' THEN 'microbiologia-resultados'`,
+    params: [],
+  });
 
   // Grupo B simples — lotes resolvidos na Query 1
   const gruposB: [string, string][] = [
