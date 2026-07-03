@@ -26,12 +26,17 @@ interface ContextoState {
     setPeriodo2: (p: { inicio: string; fim: string } | ((prev: { inicio: string; fim: string }) => { inicio: string; fim: string })) => void;
     granularidade: 'dia' | 'semana' | 'mes' | 'trimestre' | 'ano';
     setGranularidade: (g: 'dia' | 'semana' | 'mes' | 'trimestre' | 'ano') => void;
+    meta: number;
+    setMeta: (val: number) => void;
 }
 
 const ContextoCtx = createContext<ContextoState | null>(null);
 
+import { useAuth } from './AuthProvider';
+
 export function ContextoProvider({ children }: { children: ReactNode }) {
     const defPeriodo = periodoDefault();
+    const { filiais, meta: metaAuth } = useAuth();
 
     // Estado da filial recuperado do localStorage
     const [filialId, setFilialIdState] = useState<number | null>(() => {
@@ -41,6 +46,7 @@ export function ContextoProvider({ children }: { children: ReactNode }) {
     const [filialLabel, setFilialLabel] = useState<string>(() => {
         return localStorage.getItem('qlab:filialLabel') || '';
     });
+    const [meta, setMeta] = useState<number>(metaAuth);
 
     const [ctx, setCtx] = useState<Partial<ContextoAnalise>>({
         filialId: filialId ?? undefined,
@@ -50,6 +56,22 @@ export function ContextoProvider({ children }: { children: ReactNode }) {
     const [modoAnalyse, setModoAnalyse] = useState<'individual' | 'ranges' | 'granularidade'>('individual');
     const [periodo2, setPeriodo2] = useState<{ inicio: string; fim: string }>({ inicio: '', fim: '' });
     const [granularidade, setGranularidade] = useState<'dia' | 'semana' | 'mes' | 'trimestre' | 'ano'>('dia');
+
+    useEffect(() => {
+        setMeta(metaAuth);
+    }, [metaAuth]);
+
+    useEffect(() => {
+        if (filiais && filiais.length > 0) {
+            const filialPadrao = filiais.find(f => f.padrao) ?? filiais[0];
+            const filialSalva = localStorage.getItem('qlab:filialId');
+            const filialInicial = filiais.find(f => String(f.cod_filial) === filialSalva) ?? filialPadrao;
+            
+            if (filialInicial && filialInicial.cod_filial !== filialId) {
+                setFilial(filialInicial.cod_filial, filialInicial.abreviatura);
+            }
+        }
+    }, [filiais]);
 
     // Sincroniza filialId no contexto de análise
     useEffect(() => {
@@ -134,6 +156,8 @@ export function ContextoProvider({ children }: { children: ReactNode }) {
             setPeriodo2,
             granularidade,
             setGranularidade,
+            meta,
+            setMeta,
         }}>
             {children}
         </ContextoCtx.Provider>

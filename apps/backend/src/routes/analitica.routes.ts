@@ -18,6 +18,7 @@
 import { Router } from 'express';
 import { authMiddleware } from '../middlewares/auth.middleware';
 import { cacheMiddleware } from '../middlewares/cache.middleware';
+import { filialGuard } from '../middlewares/filial.guard';
 import {
     handleRotar,
     handleNumericoSerie,
@@ -45,34 +46,34 @@ const cache = cacheMiddleware();
 router.use(authMiddleware);
 
 // Principal
-router.post('/rodar', handleRotar);
+router.post('/rodar', filialGuard, handleRotar);
 
 // Numérico
-router.post('/numerico/serie', handleNumericoSerie);
-router.post('/numerico/estatisticas', handleNumericoEstatisticas);
-router.post('/numerico/histograma', handleNumericoHistograma);
-router.post('/numerico/shewhart', handleNumericoShewhart);
+router.post('/numerico/serie', filialGuard, handleNumericoSerie);
+router.post('/numerico/estatisticas', filialGuard, handleNumericoEstatisticas);
+router.post('/numerico/histograma', filialGuard, handleNumericoHistograma);
+router.post('/numerico/shewhart', filialGuard, handleNumericoShewhart);
 
 // Faixa
-router.post('/faixa/distribuicao', handleFaixaDistribuicao);
-router.post('/faixa/serie', handleFaixaSerie);
+router.post('/faixa/distribuicao', filialGuard, handleFaixaDistribuicao);
+router.post('/faixa/serie', filialGuard, handleFaixaSerie);
 
 // Categórico
-router.post('/categorico/frequencia', handleCategoricoFrequencia);
-router.post('/categorico/serie', handleCategoricoSerie);
+router.post('/categorico/frequencia', filialGuard, handleCategoricoFrequencia);
+router.post('/categorico/serie', filialGuard, handleCategoricoSerie);
 
 // Comparação
-router.post('/numerico/comparacao', handleNumericoComparacao);
-router.post('/faixa/comparacao', handleFaixaComparacao);
-router.post('/categorico/comparacao', handleCategoricoComparacao);
+router.post('/numerico/comparacao', filialGuard, handleNumericoComparacao);
+router.post('/faixa/comparacao', filialGuard, handleFaixaComparacao);
+router.post('/categorico/comparacao', filialGuard, handleCategoricoComparacao);
 
 // Detalhe de amostra
 router.get('/amostra/:codAmostra', cache, handleDetalheAmostra);
-router.post('/amostra/por-bin', handleAmostrasPorBin);
+router.post('/amostra/por-bin', filialGuard, handleAmostrasPorBin);
 
-router.get('/dashboard/kpis',               cache, handleKpisDashboard);
-router.get('/dashboard/ranking/processos',  cache, handleRankingProcessos);
-router.get('/dashboard/ranking/produtos',   cache, handleRankingProdutos);
-router.get('/dashboard/ranking/ensaios',    cache, handleRankingEnsaios);
+router.get('/dashboard/kpis',               cache, filialGuard, handleKpisDashboard);
+router.get('/dashboard/ranking/processos',  cache, filialGuard, handleRankingProcessos);
+router.get('/dashboard/ranking/produtos',   cache, filialGuard, handleRankingProdutos);
+router.get('/dashboard/ranking/ensaios',    cache, filialGuard, handleRankingEnsaios);
 
 export default router;

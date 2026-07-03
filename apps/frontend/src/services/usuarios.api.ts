@@ -18,3 +18,12 @@ export const atualizar = (id: number, dados: Partial<{ nome: string; login: stri
 
 export const desativar = (id: number) =>
     request<{ ok: boolean }>(`/api/usuarios/${id}`, { method: 'DELETE' });
+
+export const listarFiliaisUsuario = (id: number) =>
+    request<{ cod_filial: number; filial_padrao: number }[]>(`/api/usuarios/${id}/filiais`);
+
+export const vincularFilialUsuario = (id: number, cod_filial: number, filial_padrao: boolean) =>
+    request<{ ok: boolean }>(`/api/usuarios/${id}/filiais`, { method: 'POST', body: { cod_filial, filial_padrao } });
+
+export const desvincularFilialUsuario = (id: number, filialId: number) =>
+    request<{ ok: boolean }>(`/api/usuarios/${id}/filiais/${filialId}`, { method: 'DELETE' });

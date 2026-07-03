@@ -32,3 +32,18 @@ export async function handleLogin(
 export function handleMe(req: Request, res: Response): void {
     res.json(req.usuario);
 }
+
+// GET /api/auth/refresh — renova o token do usuário atual
+export async function handleRefresh(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+        if (!req.usuario?.sub) {
+            res.status(401).json({ erro: 'Token inválido' });
+            return;
+        }
+        const { renovarToken } = await import('../services/auth.service');
+        const resultado = await renovarToken(req.usuario.sub);
+        res.json(resultado);
+    } catch (err) {
+        next(err);
+    }
+}

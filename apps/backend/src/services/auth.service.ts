@@ -2,8 +2,9 @@
 
 import bcrypt from 'bcryptjs';
 import { qlabQuery } from '../db/qlab.pool';
-import type { Usuario, JwtPayload } from '@qlab/types';
+import type { Usuario, JwtPayload, FilialDoUsuario } from '@qlab/types';
 import jwt, { type SignOptions } from 'jsonwebtoken';
+import { getFiliais } from './filiais.service';
 
 type UsuarioComSenha = Usuario & { senha: string };
 
@@ -18,7 +19,7 @@ export async function login(
     senha: string,
 ): Promise<{ token: string; usuario: Omit<Usuario, 'senha'> }> {
     const rows = await qlabQuery<UsuarioComSenha>(
-        `SELECT id, nome, login, senha, role, ativo FROM usuarios WHERE login = ? LIMIT 1`,
+        `SELECT id, nome, login, senha, role, ativo, meta_conformidade FROM usuarios WHERE login = ? LIMIT 1`,
         [loginStr.trim()],
     );
 
@@ -31,16 +32,87 @@ export async function login(
     const senhaValida = await bcrypt.compare(senha, usuario.senha);
     if (!senhaValida) throw new ErroAuth('Credenciais inválidas.');
 
+    const filiaisVinculo = await qlabQuery<{ cod_filial: number; filial_padrao: number }>(
+        `SELECT cod_filial, filial_padrao
+         FROM usuario_filial
+         WHERE cod_usuario = ?
+         ORDER BY filial_padrao DESC`,
+        [usuario.id],
+    );
+
+    const todasFiliais = await getFiliais();
+    const filiaisMap = new Map(todasFiliais.map(f => [f.cod_filial, f]));
+
+    const filiais: FilialDoUsuario[] = filiaisVinculo.map(v => {
+        const dim = filiaisMap.get(v.cod_filial);
+        return {
+            cod_filial:   v.cod_filial,
+            filial:       dim?.filial      ?? `Filial ${v.cod_filial}`,
+            abreviatura:  dim?.abreviatura ?? String(v.cod_filial),
+            padrao:       v.filial_padrao === 1,
+        };
+    });
+
     const payload: JwtPayload = {
-        sub: usuario.id,
-        login: usuario.login,
-        role: usuario.role,
+        sub:               usuario.id,
+        login:             usuario.login,
+        role:              usuario.role,
+        meta_conformidade: Number(usuario.meta_conformidade ?? 95.00),
+        filiais,
     };
     const options: SignOptions = { expiresIn: JWT_EXPIRES as SignOptions['expiresIn'] };
     const token = jwt.sign(payload, JWT_SECRET, options);
 
     const { senha: _, ...usuarioSemSenha } = usuario;
     return { token, usuario: usuarioSemSenha };
+}
+
+// ─── Renovar Token ───────────────────────────────────────────────────────────
+
+export async function renovarToken(
+    usuarioId: number
+): Promise<{ token: string; usuario: Omit<Usuario, 'senha'> }> {
+    const rows = await qlabQuery<Usuario>(
+        `SELECT id, nome, login, role, ativo, meta_conformidade FROM usuarios WHERE id = ? LIMIT 1`,
+        [usuarioId],
+    );
+
+    const usuario = rows[0];
+    if (!usuario) throw new ErroAuth('Usuário não encontrado.');
+    if (!usuario.ativo) throw new ErroAuth('Usuário inativo.');
+
+    const filiaisVinculo = await qlabQuery<{ cod_filial: number; filial_padrao: number }>(
+        `SELECT cod_filial, filial_padrao
+         FROM usuario_filial
+         WHERE cod_usuario = ?
+         ORDER BY filial_padrao DESC`,
+        [usuario.id],
+    );
+
+    const todasFiliais = await getFiliais();
+    const filiaisMap = new Map(todasFiliais.map(f => [f.cod_filial, f]));
+
+    const filiais: FilialDoUsuario[] = filiaisVinculo.map(v => {
+        const dim = filiaisMap.get(v.cod_filial);
+        return {
+            cod_filial:   v.cod_filial,
+            filial:       dim?.filial      ?? `Filial ${v.cod_filial}`,
+            abreviatura:  dim?.abreviatura ?? String(v.cod_filial),
+            padrao:       v.filial_padrao === 1,
+        };
+    });
+
+    const payload: JwtPayload = {
+        sub:               usuario.id,
+        login:             usuario.login,
+        role:              usuario.role,
+        meta_conformidade: Number(usuario.meta_conformidade ?? 95.00),
+        filiais,
+    };
+    const options: SignOptions = { expiresIn: JWT_EXPIRES as SignOptions['expiresIn'] };
+    const token = jwt.sign(payload, JWT_SECRET, options);
+
+    return { token, usuario };
 }
 
 // ─── Verificar token ─────────────────────────────────────────────────────────

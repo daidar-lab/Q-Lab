@@ -1,11 +1,16 @@
 import { useState, useEffect, type FormEvent } from 'react';
 import { listar, criar, atualizar, desativar } from '../../services/usuarios.api';
+import { atualizarMeta as atualizarMetaApi } from '../../services/perfil.api';
+import { useContexto } from '../../contexts/ContextoProvider';
+import { UserFiliaisModal } from './UserFiliaisModal';
 import type { Usuario, Role } from '@qlab/types';
 import type { CSSProperties } from 'react';
 
 type UsuarioSemSenha = Omit<Usuario, 'senha'>;
 
 export default function ConfigPage() {
+    const { meta: metaContexto, setMeta: setMetaContexto } = useContexto();
+    
     const [usuarios, setUsuarios] = useState<UsuarioSemSenha[]>([]);
     const [loading, setLoading] = useState(true);
     const [erro, setErro] = useState<string | null>(null);
@@ -16,20 +21,34 @@ export default function ConfigPage() {
     const [formError, setFormError] = useState<string | null>(null);
     const [formLoading, setFormLoading] = useState(false);
     const [showForm, setShowForm] = useState(false);
+    const [showFiliaisModal, setShowFiliaisModal] = useState<UsuarioSemSenha | null>(null);
 
     // Meta states
-    const [metaValue, setMetaValue] = useState(() => localStorage.getItem('qlab_meta_conformidade') ?? '95');
+    const [metaValue, setMetaValue] = useState(() => metaContexto.toString());
     const [msgMeta, setMsgMeta] = useState('');
+    const [savingMeta, setSavingMeta] = useState(false);
 
-    function handleSaveMeta() {
+    useEffect(() => {
+        setMetaValue(metaContexto.toString());
+    }, [metaContexto]);
+
+    async function handleSaveMeta() {
         const val = parseFloat(metaValue);
         if (isNaN(val) || val < 0 || val > 100) {
             alert('A meta de conformidade deve ser um número entre 0 e 100.');
             return;
         }
-        localStorage.setItem('qlab_meta_conformidade', val.toString());
-        setMsgMeta('Meta de conformidade salva com sucesso!');
-        setTimeout(() => setMsgMeta(''), 3000);
+        setSavingMeta(true);
+        try {
+            await atualizarMetaApi(val);
+            setMetaContexto(val);
+            setMsgMeta('Meta de conformidade salva com sucesso!');
+            setTimeout(() => setMsgMeta(''), 3000);
+        } catch (e: any) {
+            alert(e.message ?? 'Erro ao salvar meta no banco.');
+        } finally {
+            setSavingMeta(false);
+        }
     }
 
     useEffect(() => {
@@ -240,7 +259,8 @@ export default function ConfigPage() {
         <div style={container}>
             {/* Seção Meta de Conformidade */}
             <div style={{ ...card, marginBottom: '28px', flexDirection: 'column', alignItems: 'flex-start', gap: '16px' }}>
-                <h3 style={{ margin: 0, fontSize: '16px', fontWeight: 700, color: '#0f172a' }}>Meta de Conformidade</h3>
+                <h3 style={{ margin: 0, fontSize: '16px', fontWeight: 700, color: '#0f172a' }}>Minha Meta de Conformidade</h3>
+                <p style={{ fontSize: '13px', color: '#64748b', margin: '0 0 -8px' }}>Essa meta será o alvo para os cálculos no Dashboard.</p>
                 <div style={{ display: 'flex', gap: '12px', alignItems: 'center', width: '100%' }}>
                     <input
                         type="number"
@@ -252,8 +272,8 @@ export default function ConfigPage() {
                         style={{ ...input, width: '120px' }}
                     />
                     <span style={{ fontSize: '15px', color: '#64748b', fontWeight: 600 }}>%</span>
-                    <button style={button} onClick={handleSaveMeta}>
-                        Salvar Meta
+                    <button style={button} onClick={handleSaveMeta} disabled={savingMeta}>
+                        {savingMeta ? 'Salvando...' : 'Salvar Meta'}
                     </button>
                 </div>
                 {msgMeta && <span style={{ fontSize: '13px', color: '#166534', fontWeight: 500 }}>{msgMeta}</span>}
@@ -284,6 +304,9 @@ export default function ConfigPage() {
                                 </div>
                             </div>
                             <div style={{ display: 'flex', gap: '8px' }}>
+                                <button style={{...secondaryButton, borderColor: '#bfdbfe', background: '#eff6ff', color: '#1d4ed8'}} onClick={() => setShowFiliaisModal(user)}>
+                                    Filiais
+                                </button>
                                 <button style={secondaryButton} onClick={() => handleEdit(user)}>
                                     Editar
                                 </button>
@@ -377,6 +400,14 @@ export default function ConfigPage() {
                         </form>
                     </div>
                 </div>
+            )}
+
+            {showFiliaisModal && (
+                <UserFiliaisModal
+                    userId={showFiliaisModal.id}
+                    userName={showFiliaisModal.nome}
+                    onClose={() => setShowFiliaisModal(null)}
+                />
             )}
         </div>
     );

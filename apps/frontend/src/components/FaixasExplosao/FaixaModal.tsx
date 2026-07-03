@@ -11,6 +11,7 @@ import {
     Legend,
 } from 'recharts';
 import { detalheApi } from '../../services/detalhe.api';
+import { useContexto } from '../../contexts/ContextoProvider';
 import FaixasContainer from './FaixasContainer';
 import { AmostraDetalheDrawer } from '../amostra/AmostraDetalheDrawer';
 import styles from './FaixaModal.module.css';
@@ -183,6 +184,7 @@ export const FaixaModal: React.FC<FaixaModalProps> = ({
     dataInicio,
     dataFim,
 }) => {
+    const { filialId } = useContexto();
     const [selectedSkus, setSelectedSkus] = useState<string[]>([]);
     const [activeFaixas, setActiveFaixas] = useState<{ lie: number; lse: number }[]>([]);
     const [samples, setSamples] = useState<SamplePoint[]>([]);
@@ -228,6 +230,7 @@ export const FaixaModal: React.FC<FaixaModalProps> = ({
                         dataInicio,
                         dataFim,
                         selectedSkus,
+                        filialId,
                     );
                 } else {
                     // Ensaio com LIE/LSE: usa endpoint original sem especificar uma única faixa para carregar todas
@@ -239,6 +242,7 @@ export const FaixaModal: React.FC<FaixaModalProps> = ({
                         dataInicio,
                         dataFim,
                         selectedSkus,
+                        filialId,
                     );
                 }
 

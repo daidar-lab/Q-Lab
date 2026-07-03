@@ -10,6 +10,7 @@ declare global {
     namespace Express {
         interface Request {
             usuario?: JwtPayload;
+            filialId?: number;
         }
     }
 }

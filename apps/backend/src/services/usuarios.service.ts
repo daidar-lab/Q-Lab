@@ -75,3 +75,39 @@ export async function atualizarUsuario(
 export async function desativarUsuario(id: number): Promise<void> {
     await qlabQuery(`UPDATE usuarios SET ativo = 0 WHERE id = ?`, [id]);
 }
+
+export async function vincularFilial(
+  codUsuario: number,
+  codFilial: number,
+  filialPadrao = false,
+): Promise<void> {
+  await qlabQuery(
+    `INSERT INTO usuario_filial (cod_usuario, cod_filial, filial_padrao)
+     VALUES (?, ?, ?)
+     ON DUPLICATE KEY UPDATE filial_padrao = VALUES(filial_padrao)`,
+    [codUsuario, codFilial, filialPadrao ? 1 : 0],
+  );
+}
+
+export async function desvincularFilial(
+  codUsuario: number,
+  codFilial: number,
+): Promise<void> {
+  await qlabQuery(
+    `DELETE FROM usuario_filial
+     WHERE cod_usuario = ? AND cod_filial = ?`,
+    [codUsuario, codFilial],
+  );
+}
+
+export async function listarFiliaisDoUsuario(
+  codUsuario: number,
+): Promise<{ cod_filial: number; filial_padrao: number }[]> {
+  return qlabQuery(
+    `SELECT cod_filial, filial_padrao
+     FROM usuario_filial
+     WHERE cod_usuario = ?
+     ORDER BY filial_padrao DESC`,
+    [codUsuario],
+  );
+}

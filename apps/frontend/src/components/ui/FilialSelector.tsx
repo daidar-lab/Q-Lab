@@ -2,11 +2,12 @@
 
 import { useEffect, useState, useRef, type CSSProperties } from 'react';
 import { useContexto } from '../../contexts/ContextoProvider';
-import { useFiliais } from '../../hooks/useFiliais';
+import { useAuth } from '../../contexts/AuthProvider';
 
 export function FilialSelector() {
   const { filialId, filialLabel, setFilial } = useContexto();
-  const { filiais, loading, error } = useFiliais();
+  const { filiais, carregando: loading } = useAuth();
+  const error = null;
   const [aberto, setAberto] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
 

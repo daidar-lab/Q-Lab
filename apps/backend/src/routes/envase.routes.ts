@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { EnvaseController } from '../controllers/envase.controller';
 import { authMiddleware } from '../middlewares/auth.middleware';
+import { filialGuard } from '../middlewares/filial.guard';
 
 const router = Router();
 
@@ -17,7 +18,7 @@ router.post('/pasteurizador', EnvaseController.getPasteurizador);
 router.post('/interunidades', EnvaseController.getProdutoInterunidades);
 
 // Grupo A — Sub-telas Módulo Envase (DW_FAT_RESULTADO direto, sem âncora)
-router.post('/envase/provas-horarias',    EnvaseController.getProvasHorarias);
+router.post('/envase/provas-horarias',    filialGuard, EnvaseController.getProvasHorarias);
 router.post('/envase/recravacao',         EnvaseController.getAnalisesRecravacao);
 router.post('/envase/pasteurizacao',      EnvaseController.getAnalisesPasteurizacao);
 router.post('/envase/lubrificantes',      EnvaseController.getAnalisesLubrificantes);

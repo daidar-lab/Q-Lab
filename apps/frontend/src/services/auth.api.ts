@@ -20,6 +20,12 @@ export async function me(): Promise<Omit<Usuario, 'senha'>> {
     return request('/api/auth/me');
 }
 
+export async function refresh(): Promise<LoginResponse> {
+    const res = await request<LoginResponse>('/api/auth/refresh');
+    setToken(res.token);
+    return res;
+}
+
 export function logout(): void {
     clearToken();
     window.location.href = '/login';

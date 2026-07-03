@@ -12,4 +12,8 @@ router.post('/login', handleLogin);
 // GET /api/auth/me — protegida — valida token e devolve payload
 router.get('/me', authMiddleware, handleMe);
 
+// GET /api/auth/refresh — renova token do usuário logado
+import { handleRefresh } from '../controllers/auth.controller';
+router.get('/refresh', authMiddleware, handleRefresh);
+
 export default router;

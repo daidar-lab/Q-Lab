@@ -12,8 +12,13 @@ import { cacheMiddleware } from '../middlewares/cache.middleware';
 const router = Router();
 const cache = cacheMiddleware();
 
+import { filialGuard } from '../middlewares/filial.guard';
+
 // Require auth for all routes
 router.use(authMiddleware);
+
+// Apply filialGuard to all routes that require filialId
+router.use(filialGuard);
 
 // GET /api/analitica/detalhe/faixas
 router.get('/faixas',                       cache, handleGetFaixas);
