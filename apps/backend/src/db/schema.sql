@@ -34,3 +34,20 @@ CREATE TABLE IF NOT EXISTS cache_ia (
   createdAt       TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   INDEX idx_tipo_bloco (tipo_bloco)
 );
+
+ALTER TABLE usuarios
+  ADD COLUMN meta_conformidade DECIMAL(5,2) NOT NULL DEFAULT 95.00
+  AFTER role;
+
+CREATE TABLE IF NOT EXISTS qlab.usuario_filial (
+  id             INT NOT NULL AUTO_INCREMENT,
+  cod_usuario    INT NOT NULL,
+  cod_filial     INT NOT NULL,
+  filial_padrao  TINYINT(1) NOT NULL DEFAULT 0,
+  criado_em      DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at     DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+
+  PRIMARY KEY (id),
+  UNIQUE KEY uq_usuario_filial (cod_usuario, cod_filial),
+  KEY idx_usuario (cod_usuario)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

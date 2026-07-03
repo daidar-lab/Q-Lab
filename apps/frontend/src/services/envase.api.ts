@@ -4,6 +4,7 @@ interface ParamsEnvaseBase {
     data_inicial: string;
     data_final: string;
     cod_filial?: number;
+    filialId?: number;
 }
 
 interface ParamsComCentroCusto extends ParamsEnvaseBase {

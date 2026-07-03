@@ -3,6 +3,7 @@
 import { blabQuery } from '../db/blab.pool';
 import { resolverGranularidade } from './inspecao.service';
 import type { ContextoAnalise } from '@qlab/types';
+import { resolveFilialLaboratorios } from '../utils/filial.helper';
 
 
 
@@ -14,7 +15,10 @@ const DATE_FORMAT: Record<string, string> = {
 
 // ─── Envelope base ────────────────────────────────────────────────────────────
 
-function buildEnvelope(ctx: ContextoAnalise): { where: string; params: unknown[] } {
+async function buildEnvelope(ctx: ContextoAnalise): Promise<{ where: string; params: unknown[] }> {
+  // Resolve cod_laboratorio[] da filial (cacheado em Redis 30min)
+  const labs = await resolveFilialLaboratorios(ctx.filialId);
+
   const conditions: string[] = [
     'D_E_L_E_T IS NULL',
     'cod_produto         = ?',
@@ -34,6 +38,13 @@ function buildEnvelope(ctx: ContextoAnalise): { where: string; params: unknown[]
     ctx.codBem ?? null, ctx.codBem ?? null,
   ];
 
+  // Filtro de filial via cod_laboratorio (array pré-resolvido)
+  if (labs.length > 0) {
+    const placeholders = labs.map(() => '?').join(', ');
+    conditions.push(`cod_laboratorio IN (${placeholders})`);
+    params.push(...labs);
+  }
+
   // skip lote: IN para múltiplos, = para único, omitido se null
   if (ctx.codSkipLote != null) {
     const valores = Array.isArray(ctx.codSkipLote) ? ctx.codSkipLote : [ctx.codSkipLote];
@@ -50,7 +61,7 @@ function buildEnvelope(ctx: ContextoAnalise): { where: string; params: unknown[]
 // ─────────────────────────────────────────────────────────────────────────────
 
 export async function numericoSerieTemporal(ctx: ContextoAnalise) {
-  const { where, params } = buildEnvelope(ctx);
+  const { where, params } = await buildEnvelope(ctx);
   const gran = resolverGranularidade(ctx.dataInicio, ctx.dataFim);
   const fmt = DATE_FORMAT[gran];
 
@@ -74,7 +85,7 @@ export async function numericoSerieTemporal(ctx: ContextoAnalise) {
 }
 
 export async function numericoEstatisticas(ctx: ContextoAnalise) {
-  const { where, params } = buildEnvelope(ctx);
+  const { where, params } = await buildEnvelope(ctx);
 
   return blabQuery(`
     SELECT
@@ -109,7 +120,7 @@ export async function numericoEstatisticas(ctx: ContextoAnalise) {
 }
 
 export async function numericoHistograma(ctx: ContextoAnalise, numBins = 10) {
-  const { where, params } = buildEnvelope(ctx);
+  const { where, params } = await buildEnvelope(ctx);
 
   return blabQuery(`
     WITH bounds AS (
@@ -154,7 +165,7 @@ export async function numericoHistograma(ctx: ContextoAnalise, numBins = 10) {
 }
 
 export async function numericoShewhart(ctx: ContextoAnalise) {
-  const { where, params } = buildEnvelope(ctx);
+  const { where, params } = await buildEnvelope(ctx);
 
   const rows = await blabQuery(`
     WITH dados AS (
@@ -239,7 +250,7 @@ export async function getDetalheAmostra(codAmostra: string, codEnsaioAtual?: str
 // ─────────────────────────────────────────────────────────────────────────────
 
 export async function faixaDistribuicao(ctx: ContextoAnalise) {
-  const { where, params } = buildEnvelope(ctx);
+  const { where, params } = await buildEnvelope(ctx);
 
   return blabQuery(`
     SELECT
@@ -256,7 +267,7 @@ export async function faixaDistribuicao(ctx: ContextoAnalise) {
 }
 
 export async function faixaSerieTemporal(ctx: ContextoAnalise) {
-  const { where, params } = buildEnvelope(ctx);
+  const { where, params } = await buildEnvelope(ctx);
   const gran = resolverGranularidade(ctx.dataInicio, ctx.dataFim);
   const fmt = DATE_FORMAT[gran];
 
@@ -278,7 +289,7 @@ export async function faixaSerieTemporal(ctx: ContextoAnalise) {
 // ─────────────────────────────────────────────────────────────────────────────
 
 export async function categoricoFrequencia(ctx: ContextoAnalise) {
-  const { where, params } = buildEnvelope(ctx);
+  const { where, params } = await buildEnvelope(ctx);
 
   return blabQuery(`
     SELECT
@@ -294,7 +305,7 @@ export async function categoricoFrequencia(ctx: ContextoAnalise) {
 }
 
 export async function categoricoSerieTemporal(ctx: ContextoAnalise) {
-  const { where, params } = buildEnvelope(ctx);
+  const { where, params } = await buildEnvelope(ctx);
   const gran = resolverGranularidade(ctx.dataInicio, ctx.dataFim);
   const fmt = DATE_FORMAT[gran];
 
@@ -833,12 +844,18 @@ export async function getAmostrasPorBin(ctx: ContextoAnalise, binInicio: number,
 // ─────────────────────────────────────────────────────────────────────────────
 
 export interface FiltroPeriodo {
+  filialId: number;
   dataInicio: string;
   dataFim: string;
 }
 
 // 1. KPIs globais — Otimizados: removido o período anterior para economizar processamento
 export async function getKpisDashboard(periodo: FiltroPeriodo) {
+  const labs = await resolveFilialLaboratorios(periodo.filialId);
+  const labFilter = labs.length > 0
+    ? `AND cod_laboratorio IN (${labs.map(() => '?').join(', ')})`
+    : '';
+
   // Executa uma query direta e linear (Sem GROUP BY e sem varrer o passado)
   const rows = await blabQuery<{
     amostras: number;
@@ -853,14 +870,15 @@ export async function getKpisDashboard(periodo: FiltroPeriodo) {
       SUM(conformidade = 'NÃO AVALIADO')                                  AS informativos,
       SUM(conformidade = 'NÃO CONFORME')                                  AS nao_conformidades,
       ROUND(
-        SUM(conformidade = 'CONFORME') * 100.0 / 
-        NULLIF(COUNT(*) - SUM(conformidade = 'NÃO AVALIADO'), 0), 
+        SUM(conformidade = 'CONFORME') * 100.0 /
+        NULLIF(COUNT(*) - SUM(conformidade = 'NÃO AVALIADO'), 0),
         1
       )                                                                   AS pct_conformidade
     FROM DW_FAT_RESULTADO
-    WHERE D_E_L_E_T IS NULL 
+    WHERE D_E_L_E_T IS NULL
       AND data_resultado BETWEEN ? AND ?
-  `, [periodo.dataInicio, periodo.dataFim]);
+      ${labFilter}
+  `, [periodo.dataInicio, periodo.dataFim, ...labs]);
 
   const atual = rows[0]; // Como não tem GROUP BY, sempre retorna exatamente 1 linha
 
@@ -1102,6 +1120,12 @@ export async function getRankingProcessos(
   const diInt = Number(di.substring(0, 10).replace(/-/g, ''));
   const dfInt = Number(df.substring(0, 10).replace(/-/g, ''));
 
+  // Resolve labs da filial para filtro na CTE
+  const labs = await resolveFilialLaboratorios(periodo.filialId);
+  const labFilter = labs.length > 0
+    ? `AND cod_laboratorio IN (${labs.map(() => '?').join(', ')})`
+    : '';
+
   // Subquery reutilizável para Físico — resolve cod_cabecalho_de_especificacao
   // via tabela de dimensão (pequena, resolvida 1x pelo otimizador MySQL)
   const FISICO_IN = `
@@ -1207,8 +1231,8 @@ export async function getRankingProcessos(
   FROM dados d
   WHERE (${where})`);
 
-  // Params: [di, df] do CTE, depois para cada ramo: [id, ...extra_where_params]
-  const allParams: unknown[] = [di, df];
+  // Params: [di, df, ...labs] do CTE, depois para cada ramo: [id, ...extra_where_params]
+  const allParams: unknown[] = [di, df, ...labs];
   for (const [id, , extra] of ramos) {
     allParams.push(id, ...extra);
   }
@@ -1234,6 +1258,7 @@ export async function getRankingProcessos(
       AND conformidade != 'NÃO AVALIADO'
       AND valor IS NOT NULL AND valor != ''
       AND data_resultado BETWEEN ? AND ?
+      ${labFilter}
   )
   ${unionParts.join('\n  UNION ALL')}`;
 
@@ -1256,6 +1281,11 @@ export async function getRankingProcessos(
 
 // 3. Ranking por produto
 export async function getRankingProdutos(periodo: FiltroPeriodo, limit = 20) {
+  const labs = await resolveFilialLaboratorios(periodo.filialId);
+  const labFilter = labs.length > 0
+    ? `AND cod_laboratorio IN (${labs.map(() => '?').join(', ')})`
+    : '';
+
   const rows = await blabQuery<any>(`
     SELECT
       cod_produto                                                          AS id,
@@ -1268,10 +1298,11 @@ export async function getRankingProdutos(periodo: FiltroPeriodo, limit = 20) {
       AND valor IS NOT NULL AND valor != ''
       AND cod_produto IS NOT NULL
       AND data_resultado BETWEEN ? AND ?
+      ${labFilter}
     GROUP BY cod_produto, produto
     ORDER BY nc DESC
     LIMIT ?
-  `, [periodo.dataInicio, periodo.dataFim, limit]);
+  `, [periodo.dataInicio, periodo.dataFim, ...labs, limit]);
 
   return rows.map(r => ({
     id: Number(r.id),
@@ -1283,6 +1314,11 @@ export async function getRankingProdutos(periodo: FiltroPeriodo, limit = 20) {
 
 // 4. Ranking por ensaio
 export async function getRankingEnsaios(periodo: FiltroPeriodo, limit = 20) {
+  const labs = await resolveFilialLaboratorios(periodo.filialId);
+  const labFilter = labs.length > 0
+    ? `AND cod_laboratorio IN (${labs.map(() => '?').join(', ')})`
+    : '';
+
   const rows = await blabQuery<any>(`
     SELECT
       cod_ensaio                                                           AS id,
@@ -1295,10 +1331,11 @@ export async function getRankingEnsaios(periodo: FiltroPeriodo, limit = 20) {
       AND valor IS NOT NULL AND valor != ''
       AND cod_ensaio IS NOT NULL
       AND data_resultado BETWEEN ? AND ?
+      ${labFilter}
     GROUP BY cod_ensaio, ensaio
     ORDER BY nc DESC
     LIMIT ?
-  `, [periodo.dataInicio, periodo.dataFim, limit]);
+  `, [periodo.dataInicio, periodo.dataFim, ...labs, limit]);
 
   return rows.map(r => ({
     id: Number(r.id),

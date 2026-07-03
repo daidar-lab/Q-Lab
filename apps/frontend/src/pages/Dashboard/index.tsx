@@ -74,12 +74,60 @@ const MACRO_GRUPOS_CONFIG = [
 
 export default function DashboardPage() {
   const navigate = useNavigate();
-  const { ctx } = useContexto();
-  const periodo = { dataInicio: ctx.dataInicio ?? '', dataFim: ctx.dataFim ?? '' };
+  const { ctx, filialId } = useContexto();
+  const periodo = { filialId, dataInicio: ctx.dataInicio ?? '', dataFim: ctx.dataFim ?? '' };
   const { kpis, processos, produtos, ensaios, carregando, erro } = useDashboard(periodo);
   const dadosPorTipo: Record<string, typeof processos> = { processos, produtos, ensaios };
   const [expandedCategories, setExpandedCategories] = useState<Record<string, boolean>>({});
   const [expandedMacros, setExpandedMacros] = useState<Record<string, boolean>>({});
+
+  if (filialId === null) {
+    return (
+      <div style={{
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        justifyContent: 'center',
+        minHeight: '60dvh',
+        padding: '24px',
+        textAlign: 'center',
+      }}>
+        <div style={{
+          background: 'var(--clr-surface)',
+          border: '1px solid var(--clr-border)',
+          borderRadius: 'var(--r-lg)',
+          padding: '40px 32px',
+          maxWidth: '480px',
+          boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)'
+        }}>
+          <div style={{
+            fontSize: '48px',
+            marginBottom: '16px',
+            color: 'var(--clr-primary)'
+          }}>
+            🏢
+          </div>
+          <h2 style={{
+            fontSize: '20px',
+            fontWeight: 700,
+            color: 'var(--clr-text)',
+            marginBottom: '10px'
+          }}>
+            Nenhuma filial selecionada
+          </h2>
+          <p style={{
+            fontSize: '14px',
+            color: 'var(--clr-text-3)',
+            lineHeight: '1.5',
+            margin: 0
+          }}>
+            Por favor, selecione uma filial no topo da tela para visualizar os KPIs e os macro processos de qualidade correspondentes.
+          </p>
+        </div>
+      </div>
+    );
+  }
+
 
   const kpiCard: CSSProperties = {
     background: 'var(--clr-surface)', border: '1px solid var(--clr-border)',

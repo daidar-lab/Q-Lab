@@ -17,7 +17,8 @@ export async function handleGetFaixas(
     next: NextFunction
 ): Promise<void> {
     try {
-        const { id, codEnsaio, dataInicio, dataFim } = req.query;
+        const { id, codEnsaio, dataInicio, dataFim, filialId: filialIdStr } = req.query;
+        const filialId = parseInt(filialIdStr as string);
 
         if (!id || typeof id !== 'string') {
             res.status(400).json({ erro: 'O parâmetro "id" (código do centro de custo) é obrigatório.' });
@@ -39,7 +40,12 @@ export async function handleGetFaixas(
             return;
         }
 
-        const result = await getExplosaoFaixas(id, codEnsaio, dataInicio, dataFim);
+        if (!filialId || isNaN(filialId)) {
+            res.status(400).json({ erro: 'filialId é obrigatório.' });
+            return;
+        }
+
+        const result = await getExplosaoFaixas(id, codEnsaio, dataInicio, dataFim, filialId);
         res.json(result);
     } catch (err) {
         next(err);
@@ -49,16 +55,14 @@ export async function handleGetFaixas(
 /**
  * GET /api/analitica/detalhe/faixas/produtos
  */
-/**
- * GET /api/analitica/detalhe/faixas/produtos
- */
 export async function handleGetProdutosPorFaixa(
     req: Request,
     res: Response,
     next: NextFunction
 ): Promise<void> {
     try {
-        const { id, codEnsaio, lie, lse, dataInicio, dataFim } = req.query;
+        const { id, codEnsaio, lie, lse, dataInicio, dataFim, filialId: filialIdStr } = req.query;
+        const filialId = parseInt(filialIdStr as string);
 
         if (id === undefined || id === null || typeof id !== 'string') {
             res.status(400).json({ erro: 'O parâmetro "id" é obrigatório e deve ser texto.' });
@@ -103,14 +107,18 @@ export async function handleGetProdutosPorFaixa(
             return;
         }
 
-        // AJUSTE SEGURO: Enviamos o 'id' e o 'codEnsaio' explicitamente para o service.
-        // Certifique-se de que a assinatura do seu getProdutosPorFaixa no service receba (id, codEnsaio, lie, lse, dataInicio, dataFim)
-        const result = await getProdutosPorFaixa(id, codEnsaio, parsedLie, parsedLse, dataInicio, dataFim);
+        if (!filialId || isNaN(filialId)) {
+            res.status(400).json({ erro: 'filialId é obrigatório.' });
+            return;
+        }
+
+        const result = await getProdutosPorFaixa(id, codEnsaio, parsedLie, parsedLse, dataInicio, dataFim, filialId);
         res.json(result);
     } catch (err) {
         next(err);
     }
 }
+
 /**
  * GET /api/analitica/detalhe/faixas/produtos/historico
  */
@@ -120,7 +128,8 @@ export async function handleGetHistoricoProdutosFaixa(
     next: NextFunction
 ): Promise<void> {
     try {
-        const { id, codEnsaio, lie, lse, dataInicio, dataFim, produtos } = req.query;
+        const { id, codEnsaio, lie, lse, dataInicio, dataFim, produtos, filialId: filialIdStr } = req.query;
+        const filialId = parseInt(filialIdStr as string);
 
         if (!id || typeof id !== 'string') {
             res.status(400).json({ erro: 'O parâmetro "id" (código do centro de custo) é obrigatório.' });
@@ -161,7 +170,11 @@ export async function handleGetHistoricoProdutosFaixa(
             return;
         }
 
-        // produtos can be passed as comma-separated or array
+        if (!filialId || isNaN(filialId)) {
+            res.status(400).json({ erro: 'filialId é obrigatório.' });
+            return;
+        }
+
         let parsedProdutos: string[] = [];
         if (typeof produtos === 'string') {
             parsedProdutos = produtos.split(',').filter(Boolean);
@@ -174,7 +187,7 @@ export async function handleGetHistoricoProdutosFaixa(
             return;
         }
 
-        const result = await getHistoricoProdutosFaixa(id, codEnsaio, parsedLie, parsedLse, dataInicio, dataFim, parsedProdutos);
+        const result = await getHistoricoProdutosFaixa(id, codEnsaio, parsedLie, parsedLse, dataInicio, dataFim, parsedProdutos, filialId);
         res.json(result);
     } catch (err) {
         next(err);
@@ -183,7 +196,6 @@ export async function handleGetHistoricoProdutosFaixa(
 
 /**
  * GET /api/analitica/detalhe/faixas/sem-faixa/produtos
- * Fallback para ensaios sem especificação numérica (processo ou produto sem LIE/LSE)
  */
 export async function handleGetProdutosSemFaixa(
     req: Request,
@@ -191,7 +203,8 @@ export async function handleGetProdutosSemFaixa(
     next: NextFunction
 ): Promise<void> {
     try {
-        const { id, codEnsaio, dataInicio, dataFim } = req.query;
+        const { id, codEnsaio, dataInicio, dataFim, filialId: filialIdStr } = req.query;
+        const filialId = parseInt(filialIdStr as string);
 
         if (!id || typeof id !== 'string') {
             res.status(400).json({ erro: 'O parâmetro "id" é obrigatório.' });
@@ -209,8 +222,12 @@ export async function handleGetProdutosSemFaixa(
             res.status(400).json({ erro: 'O parâmetro "dataFim" deve estar no formato YYYY-MM-DD.' });
             return;
         }
+        if (!filialId || isNaN(filialId)) {
+            res.status(400).json({ erro: 'filialId é obrigatório.' });
+            return;
+        }
 
-        const result = await getProdutosSemFaixa(id, codEnsaio, dataInicio, dataFim);
+        const result = await getProdutosSemFaixa(id, codEnsaio, dataInicio, dataFim, filialId);
         res.json(result);
     } catch (err) {
         next(err);
@@ -219,7 +236,6 @@ export async function handleGetProdutosSemFaixa(
 
 /**
  * GET /api/analitica/detalhe/faixas/sem-faixa/historico
- * Histórico cronológico para ensaios sem LIE/LSE — conformidade como 1/0
  */
 export async function handleGetHistoricoProdutosSemFaixa(
     req: Request,
@@ -227,7 +243,8 @@ export async function handleGetHistoricoProdutosSemFaixa(
     next: NextFunction
 ): Promise<void> {
     try {
-        const { id, codEnsaio, dataInicio, dataFim, produtos } = req.query;
+        const { id, codEnsaio, dataInicio, dataFim, produtos, filialId: filialIdStr } = req.query;
+        const filialId = parseInt(filialIdStr as string);
 
         if (!id || typeof id !== 'string') {
             res.status(400).json({ erro: 'O parâmetro "id" é obrigatório.' });
@@ -243,6 +260,10 @@ export async function handleGetHistoricoProdutosSemFaixa(
         }
         if (!dataFim || typeof dataFim !== 'string' || !isValidDate(dataFim)) {
             res.status(400).json({ erro: 'O parâmetro "dataFim" deve estar no formato YYYY-MM-DD.' });
+            return;
+        }
+        if (!filialId || isNaN(filialId)) {
+            res.status(400).json({ erro: 'filialId é obrigatório.' });
             return;
         }
 
@@ -258,9 +279,10 @@ export async function handleGetHistoricoProdutosSemFaixa(
             return;
         }
 
-        const result = await getHistoricoProdutosSemFaixa(id, codEnsaio, dataInicio, dataFim, parsedProdutos);
+        const result = await getHistoricoProdutosSemFaixa(id, codEnsaio, dataInicio, dataFim, parsedProdutos, filialId);
         res.json(result);
     } catch (err) {
         next(err);
     }
 }
+

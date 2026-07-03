@@ -5,6 +5,7 @@ import { getDetalheCompleto } from './detalhe.service';
 interface ResumoDetalheParams {
   tipo: 'processo' | 'produto' | 'ensaio';
   id: string | number;
+  filialId: number;
   dataInicio: string;
   dataFim: string;
 }
@@ -17,7 +18,7 @@ export async function getResumoDetalheIA(params: ResumoDetalheParams) {
   // 2. Fingerprint baseado nos dados numéricos reais
   const chave = gerarChaveCache(
     'resumo_detalhe',
-    { tipo: params.tipo, id: String(params.id), dataInicio: params.dataInicio, dataFim: params.dataFim },
+    { tipo: params.tipo, id: String(params.id), filialId: params.filialId, dataInicio: params.dataInicio, dataFim: params.dataFim },
     {
       resumo: detalhe.resumo,
       faixas: detalhe.faixas,

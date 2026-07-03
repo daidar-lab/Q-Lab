@@ -1,17 +1,22 @@
 import { blabQuery } from '../../db/blab.pool';
+import { resolveFilialLaboratorios } from '../../utils/filial.helper';
 
 // Sub-tela 1 — Provas Horárias (Envasamento)
 // Discriminador: cod_skip_lote IN (29, 36, 31, 54)
 // Grupo A: query única contra DW_FAT_RESULTADO, sem âncora
 
 interface ProvasHorariasParams {
-    cod_filial: number;
+    filialId: number;
     data_inicial: string; // YYYYMMDD
     data_final: string;   // YYYYMMDD
 }
 
 export async function getProvasHorarias(params: ProvasHorariasParams) {
-    const { data_inicial, data_final } = params;
+    const { filialId, data_inicial, data_final } = params;
+    const labs = await resolveFilialLaboratorios(filialId);
+    const labFilter = labs.length > 0
+        ? `AND cod_laboratorio IN (${labs.map(() => '?').join(', ')})`
+        : '';
 
     return blabQuery<any>(
         `SELECT
@@ -43,8 +48,8 @@ export async function getProvasHorarias(params: ProvasHorariasParams) {
         AND D_E_L_E_T IS NULL
         AND valor IS NOT NULL AND valor != ''
         AND cod_skip_lote IN ('29', '36', '31', '54')
-        AND cod_laboratorio IN ('16', '18', '20', '4', '6', '8', '5')
+        ${labFilter}
         ORDER BY lote_de_controle_de_qualidade, cod_amostra, cod_ensaio`,
-        [data_inicial, data_final],
+        [data_inicial, data_final, ...labs],
     );
 }

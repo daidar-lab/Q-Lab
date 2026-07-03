@@ -5,10 +5,11 @@ export const detalheApi = {
         tipo: string,
         id: string,
         dataInicio: string,
-        dataFim: string
+        dataFim: string,
+        filialId: number
     ) => {
         const res = await request<{ ok: boolean; data: any }>(`/api/detalhe/${tipo}/${id}`, {
-            params: { dataInicio, dataFim },
+            params: { dataInicio, dataFim, filialId },
         });
         return res.data;
     },
@@ -16,10 +17,11 @@ export const detalheApi = {
         tipo: string,
         id: string,
         dataInicio: string,
-        dataFim: string
+        dataFim: string,
+        filialId: number
     ) => {
         const res = await request<{ ok: boolean; data: any }>(`/api/detalhe/${tipo}/${id}/resumo-ia`, {
-            params: { dataInicio, dataFim },
+            params: { dataInicio, dataFim, filialId },
         });
         return res.data;
     },
@@ -43,10 +45,11 @@ export const detalheApi = {
         lse: number | undefined,
         dataInicio: string,
         dataFim: string,
-        produtos: string[]
+        produtos: string[],
+        filialId: number
     ) => {
         return request<any[]>('/api/analitica/detalhe/faixas/produtos/historico', {
-            params: { id, codEnsaio, lie, lse, dataInicio, dataFim, produtos: produtos.join(',') },
+            params: { id, codEnsaio, lie, lse, dataInicio, dataFim, produtos: produtos.join(','), filialId },
         });
     },
 
@@ -56,10 +59,11 @@ export const detalheApi = {
         codEnsaio: string,
         dataInicio: string,
         dataFim: string,
-        produtos: string[]
+        produtos: string[],
+        filialId: number
     ) => {
         return request<any[]>('/api/analitica/detalhe/faixas/sem-faixa/historico', {
-            params: { id, codEnsaio, dataInicio, dataFim, produtos: produtos.join(',') },
+            params: { id, codEnsaio, dataInicio, dataFim, produtos: produtos.join(','), filialId },
         });
     },
 
@@ -68,10 +72,11 @@ export const detalheApi = {
         id: string | number,
         codEnsaio: string,
         dataInicio: string,
-        dataFim: string
+        dataFim: string,
+        filialId: number
     ) => {
         return request<any[]>('/api/analitica/detalhe/faixas/sem-faixa/produtos', {
-            params: { id, codEnsaio, dataInicio, dataFim },
+            params: { id, codEnsaio, dataInicio, dataFim, filialId },
         });
     },
 
@@ -80,4 +85,4 @@ export const detalheApi = {
             params: { ensaio: codEnsaio },
         });
     },
-};
+};

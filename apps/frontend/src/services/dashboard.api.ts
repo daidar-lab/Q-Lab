@@ -2,6 +2,7 @@
 import { request } from './api';
 
 interface FiltroPeriodo {
+    filialId: number;
     dataInicio: string;
     dataFim: string;
 }

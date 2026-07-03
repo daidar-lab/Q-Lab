@@ -1,6 +1,7 @@
 import { Outlet, Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthProvider';
 import { PeriodSelector } from '../components/ui/PeriodSelector';
+import { FilialSelector } from '../components/ui/FilialSelector';
 import type { CSSProperties } from 'react';
 
 // Breadcrumb simples baseado na URL
@@ -79,10 +80,12 @@ export default function MainLayout() {
           </div>
         </Link>
 
-        {/* Centro — seletor de período */}
-        <div style={{ flex: 1, display: 'flex', justifyContent: 'center', paddingLeft: '24px', paddingRight: '24px' }}>
+        {/* Centro — seletor de período + filial */}
+        <div style={{ flex: 1, display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '16px', paddingLeft: '24px', paddingRight: '24px' }}>
+          <FilialSelector />
           <PeriodSelector />
         </div>
+
 
         {/* Direita — usuário + ações */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>

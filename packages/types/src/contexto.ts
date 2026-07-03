@@ -5,11 +5,12 @@ export type Familia = 'NUMERICO' | 'FAIXA' | 'CATEGORICO';
 
 export interface ContextoAnalise {
     // ── Obrigatórios ────────────────────────────────────────────────────────────
+    filialId: number;     // filtro mestre — obrigatório em todas as queries
     codProduto: number;
     codCentroCusto: number;
     codEnsaio: number;
     dataInicio: string;   // YYYY-MM-DD
-    dataFim: string;   // YYYY-MM-DD
+    dataFim: string;      // YYYY-MM-DD
 
     // ── Opcionais ───────────────────────────────────────────────────────────────
     codBem?: number;
@@ -21,6 +22,7 @@ export interface ContextoAnalise {
 
 export function contextoCompleto(ctx: Partial<ContextoAnalise>): ctx is ContextoAnalise {
     return (
+        ctx.filialId != null &&
         ctx.codProduto != null &&
         ctx.codCentroCusto != null &&
         ctx.codEnsaio != null &&

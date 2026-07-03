@@ -14,8 +14,10 @@ export const MicrobiologiaController = {
 
   async getEstabilidadeBiologicaMicro(req: Request, res: Response, next: NextFunction) {
     try {
-      const { data_inicial, data_final } = req.body;
+      const { filialId, data_inicial, data_final } = req.body;
+      if (!filialId) { res.status(400).json({ erro: 'filialId é obrigatório.' }); return; }
       const data = await getEstabilidadeBiologicaMicro({
+        filialId:     Number(filialId),
         data_inicial: String(data_inicial),
         data_final:   String(data_final),
       });
@@ -27,8 +29,10 @@ export const MicrobiologiaController = {
 
   async getEstabilidadeBiologicaEnvase(req: Request, res: Response, next: NextFunction) {
     try {
-      const { data_inicial, data_final } = req.body;
+      const { filialId, data_inicial, data_final } = req.body;
+      if (!filialId) { res.status(400).json({ erro: 'filialId é obrigatório.' }); return; }
       const data = await getEstabilidadeBiologicaEnvase({
+        filialId:     Number(filialId),
         data_inicial: String(data_inicial),
         data_final:   String(data_final),
       });
@@ -40,6 +44,7 @@ export const MicrobiologiaController = {
 
   async getResultadosMicrobiologicos(req: Request, res: Response, next: NextFunction) {
     try {
+      // cod_filial já era obrigatório neste endpoint — sem mudança de assinatura
       const { cod_filial, data_inicial, data_final } = req.body;
       const data = await getResultadosMicrobiologicos({
         cod_filial:   Number(cod_filial),
@@ -54,8 +59,10 @@ export const MicrobiologiaController = {
 
   async getAguaDeEnxague(req: Request, res: Response, next: NextFunction) {
     try {
-      const { data_inicial, data_final } = req.body;
+      const { filialId, data_inicial, data_final } = req.body;
+      if (!filialId) { res.status(400).json({ erro: 'filialId é obrigatório.' }); return; }
       const data = await getAguaDeEnxague({
+        filialId:     Number(filialId),
         data_inicial: String(data_inicial),
         data_final:   String(data_final),
       });
@@ -67,8 +74,10 @@ export const MicrobiologiaController = {
 
   async getSwab(req: Request, res: Response, next: NextFunction) {
     try {
-      const { data_inicial, data_final } = req.body;
+      const { filialId, data_inicial, data_final } = req.body;
+      if (!filialId) { res.status(400).json({ erro: 'filialId é obrigatório.' }); return; }
       const data = await getSwab({
+        filialId:     Number(filialId),
         data_inicial: String(data_inicial),
         data_final:   String(data_final),
       });
@@ -80,8 +89,10 @@ export const MicrobiologiaController = {
 
   async getAnaliseMicrobiologia(req: Request, res: Response, next: NextFunction) {
     try {
-      const { data_inicial, data_final } = req.body;
+      const { filialId, data_inicial, data_final } = req.body;
+      if (!filialId) { res.status(400).json({ erro: 'filialId é obrigatório.' }); return; }
       const data = await getAnaliseMicrobiologia({
+        filialId:     Number(filialId),
         data_inicial: String(data_inicial),
         data_final:   String(data_final),
       });

@@ -233,37 +233,57 @@ export async function handleCategoricoComparacao(req: Request, res: Response, ne
 
 export async function handleKpisDashboard(req: Request, res: Response, next: NextFunction) {
   try {
-    const { dataInicio, dataFim } = req.query as { dataInicio: string; dataFim: string };
+    const { dataInicio, dataFim, filialId: filialIdStr } = req.query as { dataInicio: string; dataFim: string; filialId: string };
+    const filialId = parseInt(filialIdStr);
     if (!dataInicio || !dataFim) {
       res.status(400).json({ erro: 'dataInicio e dataFim são obrigatórios.' });
       return;
     }
-    res.json(await getKpisDashboard({ dataInicio, dataFim }));
+    if (!filialId || isNaN(filialId)) {
+      res.status(400).json({ erro: 'filialId é obrigatório.' });
+      return;
+    }
+    res.json(await getKpisDashboard({ dataInicio, dataFim, filialId }));
   } catch (err) { next(err); }
 }
 
 export async function handleRankingProcessos(req: Request, res: Response, next: NextFunction) {
   try {
-    const { dataInicio, dataFim } = req.query as { dataInicio: string; dataFim: string };
+    const { dataInicio, dataFim, filialId: filialIdStr } = req.query as { dataInicio: string; dataFim: string; filialId: string };
+    const filialId = parseInt(filialIdStr);
     if (!dataInicio || !dataFim) {
       res.status(400).json({ erro: 'dataInicio e dataFim são obrigatórios.' });
       return;
     }
-    const ranking = await getRankingProcessos({ dataInicio, dataFim });
+    if (!filialId || isNaN(filialId)) {
+      res.status(400).json({ erro: 'filialId é obrigatório.' });
+      return;
+    }
+    const ranking = await getRankingProcessos({ dataInicio, dataFim, filialId });
     res.json(ranking);
   } catch (err) { next(err); }
 }
 
 export async function handleRankingProdutos(req: Request, res: Response, next: NextFunction) {
   try {
-    const { dataInicio, dataFim } = req.query as { dataInicio: string; dataFim: string };
-    res.json(await getRankingProdutos({ dataInicio, dataFim }));
+    const { dataInicio, dataFim, filialId: filialIdStr } = req.query as { dataInicio: string; dataFim: string; filialId: string };
+    const filialId = parseInt(filialIdStr);
+    if (!filialId || isNaN(filialId)) {
+      res.status(400).json({ erro: 'filialId é obrigatório.' });
+      return;
+    }
+    res.json(await getRankingProdutos({ dataInicio, dataFim, filialId }));
   } catch (err) { next(err); }
 }
 
 export async function handleRankingEnsaios(req: Request, res: Response, next: NextFunction) {
   try {
-    const { dataInicio, dataFim } = req.query as { dataInicio: string; dataFim: string };
-    res.json(await getRankingEnsaios({ dataInicio, dataFim }));
+    const { dataInicio, dataFim, filialId: filialIdStr } = req.query as { dataInicio: string; dataFim: string; filialId: string };
+    const filialId = parseInt(filialIdStr);
+    if (!filialId || isNaN(filialId)) {
+      res.status(400).json({ erro: 'filialId é obrigatório.' });
+      return;
+    }
+    res.json(await getRankingEnsaios({ dataInicio, dataFim, filialId }));
   } catch (err) { next(err); }
 }

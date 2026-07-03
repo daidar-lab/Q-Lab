@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { request } from '../../services/api';
+import { useContexto } from '../../contexts/ContextoProvider';
 import styles from './ProdutosDropdown.module.css';
 
 export interface ProdutoFaixa {
@@ -33,12 +34,14 @@ export const ProdutosDropdown: React.FC<ProdutosDropdownProps> = ({
   onToggleSku,
   semFaixa = false,
 }) => {
+  const { filialId } = useContexto();
   const [produtos, setProdutos] = useState<ProdutoFaixa[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     const fetchProdutos = async () => {
+      if (filialId === null) return;
       setLoading(true);
       setError(null);
       try {
@@ -47,8 +50,8 @@ export const ProdutosDropdown: React.FC<ProdutosDropdownProps> = ({
           : '/api/analitica/detalhe/faixas/produtos';
 
         const params: Record<string, any> = semFaixa
-          ? { id, codEnsaio, dataInicio, dataFim }
-          : { id, codEnsaio, lie, lse, dataInicio, dataFim };
+          ? { id, codEnsaio, dataInicio, dataFim, filialId }
+          : { id, codEnsaio, lie, lse, dataInicio, dataFim, filialId };
 
         const data = await request<ProdutoFaixa[]>(endpoint, { params });
         setProdutos(data || []);
@@ -61,7 +64,8 @@ export const ProdutosDropdown: React.FC<ProdutosDropdownProps> = ({
     };
 
     fetchProdutos();
-  }, [id, codEnsaio, lie, lse, dataInicio, dataFim, semFaixa]);
+  }, [id, codEnsaio, lie, lse, dataInicio, dataFim, semFaixa, filialId]);
+
 
   const getComplianceBadge = (pct: number | string | undefined | null) => {
     const numPct = typeof pct === 'number' ? pct : parseFloat(String(pct || 0));

@@ -1,5 +1,5 @@
 // apps/frontend/src/contexts/ContextoProvider.tsx
-import { createContext, useContext, useState, type ReactNode } from 'react';
+import { createContext, useContext, useState, useEffect, type ReactNode } from 'react';
 import { contextoCompleto } from '@qlab/types';
 import type { ContextoAnalise } from '@qlab/types';
 
@@ -13,6 +13,9 @@ function periodoDefault() {
 
 interface ContextoState {
     ctx: Partial<ContextoAnalise>;
+    filialId: number | null;
+    filialLabel: string;
+    setFilial: (cod_filial: number | null, label: string) => void;
     set: <K extends keyof ContextoAnalise>(key: K, val: ContextoAnalise[K] | undefined) => void;
     reset: () => void;
     periodoOk: boolean;
@@ -29,13 +32,51 @@ const ContextoCtx = createContext<ContextoState | null>(null);
 
 export function ContextoProvider({ children }: { children: ReactNode }) {
     const defPeriodo = periodoDefault();
+
+    // Estado da filial recuperado do localStorage
+    const [filialId, setFilialIdState] = useState<number | null>(() => {
+        const cached = localStorage.getItem('qlab:filialId');
+        return cached ? Number(cached) : null;
+    });
+    const [filialLabel, setFilialLabel] = useState<string>(() => {
+        return localStorage.getItem('qlab:filialLabel') || '';
+    });
+
     const [ctx, setCtx] = useState<Partial<ContextoAnalise>>({
+        filialId: filialId ?? undefined,
         dataInicio: defPeriodo.dataInicio,
         dataFim: defPeriodo.dataFim,
     });
     const [modoAnalyse, setModoAnalyse] = useState<'individual' | 'ranges' | 'granularidade'>('individual');
     const [periodo2, setPeriodo2] = useState<{ inicio: string; fim: string }>({ inicio: '', fim: '' });
     const [granularidade, setGranularidade] = useState<'dia' | 'semana' | 'mes' | 'trimestre' | 'ano'>('dia');
+
+    // Sincroniza filialId no contexto de análise
+    useEffect(() => {
+        setCtx(prev => ({
+            ...prev,
+            filialId: filialId ?? undefined,
+        }));
+    }, [filialId]);
+
+    function setFilial(cod_filial: number | null, label: string) {
+        if (cod_filial === null) {
+            localStorage.removeItem('qlab:filialId');
+            localStorage.removeItem('qlab:filialLabel');
+        } else {
+            localStorage.setItem('qlab:filialId', String(cod_filial));
+            localStorage.setItem('qlab:filialLabel', label);
+        }
+        setFilialIdState(cod_filial);
+        setFilialLabel(label);
+
+        // Ao mudar a filial, limpa os filtros dependentes anteriores
+        setCtx(prev => ({
+            filialId: cod_filial ?? undefined,
+            dataInicio: prev.dataInicio,
+            dataFim: prev.dataFim,
+        }));
+    }
 
     function set<K extends keyof ContextoAnalise>(key: K, val: ContextoAnalise[K] | undefined) {
         setCtx(prev => {
@@ -64,6 +105,7 @@ export function ContextoProvider({ children }: { children: ReactNode }) {
     function reset() {
         const defPeriodo = periodoDefault();
         setCtx({
+            filialId: filialId ?? undefined,
             dataInicio: defPeriodo.dataInicio,
             dataFim: defPeriodo.dataFim,
         });
@@ -79,6 +121,9 @@ export function ContextoProvider({ children }: { children: ReactNode }) {
     return (
         <ContextoCtx.Provider value={{
             ctx,
+            filialId,
+            filialLabel,
+            setFilial,
             set,
             reset,
             periodoOk: pOk,
@@ -99,4 +144,4 @@ export function useContexto(): ContextoState {
     const ctx = useContext(ContextoCtx);
     if (!ctx) throw new Error('useContexto deve ser usado dentro de ContextoProvider');
     return ctx;
-}
+}

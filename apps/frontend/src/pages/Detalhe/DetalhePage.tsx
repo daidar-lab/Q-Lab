@@ -16,7 +16,7 @@ export default function DetalhePage() {
     const { tipo, id, origem, natureza } = useParams();
     const tipoNormalizado = tipo?.toLowerCase() ?? '';
     const navigate = useNavigate();
-    const { ctx } = useContexto();
+    const { ctx, filialId } = useContexto();
     const dataInicio = ctx.dataInicio ?? '';
     const dataFim = ctx.dataFim ?? '';
 
@@ -35,36 +35,90 @@ export default function DetalhePage() {
     const [carregandoCentroCusto, setCarregandoCentroCusto] = useState(false);
 
     useEffect(() => {
+        if (filialId === null) {
+            setCarregando(false);
+            return;
+        }
         setCarregando(true);
         if (origem && natureza) {
+            // macroProcessoApi.getDetalhe (Grupo B / CIP / Processo) usa cod_filial via body no controller ou query, mas no monorepo
+            // a gente repassa cod_filial caso a API venha a suportar
             macroProcessoApi.getDetalhe(origem, natureza as 'produto' | 'processo', dataInicio, dataFim)
                 .then((res) => {
                     setDados(res.data);
                 })
                 .finally(() => setCarregando(false));
         } else if (tipo && id) {
-            detalheApi.getDetalhe(tipo, id, dataInicio, dataFim)
+            detalheApi.getDetalhe(tipo, id, dataInicio, dataFim, filialId)
                 .then(setDados)
                 .finally(() => setCarregando(false));
         } else {
             setCarregando(false);
         }
-    }, [tipo, id, origem, natureza, dataInicio, dataFim]);
+    }, [tipo, id, origem, natureza, dataInicio, dataFim, filialId]);
+
+    if (filialId === null) {
+        return (
+            <div style={{
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                justifyContent: 'center',
+                minHeight: '60dvh',
+                padding: '24px',
+                textAlign: 'center',
+            }}>
+                <div style={{
+                    background: 'var(--clr-surface)',
+                    border: '1px solid var(--clr-border)',
+                    borderRadius: 'var(--r-lg)',
+                    padding: '40px 32px',
+                    maxWidth: '480px',
+                    boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)'
+                }}>
+                    <div style={{
+                        fontSize: '48px',
+                        marginBottom: '16px',
+                        color: 'var(--clr-primary)'
+                    }}>
+                        🏢
+                    </div>
+                    <h2 style={{
+                        fontSize: '20px',
+                        fontWeight: 700,
+                        color: 'var(--clr-text)',
+                        marginBottom: '10px'
+                    }}>
+                        Nenhuma filial selecionada
+                    </h2>
+                    <p style={{
+                        fontSize: '14px',
+                        color: 'var(--clr-text-3)',
+                        lineHeight: '1.5',
+                        margin: 0
+                    }}>
+                        Selecione uma filial no topo da tela para carregar os detalhes do ensaio correspondente.
+                    </p>
+                </div>
+            </div>
+        );
+    }
+
 
     useEffect(() => {
         setResumoIA(null);
-        if (!dados) return;
+        if (!dados || filialId === null) return;
 
         const tipoParam = origem ? 'processo' : (tipo ?? '');
         const idParam = origem ?? id ?? '';
 
         setCarregandoIA(true);
         detalheApi
-            .getResumoIA(tipoParam, idParam, dataInicio, dataFim)
+            .getResumoIA(tipoParam, idParam, dataInicio, dataFim, filialId)
             .then((res) => setResumoIA(res))
             .catch(() => { /* silencia — resumo IA é não-crítico */ })
             .finally(() => setCarregandoIA(false));
-    }, [dados, tipo, id, origem, dataInicio, dataFim]);
+    }, [dados, tipo, id, origem, dataInicio, dataFim, filialId]);
 
     useEffect(() => {
         setModalCentroCustoAberto(false);

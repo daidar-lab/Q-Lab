@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { request } from '../../services/api';
+import { useContexto } from '../../contexts/ContextoProvider';
 import FaixaCard from './FaixaCard';
 import type { Faixa } from './FaixaCard';
 import ProdutosDropdown from './ProdutosDropdown';
@@ -27,6 +28,7 @@ export const FaixasContainer: React.FC<FaixasContainerProps> = ({
     onActiveFaixasChange,
     onModoSemFaixaChange,
 }) => {
+    const { filialId } = useContexto();
     const [faixas, setFaixas] = useState<Faixa[]>([]);
     const [loading, setLoading] = useState<boolean>(true);
     const [error, setError] = useState<string | null>(null);
@@ -37,6 +39,7 @@ export const FaixasContainer: React.FC<FaixasContainerProps> = ({
 
     useEffect(() => {
         const fetchFaixas = async () => {
+            if (filialId === null) return;
             setLoading(true);
             setError(null);
             setModoSemFaixa(false);
@@ -47,6 +50,7 @@ export const FaixasContainer: React.FC<FaixasContainerProps> = ({
                         codEnsaio,
                         dataInicio,
                         dataFim,
+                        filialId,
                     },
                 });
 

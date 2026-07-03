@@ -1,5 +1,6 @@
 import { blabQuery } from '../db/blab.pool';
 import { resolverFiltroPorId } from './analitica.service';
+import { resolveFilialLaboratorios } from '../utils/filial.helper';
 
 export interface FaixaExplosaoRow {
     lie: number;
@@ -59,9 +60,14 @@ export async function getExplosaoFaixas(
     id: string,
     codEnsaio: string,
     dataInicio: string,
-    dataFim: string
+    dataFim: string,
+    filialId: number
 ): Promise<FaixaExplosaoRow[]> {
     const { sql: filtroCtx, params: paramsCtx } = resolverFiltroContexto(id);
+    const labs = await resolveFilialLaboratorios(filialId);
+    const labFilter = labs.length > 0
+        ? `AND dw.cod_laboratorio IN (${labs.map(() => '?').join(', ')})`
+        : '';
 
     return blabQuery(`
     SELECT
@@ -73,6 +79,7 @@ export async function getExplosaoFaixas(
     FROM DW_FAT_RESULTADO dw
     WHERE dw.D_E_L_E_T IS NULL
       ${filtroCtx}
+      ${labFilter}
       AND dw.cod_ensaio = ?
       AND dw.lie IS NOT NULL
       AND dw.lse IS NOT NULL
@@ -82,7 +89,7 @@ export async function getExplosaoFaixas(
       CAST(REPLACE(dw.lse, ',', '.') AS DECIMAL(10,4))
     ORDER BY n_amostras DESC
     LIMIT 10
-  `, [...paramsCtx, codEnsaio, dataInicio, dataFim]) as Promise<FaixaExplosaoRow[]>;
+  `, [...paramsCtx, ...labs, codEnsaio, dataInicio, dataFim]) as Promise<FaixaExplosaoRow[]>;
 }
 
 /**
@@ -94,9 +101,14 @@ export async function getProdutosPorFaixa(
     lie: number,
     lse: number,
     dataInicio: string,
-    dataFim: string
+    dataFim: string,
+    filialId: number
 ): Promise<ProdutoFaixaRow[]> {
     const { sql: filtroCtx, params: paramsCtx } = resolverFiltroContexto(id);
+    const labs = await resolveFilialLaboratorios(filialId);
+    const labFilter = labs.length > 0
+        ? `AND dw.cod_laboratorio IN (${labs.map(() => '?').join(', ')})`
+        : '';
 
     return blabQuery(`
     SELECT
@@ -108,13 +120,14 @@ export async function getProdutosPorFaixa(
     FROM DW_FAT_RESULTADO dw
     WHERE dw.D_E_L_E_T IS NULL
       ${filtroCtx}
+      ${labFilter}
       AND dw.cod_ensaio = ?
       AND CAST(REPLACE(dw.lie, ',', '.') AS DECIMAL(10,4)) = ?
       AND CAST(REPLACE(dw.lse, ',', '.') AS DECIMAL(10,4)) = ?
       AND dw.data_resultado BETWEEN ? AND ?
     GROUP BY dw.cod_produto, dw.produto
     ORDER BY n_amostras DESC
-  `, [...paramsCtx, codEnsaio, lie, lse, dataInicio, dataFim]) as Promise<ProdutoFaixaRow[]>;
+  `, [...paramsCtx, ...labs, codEnsaio, lie, lse, dataInicio, dataFim]) as Promise<ProdutoFaixaRow[]>;
 }
 
 function parseValor(raw: string): number {
@@ -140,11 +153,16 @@ export async function getHistoricoProdutosFaixa(
     lse: number | undefined,
     dataInicio: string,
     dataFim: string,
-    codProdutos: string[]
+    codProdutos: string[],
+    filialId: number
 ): Promise<any[]> {
     if (codProdutos.length === 0) return [];
 
     const { sql: filtroCtx, params: paramsCtx } = resolverFiltroContexto(id);
+    const labs = await resolveFilialLaboratorios(filialId);
+    const labFilter = labs.length > 0
+        ? `AND dw.cod_laboratorio IN (${labs.map(() => '?').join(', ')})`
+        : '';
     const placeholders = codProdutos.map(() => '?').join(',');
 
     let lieLseSql = '';
@@ -173,6 +191,7 @@ export async function getHistoricoProdutosFaixa(
     FROM DW_FAT_RESULTADO dw
     WHERE dw.D_E_L_E_T IS NULL
       ${filtroCtx}
+      ${labFilter}
       AND dw.cod_ensaio = ?
       ${lieLseSql}
       AND dw.data_resultado BETWEEN ? AND ?
@@ -180,7 +199,7 @@ export async function getHistoricoProdutosFaixa(
       AND dw.valor IS NOT NULL
       AND dw.valor REGEXP '^-?[0-9]+([.,][0-9]+)?( *- *-?[0-9]+([.,][0-9]+)?)?$'
     ORDER BY dw.data_resultado ASC, dw.hora_resultado ASC
-  `, [...paramsCtx, codEnsaio, ...lieLseParams, dataInicio, dataFim, ...codProdutos]) as any[];
+  `, [...paramsCtx, ...labs, codEnsaio, ...lieLseParams, dataInicio, dataFim, ...codProdutos]) as any[];
 
   return rows.map(r => ({
       cod_produto: r.cod_produto,
@@ -205,9 +224,14 @@ export async function getProdutosSemFaixa(
     id: string,
     codEnsaio: string,
     dataInicio: string,
-    dataFim: string
+    dataFim: string,
+    filialId: number
 ): Promise<ProdutoFaixaRow[]> {
     const { sql: filtroCtx, params: paramsCtx } = resolverFiltroContexto(id);
+    const labs = await resolveFilialLaboratorios(filialId);
+    const labFilter = labs.length > 0
+        ? `AND dw.cod_laboratorio IN (${labs.map(() => '?').join(', ')})`
+        : '';
 
     return blabQuery(`
     SELECT
@@ -219,11 +243,12 @@ export async function getProdutosSemFaixa(
     FROM DW_FAT_RESULTADO dw
     WHERE dw.D_E_L_E_T IS NULL
       ${filtroCtx}
+      ${labFilter}
       AND dw.cod_ensaio = ?
       AND dw.data_resultado BETWEEN ? AND ?
     GROUP BY dw.cod_produto, dw.produto
     ORDER BY n_amostras DESC
-  `, [...paramsCtx, codEnsaio, dataInicio, dataFim]) as Promise<ProdutoFaixaRow[]>;
+  `, [...paramsCtx, ...labs, codEnsaio, dataInicio, dataFim]) as Promise<ProdutoFaixaRow[]>;
 }
 
 /**
@@ -235,11 +260,16 @@ export async function getHistoricoProdutosSemFaixa(
     codEnsaio: string,
     dataInicio: string,
     dataFim: string,
-    codProdutos: string[]
+    codProdutos: string[],
+    filialId: number
 ): Promise<HistoricoSemFaixaRow[]> {
     if (codProdutos.length === 0) return [];
 
     const { sql: filtroCtx, params: paramsCtx } = resolverFiltroContexto(id);
+    const labs = await resolveFilialLaboratorios(filialId);
+    const labFilter = labs.length > 0
+        ? `AND dw.cod_laboratorio IN (${labs.map(() => '?').join(', ')})`
+        : '';
     const placeholders = codProdutos.map(() => '?').join(',');
 
     return blabQuery(`
@@ -256,10 +286,11 @@ export async function getHistoricoProdutosSemFaixa(
     FROM DW_FAT_RESULTADO dw
     WHERE dw.D_E_L_E_T IS NULL
       ${filtroCtx}
+      ${labFilter}
       AND dw.cod_ensaio = ?
       AND dw.data_resultado BETWEEN ? AND ?
       AND dw.cod_produto IN (${placeholders})
       AND dw.conformidade IS NOT NULL
     ORDER BY dw.data_resultado ASC, dw.hora_resultado ASC
-  `, [...paramsCtx, codEnsaio, dataInicio, dataFim, ...codProdutos]) as Promise<HistoricoSemFaixaRow[]>;
+  `, [...paramsCtx, ...labs, codEnsaio, dataInicio, dataFim, ...codProdutos]) as Promise<HistoricoSemFaixaRow[]>;
 }

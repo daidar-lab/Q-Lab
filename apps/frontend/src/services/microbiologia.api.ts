@@ -1,6 +1,7 @@
 import { request } from './api';
 
 interface ParamsDataRange {
+    filialId: number;
     data_inicial: string;
     data_final: string;
 }

@@ -1,9 +1,11 @@
 import { blabQuery } from '../db/blab.pool';
 import { resolverFiltroPorId } from './analitica.service';
+import { resolveFilialLaboratorios } from '../utils/filial.helper';
 
 interface DetalheParams {
   tipo: 'processo' | 'produto' | 'ensaio';
   id: string | number;
+  filialId: number;
   dataInicio: string;
   dataFim: string;
   topN?: number; // default 4
@@ -172,6 +174,10 @@ function getFiltroSql(
 // 1. Série temporal de conformidade agregada (dinâmica)
 export async function getSerieConformidade(params: DetalheParams) {
   const filter = getFiltroSql(params.tipo, params.id, params.dataInicio, params.dataFim);
+  const labs = await resolveFilialLaboratorios(params.filialId);
+  const labFilter = labs.length > 0
+    ? `AND cod_laboratorio IN (${labs.map(() => '?').join(', ')})`
+    : '';
 
   const inicio = new Date(params.dataInicio);
   const fim = new Date(params.dataFim);
@@ -233,30 +239,20 @@ export async function getSerieConformidade(params: DetalheParams) {
       AND LENGTH(data_resultado) = 10
       AND data_resultado REGEXP '^[0-9]{4}-[0-9]{2}-[0-9]{2}$'
       AND data_resultado BETWEEN ? AND ?
+      ${labFilter}
     GROUP BY ${groupBy}
     ORDER BY ${orderBy}
-  `, [...filter.params, params.dataInicio, params.dataFim]);
+  `, [...filter.params, params.dataInicio, params.dataFim, ...labs]);
   return { granularidade, dados };
 }
 
 // 2. Resumo macro (conformidade, NC, lotes afetados)
 export async function getResumoMacro(params: DetalheParams) {
   const filter = getFiltroSql(params.tipo, params.id, params.dataInicio, params.dataFim);
-  console.log(`
-    SELECT
-      COUNT(*)                                                        AS total,
-      SUM(conformidade != 'CONFORME')                                 AS n_nao_conforme,
-      ROUND(SUM(conformidade = 'CONFORME') * 1.0 / COUNT(*) * 100, 1) AS pct_conforme,
-COUNT(DISTINCT lote_de_controle_de_qualidade)  AS total_lotes,
-COUNT(DISTINCT CASE
-  WHEN conformidade != 'CONFORME' THEN lote_de_controle_de_qualidade
-END)                                            AS lotes_afetados
-    FROM DW_FAT_RESULTADO
-    WHERE D_E_L_E_T IS NULL
-      AND conformidade != 'NÃO AVALIADO'
-      AND ${filter.sql}
-      AND data_resultado BETWEEN ? AND ?
-  `);
+  const labs = await resolveFilialLaboratorios(params.filialId);
+  const labFilter = labs.length > 0
+    ? `AND cod_laboratorio IN (${labs.map(() => '?').join(', ')})`
+    : '';
 
   const [resumo] = await blabQuery(`
     SELECT
@@ -272,7 +268,8 @@ END)                                            AS lotes_afetados
       AND conformidade != 'NÃO AVALIADO'
       AND ${filter.sql}
       AND data_resultado BETWEEN ? AND ?
-  `, [...filter.params, params.dataInicio, params.dataFim]);
+      ${labFilter}
+  `, [...filter.params, params.dataInicio, params.dataFim, ...labs]);
 
   return resumo;
 }
@@ -285,6 +282,10 @@ export async function getTopEnsaios(params: DetalheParams) {
 
   const filter = getFiltroSql(params.tipo, params.id, params.dataInicio, params.dataFim);
   const topN = params.topN ?? 4;
+  const labs = await resolveFilialLaboratorios(params.filialId);
+  const labFilter = labs.length > 0
+    ? `AND cod_laboratorio IN (${labs.map(() => '?').join(', ')})`
+    : '';
 
   return blabQuery(`
     SELECT
@@ -296,10 +297,11 @@ export async function getTopEnsaios(params: DetalheParams) {
       AND conformidade != 'NÃO AVALIADO'
       AND ${filter.sql}
       AND data_resultado BETWEEN ? AND ?
+      ${labFilter}
     GROUP BY cod_ensaio, ensaio
     ORDER BY n_amostras DESC
     LIMIT ?
-  `, [...filter.params, params.dataInicio, params.dataFim, topN]);
+  `, [...filter.params, params.dataInicio, params.dataFim, ...labs, topN]);
 }
 
 // 4. Faixas de especificação dos ensaios (com decisão de modo)

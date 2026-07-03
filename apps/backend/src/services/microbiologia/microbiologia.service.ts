@@ -1,10 +1,12 @@
 // apps/backend/src/services/microbiologia/microbiologia.service.ts
 
 import { blabQuery, TABELA_FATO_PRINCIPAL } from '../../db/blab.pool';
+import { resolveFilialLaboratorios } from '../../utils/filial.helper';
 
 // ─── Tipos ────────────────────────────────────────────────────────────────────
 
 interface ParamsDataRange {
+    filialId: number;
     data_inicial: string; // YYYYMMDD
     data_final: string;   // YYYYMMDD
 }
@@ -20,7 +22,11 @@ interface ParamsResultadosMicro extends ParamsDataRange {
 // ─────────────────────────────────────────────────────────────────────────────
 
 export async function getEstabilidadeBiologicaMicro(params: ParamsDataRange) {
-    const { data_inicial, data_final } = params;
+    const { filialId, data_inicial, data_final } = params;
+    const labs = await resolveFilialLaboratorios(filialId);
+    const labFilter = labs.length > 0
+        ? `AND cod_laboratorio IN (${labs.map(() => '?').join(', ')})`
+        : '';
 
     return blabQuery<any>(
         `SELECT
@@ -48,8 +54,9 @@ export async function getEstabilidadeBiologicaMicro(params: ParamsDataRange) {
     AND D_E_L_E_T IS NULL
     AND valor IS NOT NULL AND valor != ''
     AND (cod_skip_lote NOT IN ('36', '54') OR cod_skip_lote IS NULL)
+    ${labFilter}
     ORDER BY cod_amostra, cod_ensaio`,
-        [data_inicial, data_final],
+        [data_inicial, data_final, ...labs],
     );
 }
 
@@ -60,7 +67,11 @@ export async function getEstabilidadeBiologicaMicro(params: ParamsDataRange) {
 // ─────────────────────────────────────────────────────────────────────────────
 
 export async function getEstabilidadeBiologicaEnvase(params: ParamsDataRange) {
-    const { data_inicial, data_final } = params;
+    const { filialId, data_inicial, data_final } = params;
+    const labs = await resolveFilialLaboratorios(filialId);
+    const labFilter = labs.length > 0
+        ? `AND cod_laboratorio IN (${labs.map(() => '?').join(', ')})`
+        : '';
 
     return blabQuery<any>(
         `SELECT
@@ -89,8 +100,9 @@ export async function getEstabilidadeBiologicaEnvase(params: ParamsDataRange) {
     AND valor IS NOT NULL AND valor != ''
     AND (conformidade = 'CONFORME' OR conformidade = 'NÃO CONFORME')
     AND cod_skip_lote IN ('36', '54')
+    ${labFilter}
     ORDER BY cod_amostra, cod_ensaio`,
-        [data_inicial, data_final],
+        [data_inicial, data_final, ...labs],
     );
 }
 
@@ -166,7 +178,11 @@ export async function getResultadosMicrobiologicos(params: ParamsResultadosMicro
 // ─────────────────────────────────────────────────────────────────────────────
 
 export async function getAguaDeEnxague(params: ParamsDataRange) {
-    const { data_inicial, data_final } = params;
+    const { filialId, data_inicial, data_final } = params;
+    const labs = await resolveFilialLaboratorios(filialId);
+    const labFilter = labs.length > 0
+        ? `AND cod_laboratorio IN (${labs.map(() => '?').join(', ')})`
+        : '';
 
     return blabQuery<any>(
         `SELECT
@@ -190,8 +206,9 @@ export async function getAguaDeEnxague(params: ParamsDataRange) {
     AND valor IS NOT NULL AND valor != ''
     AND (conformidade = 'CONFORME' OR conformidade = 'NÃO CONFORME')
     AND cod_produto = 15
+    ${labFilter}
     ORDER BY cod_amostra, cod_ensaio`,
-        [data_inicial, data_final],
+        [data_inicial, data_final, ...labs],
     );
 }
 
@@ -202,7 +219,11 @@ export async function getAguaDeEnxague(params: ParamsDataRange) {
 // ─────────────────────────────────────────────────────────────────────────────
 
 export async function getSwab(params: ParamsDataRange) {
-    const { data_inicial, data_final } = params;
+    const { filialId, data_inicial, data_final } = params;
+    const labs = await resolveFilialLaboratorios(filialId);
+    const labFilter = labs.length > 0
+        ? `AND cod_laboratorio IN (${labs.map(() => '?').join(', ')})`
+        : '';
 
     return blabQuery<any>(
         `SELECT
@@ -226,8 +247,9 @@ export async function getSwab(params: ParamsDataRange) {
     AND valor IS NOT NULL AND valor != ''
     AND (conformidade = 'CONFORME' OR conformidade = 'NÃO CONFORME')
     AND cod_produto = 14
+    ${labFilter}
     ORDER BY cod_amostra, cod_ensaio`,
-        [data_inicial, data_final],
+        [data_inicial, data_final, ...labs],
     );
 }
 
@@ -238,7 +260,11 @@ export async function getSwab(params: ParamsDataRange) {
 // ─────────────────────────────────────────────────────────────────────────────
 
 export async function getAnaliseMicrobiologia(params: ParamsDataRange) {
-    const { data_inicial, data_final } = params;
+    const { filialId, data_inicial, data_final } = params;
+    const labs = await resolveFilialLaboratorios(filialId);
+    const labFilter = labs.length > 0
+        ? `AND cod_laboratorio IN (${labs.map(() => '?').join(', ')})`
+        : '';
 
     return blabQuery<any>(
         `SELECT
@@ -271,7 +297,8 @@ export async function getAnaliseMicrobiologia(params: ParamsDataRange) {
     AND valor IS NOT NULL AND valor != ''
     AND cod_laboratorio IN (5, 17)
     AND cod_area IN (73, 75)
+    ${labFilter}
     ORDER BY cod_amostra, cod_ensaio`,
-        [data_inicial, data_final],
+        [data_inicial, data_final, ...labs],
     );
 }

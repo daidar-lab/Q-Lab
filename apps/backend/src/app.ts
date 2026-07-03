@@ -17,6 +17,7 @@ import fermentoRoutes from './routes/fermento.routes';
 import fisicoRoutes from './routes/fisico.routes';
 import processoRoutes from './routes/processo.routes';
 import microbiologiaRoutes from './routes/microbiologia.routes';
+import filiaisRoutes from './routes/filiais.routes';
 import { errorMiddleware } from './middlewares/error.middleware';
 
 const app = express();
@@ -47,6 +48,7 @@ app.use('/qlab/fermento', fermentoRoutes);
 app.use('/qlab/fisico', fisicoRoutes);
 app.use('/qlab/processo', processoRoutes);
 app.use('/qlab', microbiologiaRoutes);
+app.use('/api/filiais', filiaisRoutes);
 
 // ─── Health check ─────────────────────────────────────────────────────────────
 

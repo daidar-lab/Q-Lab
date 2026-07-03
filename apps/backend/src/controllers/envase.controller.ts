@@ -131,17 +131,19 @@ export const EnvaseController = {
 
     async getProvasHorarias(req: Request, res: Response, next: NextFunction) {
         try {
-            const { cod_filial, data_inicial, data_final } = req.body;
+            const { filialId, data_inicial, data_final } = req.body;
+            if (!filialId) { res.status(400).json({ erro: 'filialId é obrigatório.' }); return; }
             const data = await EnvasamentoService.getProvasHorarias({
-                cod_filial: Number(cod_filial),
+                filialId:     Number(filialId),
                 data_inicial: String(data_inicial),
-                data_final: String(data_final),
+                data_final:   String(data_final),
             });
             res.json({ ok: true, data });
         } catch (err) {
             next(err);
         }
     },
+
 
     async getAnalisesRecravacao(req: Request, res: Response, next: NextFunction) {
         try {
