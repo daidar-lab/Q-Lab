@@ -37,6 +37,8 @@ interface SamplePoint {
     timestamp: string;
     valor: number;
     valor_original?: string;
+    lie?: number;
+    lse?: number;
 }
 
 // ─── Utilities (resgatadas do AmostraDetalheDrawer) ──────────────────────────
@@ -104,6 +106,14 @@ const COLORS = [
     '#ec4899', // pink
     '#06b6d4', // cyan
     '#f97316', // orange
+];
+
+const LIMIT_COLORS = [
+    '#ef4444', // Red
+    '#d97706', // Amber/Orange
+    '#7c3aed', // Violet
+    '#0891b2', // Cyan/Teal
+    '#ec4899', // Pink
 ];
 
 // ─── Custom Tooltip ──────────────────────────────────────────────────────────
@@ -174,7 +184,7 @@ export const FaixaModal: React.FC<FaixaModalProps> = ({
     dataFim,
 }) => {
     const [selectedSkus, setSelectedSkus] = useState<string[]>([]);
-    const [activeLimits, setActiveLimits] = useState<{ lie: number; lse: number } | null>(null);
+    const [activeFaixas, setActiveFaixas] = useState<{ lie: number; lse: number }[]>([]);
     const [samples, setSamples] = useState<SamplePoint[]>([]);
     const [loadingChart, setLoadingChart] = useState<boolean>(false);
 
@@ -188,16 +198,16 @@ export const FaixaModal: React.FC<FaixaModalProps> = ({
     // Diferença de dias entre o range filtrado — define o formato do label X
     const diffDias = calcDiffDias(dataInicio, dataFim);
 
-    // Fetch: dispara sempre que SKUs selecionados ou faixa ativa mudam
+    // Fetch: dispara sempre que SKUs selecionados ou faixas ativas mudam
     useEffect(() => {
-        // Modo sem-faixa: não precisa de activeLimits para buscar
+        // Modo sem-faixa: não precisa de activeFaixas para buscar
         if (modoSemFaixa) {
             if (selectedSkus.length === 0) {
                 setSamples([]);
                 return;
             }
         } else {
-            if (selectedSkus.length === 0 || !activeLimits) {
+            if (selectedSkus.length === 0 || activeFaixas.length === 0) {
                 setSamples([]);
                 return;
             }
@@ -220,12 +230,12 @@ export const FaixaModal: React.FC<FaixaModalProps> = ({
                         selectedSkus,
                     );
                 } else {
-                    // Ensaio com LIE/LSE: usa endpoint original
+                    // Ensaio com LIE/LSE: usa endpoint original sem especificar uma única faixa para carregar todas
                     response = await detalheApi.getHistoricoProdutosFaixa(
                         id,
                         codEnsaio,
-                        activeLimits!.lie,
-                        activeLimits!.lse,
+                        undefined,
+                        undefined,
                         dataInicio,
                         dataFim,
                         selectedSkus,
@@ -251,13 +261,13 @@ export const FaixaModal: React.FC<FaixaModalProps> = ({
 
         fetchHistory();
         return () => { cancelled = true; };
-    }, [id, codEnsaio, activeLimits, selectedSkus, dataInicio, dataFim, modoSemFaixa]);
+    }, [id, codEnsaio, activeFaixas, selectedSkus, dataInicio, dataFim, modoSemFaixa]);
 
     // Reset ao abrir modal ou trocar ensaio
     useEffect(() => {
         if (isOpen) {
             setSelectedSkus([]);
-            setActiveLimits(null);
+            setActiveFaixas([]);
             setSamples([]);
             setModoSemFaixa(false);
             setDrawerOpen(false);
@@ -317,19 +327,21 @@ export const FaixaModal: React.FC<FaixaModalProps> = ({
     if (modoSemFaixa) {
         // Conformidade: 0 = NC, 1 = CONFORME — pequeno padding
         yDomain = [-0.3, 1.3];
-    } else if (activeLimits) {
-        const lie = Number(activeLimits.lie);
-        const lse = Number(activeLimits.lse);
+    } else if (activeFaixas.length > 0) {
+        const lies = activeFaixas.map(f => Number(f.lie));
+        const lses = activeFaixas.map(f => Number(f.lse));
+        const minLimit = Math.min(...lies);
+        const maxLimit = Math.max(...lses);
         const values = samples.map(s => Number(s.valor)).filter(v => !isNaN(v));
         if (values.length > 0) {
-            const minVal = Math.min(...values, lie);
-            const maxVal = Math.max(...values, lse);
+            const minVal = Math.min(...values, minLimit);
+            const maxVal = Math.max(...values, maxLimit);
             const pad = (maxVal - minVal) * 0.12 || 1;
             yDomain = [+(minVal - pad).toFixed(4), +(maxVal + pad).toFixed(4)];
         } else {
-            const diff = lse - lie;
+            const diff = maxLimit - minLimit;
             const pad = diff * 0.2 || 1;
-            yDomain = [+(lie - pad).toFixed(4), +(lse + pad).toFixed(4)];
+            yDomain = [+(minLimit - pad).toFixed(4), +(maxLimit + pad).toFixed(4)];
         }
     }
 
@@ -360,7 +372,7 @@ export const FaixaModal: React.FC<FaixaModalProps> = ({
                             dataFim={dataFim}
                             selectedSkus={selectedSkus}
                             onSelectedSkusChange={setSelectedSkus}
-                            onActiveFaixaChange={setActiveLimits}
+                            onActiveFaixasChange={setActiveFaixas}
                             onModoSemFaixaChange={setModoSemFaixa}
                         />
                     </div>
@@ -373,8 +385,8 @@ export const FaixaModal: React.FC<FaixaModalProps> = ({
                                 <p className={styles.chartSubtitle}>
                                     {modoSemFaixa
                                         ? 'Conformidade por amostra (Conforme = 1 · Não Conforme = 0)'
-                                        : activeLimits
-                                            ? `Faixa ativa: LIE ${Number(activeLimits.lie).toLocaleString('pt-BR')}  ·  LSE ${Number(activeLimits.lse).toLocaleString('pt-BR')}`
+                                        : activeFaixas.length > 0
+                                            ? `Faixas ativas: ${activeFaixas.map(f => `LIE ${Number(f.lie).toLocaleString('pt-BR')} / LSE ${Number(f.lse).toLocaleString('pt-BR')}`).join('  ·  ')}`
                                             : 'Selecione uma faixa para ativar os limites de referência'}
                                 </p>
                             </div>
@@ -395,7 +407,7 @@ export const FaixaModal: React.FC<FaixaModalProps> = ({
                                     </span>
                                 </div>
 
-                            ) : !modoSemFaixa && !activeLimits ? (
+                            ) : !modoSemFaixa && activeFaixas.length === 0 ? (
                                 <div className={styles.noData}>
                                     <span className={styles.noDataTitle}>Nenhuma faixa ativa</span>
                                     <span className={styles.noDataText}>
@@ -450,37 +462,40 @@ export const FaixaModal: React.FC<FaixaModalProps> = ({
                                                 wrapperStyle={{ fontSize: 12, paddingTop: 8 }}
                                             />
 
-                                            {/* Linhas de especificação LIE / LSE — apenas no modo com faixa */}
-                                            {!modoSemFaixa && activeLimits && (
-                                                <>
-                                                    <ReferenceLine
-                                                        y={Number(activeLimits.lie)}
-                                                        stroke="#EF4444"
-                                                        strokeDasharray="5 3"
-                                                        strokeWidth={1.5}
-                                                        label={{
-                                                            value: `LIE: ${Number(activeLimits.lie)}`,
-                                                            position: 'insideBottomLeft',
-                                                            fill: '#EF4444',
-                                                            fontSize: 10,
-                                                            fontWeight: 600,
-                                                        }}
-                                                    />
-                                                    <ReferenceLine
-                                                        y={Number(activeLimits.lse)}
-                                                        stroke="#EF4444"
-                                                        strokeDasharray="5 3"
-                                                        strokeWidth={1.5}
-                                                        label={{
-                                                            value: `LSE: ${Number(activeLimits.lse)}`,
-                                                            position: 'insideTopLeft',
-                                                            fill: '#EF4444',
-                                                            fontSize: 10,
-                                                            fontWeight: 600,
-                                                        }}
-                                                    />
-                                                </>
-                                            )}
+                                             {/* Linhas de especificação LIE / LSE — apenas no modo com faixa */}
+                                             {!modoSemFaixa && activeFaixas.map((limits, idx) => {
+                                                 const color = LIMIT_COLORS[idx % LIMIT_COLORS.length];
+                                                 return (
+                                                     <React.Fragment key={`${limits.lie}_${limits.lse}`}>
+                                                         <ReferenceLine
+                                                             y={Number(limits.lie)}
+                                                             stroke={color}
+                                                             strokeDasharray="5 3"
+                                                             strokeWidth={1.5}
+                                                             label={{
+                                                                 value: `LIE: ${Number(limits.lie)}`,
+                                                                 position: 'insideBottomLeft',
+                                                                 fill: color,
+                                                                 fontSize: 10,
+                                                                 fontWeight: 600,
+                                                             }}
+                                                         />
+                                                         <ReferenceLine
+                                                             y={Number(limits.lse)}
+                                                             stroke={color}
+                                                             strokeDasharray="5 3"
+                                                             strokeWidth={1.5}
+                                                             label={{
+                                                                 value: `LSE: ${Number(limits.lse)}`,
+                                                                 position: 'insideTopLeft',
+                                                                 fill: color,
+                                                                 fontSize: 10,
+                                                                 fontWeight: 600,
+                                                             }}
+                                                         />
+                                                     </React.Fragment>
+                                                 );
+                                             })}
 
                                             {/* Linha de referência de conformidade — apenas no modo sem faixa */}
                                             {modoSemFaixa && (

@@ -6,6 +6,8 @@ import 'dotenv/config';
 
 const IA_GATEWAY_URL = process.env.IA_GATEWAY_URL!;
 const IA_GATEWAY_API_KEY = process.env.IA_GATEWAY_API_KEY!;
+const IA_GATEWAY_URL2 = process.env.IA_GATEWAY_URL2!;
+const IA_GATEWAY_API_KEY2 = process.env.IA_GATEWAY_API_KEY2!;
 
 export interface RespostaIA {
   texto: string;
@@ -15,7 +17,7 @@ export interface RespostaIA {
 
 //slug: /q-lab-dashboard
 export async function chamarGatewayIA(slug: string, contexto: Record<string, unknown>): Promise<RespostaIA> {
-  const response = await fetch(`${IA_GATEWAY_URL}`, {
+  const response = await fetch(IA_GATEWAY_URL, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -26,6 +28,33 @@ export async function chamarGatewayIA(slug: string, contexto: Record<string, unk
 
   if (!response.ok) {
     throw new Error(`Gateway IA retornou ${response.status}`);
+  }
+
+  const raw = await response.json();
+
+  // Formato real do b/Synapse: { success, data: { success, data: "texto..." } }
+  const textoResposta = raw?.data?.data ?? raw?.data?.texto ?? raw?.texto ?? '';
+
+  return {
+    texto: textoResposta,
+    destaques: raw?.data?.destaques ?? [],
+    acoes: raw?.data?.acoes ?? [],
+  };
+}
+
+//slug: /q-lab-detalhe
+export async function chamarGatewayIA2(slug: string, contexto: Record<string, unknown>): Promise<RespostaIA> {
+  const response = await fetch(IA_GATEWAY_URL2, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'x-api-key': IA_GATEWAY_API_KEY2,
+    },
+    body: JSON.stringify(contexto),
+  });
+
+  if (!response.ok) {
+    throw new Error(`Gateway IA 2 retornou ${response.status}`);
   }
 
   const raw = await response.json();

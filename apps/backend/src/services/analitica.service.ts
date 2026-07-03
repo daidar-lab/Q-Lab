@@ -873,6 +873,7 @@ export async function getKpisDashboard(periodo: FiltroPeriodo) {
   };
 }
 /**
+ * 
  * Traduz um id (numérico ou slug de sub-processo) para o fragmento WHERE
  * correto no DW_FAT_RESULTADO.
  *
@@ -936,11 +937,11 @@ export function resolverFiltroPorId(id: string | number): { sql: string; params:
       params: [],
     },
     'envase-assoprador': {
-      sql: `operacao LIKE '%ASSOPRADOR%'`,
+      sql: `cod_operacao = 96`,
       params: [],
     },
     'envase-lubrificante': {
-      sql: `operacao LIKE '%LUBRIFICANTE%'`,
+      sql: `produto LIKE '%LUBRIFICANTE%'`,
       params: [],
     },
     'envase-recravacao': {
@@ -956,7 +957,7 @@ export function resolverFiltroPorId(id: string | number): { sql: string; params:
       params: [],
     },
     'envase-produto-acabado': {
-      sql: `lote_de_controle_de_qualidade LIKE 'LCQE%' AND cod_skip_lote IN ('33', '136')`,
+      sql: `lote_de_controle_de_qualidade LIKE 'LCQE%' AND cod_skip_lote IN ('33')`,
       params: [],
     },
     // CIP — amostras realizadas nos laboratórios de CIP (não âncora via lote)
@@ -975,6 +976,40 @@ export function resolverFiltroPorId(id: string | number): { sql: string; params:
     // Microbiologia — análise laboratorial direta
     'microbiologia-analise-microbiologia': {
       sql: `cod_laboratorio IN (5, 17) AND cod_area IN (73, 75)`,
+      params: [],
+    },
+    // Físico
+    'fisico-embalagem': {
+      sql: `cod_cabecalho_de_especificacao IN (
+        SELECT ESPC.cod_cabecalho_de_especificacao
+        FROM DIM_PLANEJAMENTO_DE_CRIACAO PL
+        INNER JOIN DIM_PLANEJAMENTO_DE_CRIACAO_X_CABECALHO_DE_ESPECIFICACAO ESPC
+            ON ESPC.cod_planejamento_de_criacao = PL.cod_planejamento_de_criacao
+        WHERE PL.D_E_L_E_T IS NULL AND ESPC.D_E_L_E_T IS NULL
+          AND PL.evento LIKE '%embalagem%'
+      )`,
+      params: [],
+    },
+    'fisico-materia-prima': {
+      sql: `cod_cabecalho_de_especificacao IN (
+        SELECT ESPC.cod_cabecalho_de_especificacao
+        FROM DIM_PLANEJAMENTO_DE_CRIACAO PL
+        INNER JOIN DIM_PLANEJAMENTO_DE_CRIACAO_X_CABECALHO_DE_ESPECIFICACAO ESPC
+            ON ESPC.cod_planejamento_de_criacao = PL.cod_planejamento_de_criacao
+        WHERE PL.D_E_L_E_T IS NULL AND ESPC.D_E_L_E_T IS NULL
+          AND PL.evento LIKE '%matéria prima%'
+      )`,
+      params: [],
+    },
+    'fisico-quimicos': {
+      sql: `cod_cabecalho_de_especificacao IN (
+        SELECT ESPC.cod_cabecalho_de_especificacao
+        FROM DIM_PLANEJAMENTO_DE_CRIACAO PL
+        INNER JOIN DIM_PLANEJAMENTO_DE_CRIACAO_X_CABECALHO_DE_ESPECIFICACAO ESPC
+            ON ESPC.cod_planejamento_de_criacao = PL.cod_planejamento_de_criacao
+        WHERE PL.D_E_L_E_T IS NULL AND ESPC.D_E_L_E_T IS NULL
+          AND PL.evento LIKE '%Químicos%'
+      )`,
       params: [],
     },
   };
@@ -1094,12 +1129,12 @@ export async function getRankingProcessos(
     ['microbiologia-analise-microbiologia', `cod_laboratorio IN (5, 17) AND cod_area IN (73, 75)`, []],
 
     // Envase
-    ['envase-produto-acabado', `lote_de_controle_de_qualidade LIKE 'LCQE%' AND cod_skip_lote IN ('33', '136')`, []],
+    ['envase-produto-acabado', `lote_de_controle_de_qualidade LIKE 'LCQE%' AND cod_skip_lote IN ('33')`, []],
     ['envase-chopp', `cod_centro_de_custo = 450050`, []],
     ['envase-arrolhamento', `operacao LIKE '%ARROLHAMENTO%'`, []],
     ['envase-provas-horarias', `cod_skip_lote IN ('29', '36', '31', '54') AND cod_laboratorio IN (16, 18, 20, 4, 6, 8, 5)`, []],
-    ['envase-assoprador', `operacao LIKE '%ASSOPRADOR%'`, []],
-    ['envase-lubrificante', `operacao LIKE '%LUBRIFICANTE%'`, []],
+    ['envase-assoprador', `cod_operacao = 96`, []],
+    ['envase-lubrificante', `produto LIKE '%LUBRIFICANTE%'`, []],
     ['envase-recravacao', `operacao LIKE '%RECRAVAÇÃO%'`, []],
     ['envase-pasteurizador', `operacao LIKE '%PASTEURIZ%'`, []],
     ['envase-interunidades', `cod_amostra_interunidade IS NOT NULL`, []],
@@ -1192,7 +1227,8 @@ export async function getRankingProcessos(
       cod_produto,
       cod_amostra_interunidade,
       cod_cabecalho_de_especificacao,
-      cod_operacao
+      cod_operacao,
+      produto
     FROM DW_FAT_RESULTADO
     WHERE D_E_L_E_T IS NULL
       AND conformidade != 'NÃO AVALIADO'

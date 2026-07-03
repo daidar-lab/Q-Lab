@@ -132,27 +132,23 @@ export async function handleGetHistoricoProdutosFaixa(
             return;
         }
 
-        if (lie === undefined || lie === null || typeof lie !== 'string') {
-            res.status(400).json({ erro: 'O parâmetro "lie" é obrigatório e deve ser um número válido.' });
-            return;
+        let parsedLie: number | undefined;
+        let parsedLse: number | undefined;
+
+        if (lie !== undefined && lie !== null && typeof lie === 'string' && lie !== '') {
+            parsedLie = Number(lie.replace(',', '.'));
+            if (isNaN(parsedLie)) {
+                res.status(400).json({ erro: 'O parâmetro "lie" deve ser um valor numérico válido.' });
+                return;
+            }
         }
 
-        if (lse === undefined || lse === null || typeof lse !== 'string') {
-            res.status(400).json({ erro: 'O parâmetro "lse" é obrigatório e deve ser um número válido.' });
-            return;
-        }
-
-        const parsedLie = Number(lie.replace(',', '.'));
-        const parsedLse = Number(lse.replace(',', '.'));
-
-        if (isNaN(parsedLie)) {
-            res.status(400).json({ erro: 'O parâmetro "lie" deve ser um valor numérico válido.' });
-            return;
-        }
-
-        if (isNaN(parsedLse)) {
-            res.status(400).json({ erro: 'O parâmetro "lse" deve ser um valor numérico válido.' });
-            return;
+        if (lse !== undefined && lse !== null && typeof lse === 'string' && lse !== '') {
+            parsedLse = Number(lse.replace(',', '.'));
+            if (isNaN(parsedLse)) {
+                res.status(400).json({ erro: 'O parâmetro "lse" deve ser um valor numérico válido.' });
+                return;
+            }
         }
 
         if (!dataInicio || typeof dataInicio !== 'string' || !isValidDate(dataInicio)) {

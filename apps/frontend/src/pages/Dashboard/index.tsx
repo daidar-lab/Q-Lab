@@ -134,6 +134,10 @@ export default function DashboardPage() {
   }).filter(g => g.subitens.length > 0 || g.nc > 0 || g.amostras > 0)
     .sort((a, b) => b.nc - a.nc);
 
+  const metaSalva = localStorage.getItem('qlab_meta_conformidade');
+  const parsedMeta = metaSalva ? parseFloat(metaSalva) : 95.0;
+  const metaConformidade = isNaN(parsedMeta) ? 95.0 : parsedMeta;
+
   return (
     <div style={{ padding: '28px 24px', maxWidth: '1200px', margin: '0 auto' }}>
 
@@ -146,7 +150,7 @@ export default function DashboardPage() {
           { label: 'NÃO CONFORME', value: kpis.naoConformidades.valor.toLocaleString('pt-BR'), delta: formatDelta(kpis.naoConformidades.deltaPct, true) },
           {
             label: 'CONFORMIDADE', value: `${kpis.conformidade.valor}%`,
-            delta: { texto: `— meta ${kpis.conformidade.meta}%`, cor: 'var(--clr-text-3)' }
+            delta: { texto: `— meta ${metaConformidade}%`, cor: 'var(--clr-text-3)' }
           },
         ].map(k => (
           <div key={k.label} style={kpiCard}>

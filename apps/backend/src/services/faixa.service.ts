@@ -136,8 +136,8 @@ function parseValor(raw: string): number {
 export async function getHistoricoProdutosFaixa(
     id: string,
     codEnsaio: string,
-    lie: number,
-    lse: number,
+    lie: number | undefined,
+    lse: number | undefined,
     dataInicio: string,
     dataFim: string,
     codProdutos: string[]
@@ -146,6 +146,17 @@ export async function getHistoricoProdutosFaixa(
 
     const { sql: filtroCtx, params: paramsCtx } = resolverFiltroContexto(id);
     const placeholders = codProdutos.map(() => '?').join(',');
+
+    let lieLseSql = '';
+    const lieLseParams: any[] = [];
+    if (lie !== undefined && lie !== null) {
+        lieLseSql += ` AND CAST(REPLACE(dw.lie, ',', '.') AS DECIMAL(10,4)) = ?`;
+        lieLseParams.push(lie);
+    }
+    if (lse !== undefined && lse !== null) {
+        lieLseSql += ` AND CAST(REPLACE(dw.lse, ',', '.') AS DECIMAL(10,4)) = ?`;
+        lieLseParams.push(lse);
+    }
 
     const rows = await blabQuery(`
     SELECT
@@ -156,19 +167,20 @@ export async function getHistoricoProdutosFaixa(
       dw.data_resultado,
       COALESCE(dw.hora_resultado, '00:00:00')                              AS hora_resultado,
       CONCAT(dw.data_resultado, ' ', COALESCE(dw.hora_resultado, '00:00:00')) AS timestamp,
-      dw.valor                                                            AS valor_raw
+      dw.valor                                                            AS valor_raw,
+      CAST(REPLACE(dw.lie, ',', '.') AS DECIMAL(10,4))                     AS lie,
+      CAST(REPLACE(dw.lse, ',', '.') AS DECIMAL(10,4))                     AS lse
     FROM DW_FAT_RESULTADO dw
     WHERE dw.D_E_L_E_T IS NULL
       ${filtroCtx}
       AND dw.cod_ensaio = ?
-      AND CAST(REPLACE(dw.lie, ',', '.') AS DECIMAL(10,4)) = ?
-      AND CAST(REPLACE(dw.lse, ',', '.') AS DECIMAL(10,4)) = ?
+      ${lieLseSql}
       AND dw.data_resultado BETWEEN ? AND ?
       AND dw.cod_produto IN (${placeholders})
       AND dw.valor IS NOT NULL
       AND dw.valor REGEXP '^-?[0-9]+([.,][0-9]+)?( *- *-?[0-9]+([.,][0-9]+)?)?$'
     ORDER BY dw.data_resultado ASC, dw.hora_resultado ASC
-  `, [...paramsCtx, codEnsaio, lie, lse, dataInicio, dataFim, ...codProdutos]) as any[];
+  `, [...paramsCtx, codEnsaio, ...lieLseParams, dataInicio, dataFim, ...codProdutos]) as any[];
 
   return rows.map(r => ({
       cod_produto: r.cod_produto,
@@ -180,6 +192,8 @@ export async function getHistoricoProdutosFaixa(
       timestamp: r.timestamp,
       valor: parseValor(r.valor_raw),
       valor_original: r.valor_raw,
+      lie: r.lie !== null ? Number(r.lie) : undefined,
+      lse: r.lse !== null ? Number(r.lse) : undefined,
   }));
 }
 

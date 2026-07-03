@@ -12,7 +12,7 @@ interface FaixasContainerProps {
     dataFim: string;
     selectedSkus: string[];
     onSelectedSkusChange: (skus: string[]) => void;
-    onActiveFaixaChange?: (limits: { lie: number; lse: number } | null) => void;
+    onActiveFaixasChange?: (limits: { lie: number; lse: number }[]) => void;
     /** Notifica o modal pai se estamos em modo sem-faixa (processo / produto sem especificação) */
     onModoSemFaixaChange?: (semFaixa: boolean) => void;
 }
@@ -24,13 +24,13 @@ export const FaixasContainer: React.FC<FaixasContainerProps> = ({
     dataFim,
     selectedSkus,
     onSelectedSkusChange,
-    onActiveFaixaChange,
+    onActiveFaixasChange,
     onModoSemFaixaChange,
 }) => {
     const [faixas, setFaixas] = useState<Faixa[]>([]);
     const [loading, setLoading] = useState<boolean>(true);
     const [error, setError] = useState<string | null>(null);
-    const [expandedFaixaKey, setExpandedFaixaKey] = useState<string | null>(null);
+    const [expandedFaixaKeys, setExpandedFaixaKeys] = useState<Record<string, boolean>>({});
 
     // Modo sem-faixa: quando o ensaio não tem LIE/LSE distintos
     const [modoSemFaixa, setModoSemFaixa] = useState<boolean>(false);
@@ -56,7 +56,7 @@ export const FaixasContainer: React.FC<FaixasContainerProps> = ({
                     setModoSemFaixa(true);
                     onModoSemFaixaChange?.(true);
                     // Neste modo não há limites ativos
-                    onActiveFaixaChange?.(null);
+                    onActiveFaixasChange?.([]);
                 } else {
                     setFaixas(data);
                     setModoSemFaixa(false);
@@ -77,24 +77,23 @@ export const FaixasContainer: React.FC<FaixasContainerProps> = ({
 
     // Reset parent active limits and local expanded key when codEnsaio changes
     useEffect(() => {
-        setExpandedFaixaKey(null);
-        if (onActiveFaixaChange) {
-            onActiveFaixaChange(null);
+        setExpandedFaixaKeys({});
+        if (onActiveFaixasChange) {
+            onActiveFaixasChange([]);
         }
-    }, [id, codEnsaio, onActiveFaixaChange]);
+    }, [id, codEnsaio]);
 
-    const handleToggleExpand = (key: string, faixa: Faixa) => {
-        const nextKey = expandedFaixaKey === key ? null : key;
-        setExpandedFaixaKey(nextKey);
-
-        if (onActiveFaixaChange) {
-            if (nextKey) {
-                // Garante que lie/lse sejam números mesmo se o backend retornar strings
-                onActiveFaixaChange({ lie: Number(faixa.lie), lse: Number(faixa.lse) });
-            } else {
-                onActiveFaixaChange(null);
+    const handleToggleExpand = (key: string, Faixa: Faixa) => {
+        setExpandedFaixaKeys(prev => {
+            const next = { ...prev, [key]: !prev[key] };
+            if (onActiveFaixasChange) {
+                const active = faixas
+                    .filter(f => next[`${f.lie}_${f.lse}`])
+                    .map(f => ({ lie: Number(f.lie), lse: Number(f.lse) }));
+                onActiveFaixasChange(active);
             }
-        }
+            return next;
+        });
     };
 
     const handleToggleSku = (codProduto: string) => {
@@ -167,7 +166,7 @@ export const FaixasContainer: React.FC<FaixasContainerProps> = ({
             <div className={styles.grid}>
                 {faixas.map((faixa) => {
                     const key = `${faixa.lie}_${faixa.lse}`;
-                    const isExpanded = expandedFaixaKey === key;
+                    const isExpanded = !!expandedFaixaKeys[key];
 
                     return (
                         <FaixaCard

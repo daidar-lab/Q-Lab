@@ -12,6 +12,17 @@ export const detalheApi = {
         });
         return res.data;
     },
+    getResumoIA: async (
+        tipo: string,
+        id: string,
+        dataInicio: string,
+        dataFim: string
+    ) => {
+        const res = await request<{ ok: boolean; data: any }>(`/api/detalhe/${tipo}/${id}/resumo-ia`, {
+            params: { dataInicio, dataFim },
+        });
+        return res.data;
+    },
     getCentrosCustoPorEnsaio: async (codEnsaio: string, dataInicio: string, dataFim: string) => {
         const res = await request<{ ok: boolean; data: any }>(`/api/detalhe/ensaio/${codEnsaio}/centros-custo`, {
             params: { dataInicio, dataFim },
@@ -28,8 +39,8 @@ export const detalheApi = {
     getHistoricoProdutosFaixa: async (
         id: string | number,
         codEnsaio: string,
-        lie: number,
-        lse: number,
+        lie: number | undefined,
+        lse: number | undefined,
         dataInicio: string,
         dataFim: string,
         produtos: string[]

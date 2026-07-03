@@ -7,6 +7,7 @@ import SerieConformidade from '../../components/detalhe/SerieConformidade';
 import FaixaEspecificacao from '../../components/detalhe/FaixaEspecificacao';
 import FaixaModal from '../../components/FaixasExplosao/FaixaModal';
 import SelecionarCentroCustoModal from '../../components/FaixasExplosao/SelecionarCentroCustoModal';
+import ResumoIADetalhe from '../../components/detalhe/ResumoIADetalhe';
 import styles from './DetalhePage.module.css';
 
 
@@ -21,6 +22,8 @@ export default function DetalhePage() {
 
     const [dados, setDados] = useState<any>(null);
     const [carregando, setCarregando] = useState(true);
+    const [resumoIA, setResumoIA] = useState<{ texto: string; destaques?: any[] } | null>(null);
+    const [carregandoIA, setCarregandoIA] = useState(false);
     const [faixaSelecionadaObjeto, setFaixaSelecionadaObjeto] = useState<any>(null);
     const [faixaAtiva, setFaixaAtiva] = useState<{ lie: number; lse: number } | null>(null);
     const [prefixoLcq, setPrefixoLcq] = useState<string | null>(null);
@@ -47,6 +50,21 @@ export default function DetalhePage() {
             setCarregando(false);
         }
     }, [tipo, id, origem, natureza, dataInicio, dataFim]);
+
+    useEffect(() => {
+        setResumoIA(null);
+        if (!dados) return;
+
+        const tipoParam = origem ? 'processo' : (tipo ?? '');
+        const idParam = origem ?? id ?? '';
+
+        setCarregandoIA(true);
+        detalheApi
+            .getResumoIA(tipoParam, idParam, dataInicio, dataFim)
+            .then((res) => setResumoIA(res))
+            .catch(() => { /* silencia — resumo IA é não-crítico */ })
+            .finally(() => setCarregandoIA(false));
+    }, [dados, tipo, id, origem, dataInicio, dataFim]);
 
     useEffect(() => {
         setModalCentroCustoAberto(false);
@@ -128,6 +146,12 @@ export default function DetalhePage() {
                     </strong>
                 </div>
             </div>
+
+            <ResumoIADetalhe
+                texto={resumoIA?.texto ?? ''}
+                destaques={resumoIA?.destaques}
+                carregando={carregandoIA}
+            />
 
             <div className={styles.graficosRow}>
                 <SerieConformidade dados={dados.serie} limites={faixaAtiva} />

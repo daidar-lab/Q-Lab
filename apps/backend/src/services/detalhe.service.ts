@@ -242,6 +242,21 @@ export async function getSerieConformidade(params: DetalheParams) {
 // 2. Resumo macro (conformidade, NC, lotes afetados)
 export async function getResumoMacro(params: DetalheParams) {
   const filter = getFiltroSql(params.tipo, params.id, params.dataInicio, params.dataFim);
+  console.log(`
+    SELECT
+      COUNT(*)                                                        AS total,
+      SUM(conformidade != 'CONFORME')                                 AS n_nao_conforme,
+      ROUND(SUM(conformidade = 'CONFORME') * 1.0 / COUNT(*) * 100, 1) AS pct_conforme,
+COUNT(DISTINCT lote_de_controle_de_qualidade)  AS total_lotes,
+COUNT(DISTINCT CASE
+  WHEN conformidade != 'CONFORME' THEN lote_de_controle_de_qualidade
+END)                                            AS lotes_afetados
+    FROM DW_FAT_RESULTADO
+    WHERE D_E_L_E_T IS NULL
+      AND conformidade != 'NÃO AVALIADO'
+      AND ${filter.sql}
+      AND data_resultado BETWEEN ? AND ?
+  `);
 
   const [resumo] = await blabQuery(`
     SELECT
@@ -348,18 +363,8 @@ export async function getFaixasEspecificacao(
   // Decide o modo de exibição para cada linha
   // Decide o modo de exibição, calcula a não-conformidade e ordena
   const linhasProcessadas = rows.map((row: any) => {
-    const temLimitesNumericos = row.lie !== null && row.lse !== null;
-    const contextoUnivoco = row.qtd_produtos === 1;
-
-    let modo: 'regua' | 'percentual';
-    let motivo: 'multiplos_produtos' | 'sem_especificacao' | null = null;
-
-    if (temLimitesNumericos && contextoUnivoco) {
-      modo = 'regua';
-    } else {
-      modo = 'percentual';
-      motivo = !contextoUnivoco ? 'multiplos_produtos' : 'sem_especificacao';
-    }
+    const modo: 'percentual' = 'percentual';
+    const motivo: null = null;
 
     // Calcula a porcentagem de NÃO CONFORME (100% - pct_conforme)
     const pct_nao_conforme = Number((100 - row.pct_conforme).toFixed(1));

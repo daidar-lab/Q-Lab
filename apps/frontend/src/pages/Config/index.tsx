@@ -17,6 +17,21 @@ export default function ConfigPage() {
     const [formLoading, setFormLoading] = useState(false);
     const [showForm, setShowForm] = useState(false);
 
+    // Meta states
+    const [metaValue, setMetaValue] = useState(() => localStorage.getItem('qlab_meta_conformidade') ?? '95');
+    const [msgMeta, setMsgMeta] = useState('');
+
+    function handleSaveMeta() {
+        const val = parseFloat(metaValue);
+        if (isNaN(val) || val < 0 || val > 100) {
+            alert('A meta de conformidade deve ser um número entre 0 e 100.');
+            return;
+        }
+        localStorage.setItem('qlab_meta_conformidade', val.toString());
+        setMsgMeta('Meta de conformidade salva com sucesso!');
+        setTimeout(() => setMsgMeta(''), 3000);
+    }
+
     useEffect(() => {
         carregarUsuarios();
     }, []);
@@ -223,6 +238,27 @@ export default function ConfigPage() {
 
     return (
         <div style={container}>
+            {/* Seção Meta de Conformidade */}
+            <div style={{ ...card, marginBottom: '28px', flexDirection: 'column', alignItems: 'flex-start', gap: '16px' }}>
+                <h3 style={{ margin: 0, fontSize: '16px', fontWeight: 700, color: '#0f172a' }}>Meta de Conformidade</h3>
+                <div style={{ display: 'flex', gap: '12px', alignItems: 'center', width: '100%' }}>
+                    <input
+                        type="number"
+                        min="0"
+                        max="100"
+                        step="0.1"
+                        value={metaValue}
+                        onChange={e => setMetaValue(e.target.value)}
+                        style={{ ...input, width: '120px' }}
+                    />
+                    <span style={{ fontSize: '15px', color: '#64748b', fontWeight: 600 }}>%</span>
+                    <button style={button} onClick={handleSaveMeta}>
+                        Salvar Meta
+                    </button>
+                </div>
+                {msgMeta && <span style={{ fontSize: '13px', color: '#166534', fontWeight: 500 }}>{msgMeta}</span>}
+            </div>
+
             <div style={header}>
                 <h2 style={title}>Gerenciar Usuários</h2>
                 <button style={button} onClick={handleAddNew}>
