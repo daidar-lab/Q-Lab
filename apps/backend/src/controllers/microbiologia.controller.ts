@@ -7,6 +7,7 @@ import {
   getResultadosMicrobiologicos,
   getAguaDeEnxague,
   getSwab,
+  getAnaliseMicrobiologia,
 } from '../services/microbiologia/microbiologia.service';
 
 export const MicrobiologiaController = {
@@ -68,6 +69,19 @@ export const MicrobiologiaController = {
     try {
       const { data_inicial, data_final } = req.body;
       const data = await getSwab({
+        data_inicial: String(data_inicial),
+        data_final:   String(data_final),
+      });
+      res.json({ ok: true, data });
+    } catch (err) {
+      next(err);
+    }
+  },
+
+  async getAnaliseMicrobiologia(req: Request, res: Response, next: NextFunction) {
+    try {
+      const { data_inicial, data_final } = req.body;
+      const data = await getAnaliseMicrobiologia({
         data_inicial: String(data_inicial),
         data_final:   String(data_final),
       });

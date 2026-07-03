@@ -8,6 +8,7 @@ router.use(authMiddleware);
 
 router.post('/envasamento', CipController.getCipEnvasamento);
 router.post('/processo',    CipController.getCipProcesso);
+router.post('/envasamento-antigo', CipController.getCipEnvasamentoAntigo);
 
 export default router;
 // Registrar: app.use('/qlab/cip', cipRoutes)

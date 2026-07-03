@@ -230,3 +230,48 @@ export async function getSwab(params: ParamsDataRange) {
         [data_inicial, data_final],
     );
 }
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Grupo A — Análise microbiológica (laboratorios 5 e 17, áreas 73 e 75)
+// Filtro direto: cod_laboratorio IN (5, 17) AND cod_area IN (73, 75)
+// Sem âncora — query única contra DW_FAT_RESULTADO
+// ─────────────────────────────────────────────────────────────────────────────
+
+export async function getAnaliseMicrobiologia(params: ParamsDataRange) {
+    const { data_inicial, data_final } = params;
+
+    return blabQuery<any>(
+        `SELECT
+        cod_amostra,
+        data_resultado,
+        hora_resultado,
+        cod_ensaio,
+        ensaio,
+        valor,
+        lie,
+        lse,
+        conformidade,
+        cod_laboratorio,
+        laboratorio,
+        cod_area,
+        area,
+        cod_centro_de_custo,
+        centro_de_custo,
+        cod_bem,
+        bem,
+        abreviatura,
+        descricao,
+        cod_produto,
+        produto,
+        lote_de_controle_de_qualidade,
+        numero_de_controle
+    FROM ${TABELA_FATO_PRINCIPAL}
+    WHERE data_resultado BETWEEN ? AND ?
+    AND D_E_L_E_T IS NULL
+    AND valor IS NOT NULL AND valor != ''
+    AND cod_laboratorio IN (5, 17)
+    AND cod_area IN (73, 75)
+    ORDER BY cod_amostra, cod_ensaio`,
+        [data_inicial, data_final],
+    );
+}

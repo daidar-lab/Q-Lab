@@ -15,7 +15,7 @@ const MACRO_GRUPOS_CONFIG = [
   {
     id: 'cip',
     label: 'CIP',
-    subids: ['cip'],
+    subids: ['cip-processo', 'cip-envasamento-novo', 'cip-envasamento-antigo'],
   },
   {
     id: 'envase',
@@ -24,6 +24,7 @@ const MACRO_GRUPOS_CONFIG = [
       'envase-produto-acabado',
       'envase-chopp',
       'envase-arrolhamento',
+      'envase-provas-horarias',
       'envase-assoprador',
       'envase-lubrificante',
       'envase-recravacao',
@@ -50,6 +51,7 @@ const MACRO_GRUPOS_CONFIG = [
       'microbiologia-resultados',
       'microbiologia-agua-enxague',
       'microbiologia-swab',
+      'microbiologia-analise-microbiologia',
     ],
   },
   {

@@ -9,7 +9,13 @@ interface DetalheParams {
   topN?: number; // default 4
 }
 
-function getFiltroSql(tipo: 'processo' | 'produto' | 'ensaio', id: string | number, alias = ''): { sql: string; params: any[] } {
+function getFiltroSql(
+  tipo: 'processo' | 'produto' | 'ensaio',
+  id: string | number,
+  dataInicio?: string,
+  dataFim?: string,
+  alias = ''
+): { sql: string; params: any[] } {
   const prefix = alias ? `${alias}.` : '';
   if (tipo === 'produto') {
     return { sql: `${prefix}cod_produto = ?`, params: [id] };
@@ -29,6 +35,8 @@ function getFiltroSql(tipo: 'processo' | 'produto' | 'ensaio', id: string | numb
       return { sql: `${prefix}cod_skip_lote IN ('36', '54') AND ${prefix}lote_de_controle_de_qualidade LIKE 'LCQMB%'`, params: [] };
     case 'envase-arrolhamento':
       return { sql: `${prefix}operacao LIKE '%ARROLHAMENTO%'`, params: [] };
+    case 'envase-provas-horarias':
+      return { sql: `${prefix}cod_skip_lote IN ('29', '36', '31', '54') AND ${prefix}cod_laboratorio IN (16, 18, 20, 4, 6, 8, 5)`, params: [] };
     case 'envase-interunidades':
       return { sql: `${prefix}cod_amostra_interunidade IS NOT NULL`, params: [] };
     case 'filtracao':
@@ -47,6 +55,54 @@ function getFiltroSql(tipo: 'processo' | 'produto' | 'ensaio', id: string | numb
       return { sql: `${prefix}lote_de_controle_de_qualidade LIKE 'LCQTE%'`, params: [] };
     case 'cip':
       return { sql: `${prefix}cod_laboratorio IN (1, 4, 15, 16, 25)`, params: [] };
+    case 'cip-processo': {
+      const diInt = dataInicio ? Number(dataInicio.substring(0, 10).replace(/-/g, '')) : 0;
+      const dfInt = dataFim ? Number(dataFim.substring(0, 10).replace(/-/g, '')) : 99999999;
+      return {
+        sql: `${prefix}cod_laboratorio IN (1, 15, 25)
+          AND ${prefix}cod_centro_de_custo IN (450050, 450070, 460000, 430000, 430010, 430020, 410010, 470020)
+          AND ${prefix}lote_de_controle_de_qualidade COLLATE utf8mb4_unicode_ci IN (
+            SELECT L.lote_de_controle_de_qualidade COLLATE utf8mb4_unicode_ci
+            FROM FAT_CIP C
+            INNER JOIN FAT_LOTE_DE_CONTROLE_DE_QUALIDADE L
+                ON L.cod_lote_de_controle_de_qualidade = C.cod_lote_de_controle_de_qualidade
+            WHERE C.tipo_cip IN (
+                'CIP COMPLETO', 'CIP CAUSTICO', 'CIP COMPLETO ALCALINO CLORADO',
+                'ASSEPSIA ALCALINO CLORADO', 'ASSEPSIA ALCALINO',
+                'CIP COMPLETO (BRASSAGEM)', 'CIP PASSIVAÇÃO', 'CIP SANITIZAÇÃO'
+              )
+              AND C.data BETWEEN ? AND ?
+              AND C.D_E_L_E_T IS NULL
+              AND L.D_E_L_E_T IS NULL
+          )`,
+        params: [diInt, dfInt],
+      };
+    }
+    case 'cip-envasamento-novo': {
+      const diInt = dataInicio ? Number(dataInicio.substring(0, 10).replace(/-/g, '')) : 0;
+      const dfInt = dataFim ? Number(dataFim.substring(0, 10).replace(/-/g, '')) : 99999999;
+      return {
+        sql: `${prefix}cod_laboratorio IN (4, 16, 25)
+          AND ${prefix}cod_centro_de_custo IN (450010, 450060, 450030, 450040, 450020)
+          AND ${prefix}lote_de_controle_de_qualidade COLLATE utf8mb4_unicode_ci IN (
+            SELECT L.lote_de_controle_de_qualidade COLLATE utf8mb4_unicode_ci
+            FROM FAT_CIP C
+            INNER JOIN FAT_LOTE_DE_CONTROLE_DE_QUALIDADE L
+                ON L.cod_lote_de_controle_de_qualidade = C.cod_lote_de_controle_de_qualidade
+            WHERE C.tipo_cip IN (
+                'CIP COMPLETO', 'CIP CAUSTICO', 'CIP COMPLETO ALCALINO CLORADO',
+                'ASSEPSIA ALCALINO CLORADO', 'ASSEPSIA ALCALINO',
+                'CIP COMPLETO (BRASSAGEM)', 'CIP PASSIVAÇÃO', 'CIP SANITIZAÇÃO'
+              )
+              AND C.data BETWEEN ? AND ?
+              AND C.D_E_L_E_T IS NULL
+              AND L.D_E_L_E_T IS NULL
+          )`,
+        params: [diInt, dfInt],
+      };
+    }
+    case 'microbiologia-analise-microbiologia':
+      return { sql: `${prefix}cod_laboratorio IN (5, 17) AND ${prefix}cod_area IN (73, 75)`, params: [] };
     case 'fisico-embalagem':
       return {
         sql: `${prefix}cod_cabecalho_de_especificacao IN (
@@ -86,7 +142,7 @@ function getFiltroSql(tipo: 'processo' | 'produto' | 'ensaio', id: string | numb
         )`,
         params: [],
       };
-    default: {
+    default:
       if (isNaN(Number(procId))) {
         const res = resolverFiltroPorId(procId);
         if (alias) {
@@ -110,13 +166,12 @@ function getFiltroSql(tipo: 'processo' | 'produto' | 'ensaio', id: string | numb
         return res;
       }
       return { sql: `${prefix}cod_centro_de_custo = ?`, params: [Number(id)] };
-    }
   }
 }
 
 // 1. Série temporal de conformidade agregada (dinâmica)
 export async function getSerieConformidade(params: DetalheParams) {
-  const filter = getFiltroSql(params.tipo, params.id);
+  const filter = getFiltroSql(params.tipo, params.id, params.dataInicio, params.dataFim);
 
   const inicio = new Date(params.dataInicio);
   const fim = new Date(params.dataFim);
@@ -186,7 +241,7 @@ export async function getSerieConformidade(params: DetalheParams) {
 
 // 2. Resumo macro (conformidade, NC, lotes afetados)
 export async function getResumoMacro(params: DetalheParams) {
-  const filter = getFiltroSql(params.tipo, params.id);
+  const filter = getFiltroSql(params.tipo, params.id, params.dataInicio, params.dataFim);
 
   const [resumo] = await blabQuery(`
     SELECT
@@ -213,7 +268,7 @@ export async function getTopEnsaios(params: DetalheParams) {
     return [{ cod_ensaio: params.id }];
   }
 
-  const filter = getFiltroSql(params.tipo, params.id);
+  const filter = getFiltroSql(params.tipo, params.id, params.dataInicio, params.dataFim);
   const topN = params.topN ?? 4;
 
   return blabQuery(`
@@ -241,8 +296,8 @@ export async function getFaixasEspecificacao(
     return [];
   }
 
-  const filter = getFiltroSql(params.tipo, params.id);
-  const filterDw = getFiltroSql(params.tipo, params.id, 'dw');
+  const filter = getFiltroSql(params.tipo, params.id, params.dataInicio, params.dataFim);
+  const filterDw = getFiltroSql(params.tipo, params.id, params.dataInicio, params.dataFim, 'dw');
 
   const placeholders = ensaioIds.map(() => '?').join(',');
 

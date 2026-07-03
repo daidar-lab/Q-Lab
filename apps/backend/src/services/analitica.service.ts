@@ -931,6 +931,10 @@ export function resolverFiltroPorId(id: string | number): { sql: string; params:
       sql: `operacao LIKE '%ARROLHAMENTO%'`,
       params: [],
     },
+    'envase-provas-horarias': {
+      sql: `cod_skip_lote IN ('29', '36', '31', '54') AND cod_laboratorio IN (16, 18, 20, 4, 6, 8, 5)`,
+      params: [],
+    },
     'envase-assoprador': {
       sql: `operacao LIKE '%ASSOPRADOR%'`,
       params: [],
@@ -951,9 +955,26 @@ export function resolverFiltroPorId(id: string | number): { sql: string; params:
       sql: `cod_centro_de_custo = 450050`,
       params: [],
     },
+    'envase-produto-acabado': {
+      sql: `lote_de_controle_de_qualidade LIKE 'LCQE%' AND cod_skip_lote IN ('33', '136')`,
+      params: [],
+    },
     // CIP — amostras realizadas nos laboratórios de CIP (não âncora via lote)
-    'cip': {
-      sql: `cod_laboratorio IN (1, 4, 15, 16, 25)`,
+    'cip-processo': {
+      sql: `cod_laboratorio IN (1, 15, 25) AND cod_centro_de_custo IN (450050, 450070, 460000, 430000, 430010, 430020, 410010, 470020)`,
+      params: [],
+    },
+    'cip-envasamento-novo': {
+      sql: `cod_laboratorio IN (4, 16, 25) AND cod_centro_de_custo IN (450010, 450060, 450030, 450040, 450020)`,
+      params: [],
+    },
+    'cip-envasamento-antigo': {
+      sql: `cod_laboratorio IN (4, 16, 25) AND cod_operacao IN (31, 55, 68, 27)`,
+      params: [],
+    },
+    // Microbiologia — análise laboratorial direta
+    'microbiologia-analise-microbiologia': {
+      sql: `cod_laboratorio IN (5, 17) AND cod_area IN (73, 75)`,
       params: [],
     },
   };
@@ -1002,11 +1023,13 @@ const LABELS_CATEGORIA: Record<string, string> = {
   'microbiologia-resultados': 'Resultados Microbiológicos',
   'microbiologia-agua-enxague': 'Água de Enxague',
   'microbiologia-swab': 'SWAB',
+  'microbiologia-analise-microbiologia': 'Análise Microbiológica',
 
   // Envase
   'envase-produto-acabado': 'Produto Acabado',
   'envase-chopp': 'Chopp',
   'envase-arrolhamento': 'Arrolhamento',
+  'envase-provas-horarias': 'Provas Horárias',
   'envase-assoprador': 'Assoprador',
   'envase-lubrificante': 'Lubrificante de Esteira',
   'envase-recravacao': 'Recravação',
@@ -1026,9 +1049,9 @@ const LABELS_CATEGORIA: Record<string, string> = {
   'co2-beneficiado': 'CO2 Beneficiado',
 
   // CIP
-  'cip': 'CIP',
-  'cip-envasamento': 'CIP — Envasamento',
   'cip-processo': 'CIP — Processo',
+  'cip-envasamento-novo': 'CIP — Envasamento Novo',
+  'cip-envasamento-antigo': 'CIP — Envasamento Antigo',
 
   // Físico
   'fisico-embalagem': 'Físico — Embalagem',
@@ -1037,247 +1060,154 @@ const LABELS_CATEGORIA: Record<string, string> = {
 };
 
 
-
-function ph(arr: string[]): string {
-  return arr.map(() => '?').join(', ');
-}
-
 export async function getRankingProcessos(
   periodo: FiltroPeriodo,
 ): Promise<{ id: string; nome: string; amostras: number; nc: number }[]> {
-
   const { dataInicio: di, dataFim: df } = periodo;
+  const diInt = Number(di.substring(0, 10).replace(/-/g, ''));
+  const dfInt = Number(df.substring(0, 10).replace(/-/g, ''));
 
-  // ─── QUERY 1 — Obter lotes ativos no período diretamente do DW ───────────
-  // Para evitar locks, fazemos uma leitura rápida indexada por data.
-  // Isso resolve problemas de lotes iniciados antes do período filtrado.
-  const q1Rows = await blabQuery<{ categoria: string; chave: string }>(`
-    SELECT DISTINCT
-      CASE
-        WHEN lote_de_controle_de_qualidade LIKE 'LCQFI%' THEN 'filtracao'
-        WHEN lote_de_controle_de_qualidade LIKE 'LCQF%'  THEN 'fermentacao'
-        WHEN lote_de_controle_de_qualidade LIKE 'LCQB%'  THEN 'brassagem'
-        WHEN lote_de_controle_de_qualidade LIKE 'LCQM%'  THEN 'maturacao'
-        WHEN lote_de_controle_de_qualidade LIKE 'LCQD%'  THEN 'desalcoolizacao'
-        WHEN lote_de_controle_de_qualidade LIKE 'LCQCP%' THEN 'captacao'
-        WHEN lote_de_controle_de_qualidade LIKE 'LCQTE%' THEN 'tratamento-efluentes'
-        WHEN lote_de_controle_de_qualidade LIKE 'LCQC%'  THEN 'cip'
-      END AS categoria,
-      CAST(lote_de_controle_de_qualidade AS CHAR) AS chave
-    FROM DW_FAT_RESULTADO
-    WHERE data_resultado BETWEEN ? AND ?
-      AND D_E_L_E_T IS NULL
-      AND lote_de_controle_de_qualidade LIKE 'LCQ%'
-  `, [di, df]);
+  // Subquery reutilizável para Físico — resolve cod_cabecalho_de_especificacao
+  // via tabela de dimensão (pequena, resolvida 1x pelo otimizador MySQL)
+  const FISICO_IN = `
+    cod_cabecalho_de_especificacao IN (
+      SELECT ESPC.cod_cabecalho_de_especificacao
+      FROM DIM_PLANEJAMENTO_DE_CRIACAO PL
+      INNER JOIN DIM_PLANEJAMENTO_DE_CRIACAO_X_CABECALHO_DE_ESPECIFICACAO ESPC
+          ON ESPC.cod_planejamento_de_criacao = PL.cod_planejamento_de_criacao
+      WHERE PL.D_E_L_E_T IS NULL AND ESPC.D_E_L_E_T IS NULL
+        AND PL.evento LIKE ?
+    )`;
 
+  // Cada ramo: [id_categoria, sql_where_extra, params_extra_após_di_df]
+  // Os params de cada ramo são consumidos na ordem: [id_do_SELECT_?_AS_categoria, ...params_extra_no_WHERE]
+  const ramos: [string, string, unknown[]][] = [
+    // Fermento
+    ['fermento', `cod_skip_lote IN ('68', '69')`, []],
 
+    // Microbiologia
+    ['microbiologia-estabilidade-micro', `(cod_skip_lote NOT IN ('36', '54') OR cod_skip_lote IS NULL) AND lote_de_controle_de_qualidade LIKE 'LCQMB%'`, []],
+    ['microbiologia-estabilidade-envase', `cod_skip_lote IN ('36', '54') AND lote_de_controle_de_qualidade LIKE 'LCQMB%'`, []],
+    ['microbiologia-resultados', `lote_de_controle_de_qualidade LIKE 'LCQMB%'`, []],
+    ['microbiologia-agua-enxague', `cod_produto = 15`, []],
+    ['microbiologia-swab', `cod_produto = 14`, []],
+    ['microbiologia-analise-microbiologia', `cod_laboratorio IN (5, 17) AND cod_area IN (73, 75)`, []],
 
-  // Agrupar lotes por categoria
-  const lotesPorCat: Record<string, string[]> = {};
-  for (const row of q1Rows) {
-    if (!lotesPorCat[row.categoria]) lotesPorCat[row.categoria] = [];
-    lotesPorCat[row.categoria].push(row.chave);
-  }
-  // Dedup por categoria
-  for (const cat of Object.keys(lotesPorCat)) {
-    lotesPorCat[cat] = [...new Set(lotesPorCat[cat])];
-  }
+    // Envase
+    ['envase-produto-acabado', `lote_de_controle_de_qualidade LIKE 'LCQE%' AND cod_skip_lote IN ('33', '136')`, []],
+    ['envase-chopp', `cod_centro_de_custo = 450050`, []],
+    ['envase-arrolhamento', `operacao LIKE '%ARROLHAMENTO%'`, []],
+    ['envase-provas-horarias', `cod_skip_lote IN ('29', '36', '31', '54') AND cod_laboratorio IN (16, 18, 20, 4, 6, 8, 5)`, []],
+    ['envase-assoprador', `operacao LIKE '%ASSOPRADOR%'`, []],
+    ['envase-lubrificante', `operacao LIKE '%LUBRIFICANTE%'`, []],
+    ['envase-recravacao', `operacao LIKE '%RECRAVAÇÃO%'`, []],
+    ['envase-pasteurizador', `operacao LIKE '%PASTEURIZ%'`, []],
+    ['envase-interunidades', `cod_amostra_interunidade IS NOT NULL`, []],
 
-  const lotesCip = lotesPorCat['cip'] ?? [];
+    // Processo produtivo — mais específico antes para evitar sobreposição de prefixos
+    ['filtracao', `lote_de_controle_de_qualidade LIKE 'LCQFI%'`, []],
+    ['fermentacao', `lote_de_controle_de_qualidade LIKE 'LCQF%' AND lote_de_controle_de_qualidade NOT LIKE 'LCQFI%'`, []],
+    ['brassagem', `lote_de_controle_de_qualidade LIKE 'LCQB%'`, []],
+    ['maturacao', `lote_de_controle_de_qualidade LIKE 'LCQM%' AND lote_de_controle_de_qualidade NOT LIKE 'LCQMB%'`, []],
+    ['desalcoolizacao', `lote_de_controle_de_qualidade LIKE 'LCQD%'`, []],
+    ['captacao', `lote_de_controle_de_qualidade LIKE 'LCQCP%'`, []],
+    ['tratamento-efluentes', `lote_de_controle_de_qualidade LIKE 'LCQTE%'`, []],
+    ['residuos', `cod_produto IN (303, 304)`, []],
+    ['ar-co2', `cod_produto IN (153, 160) AND cod_laboratorio NOT IN (5, 17, 6, 20)`, []],
 
-  // ─── QUERY 1b — Âncora Físico: resolve cod_cabecalho_de_especificacao ──────
-  const q1bRows = await blabQuery<{ categoria: string; chave: string }>(`
-    SELECT
-        CASE
-            WHEN PL.evento LIKE '%embalagem%'     THEN 'fisico-embalagem'
-            WHEN PL.evento LIKE '%matéria prima%' THEN 'fisico-materia-prima'
-            WHEN PL.evento LIKE '%Químicos%'      THEN 'fisico-quimicos'
-        END AS categoria,
-        CAST(ESPC.cod_cabecalho_de_especificacao AS CHAR) AS chave
-    FROM DIM_PLANEJAMENTO_DE_CRIACAO PL
-    INNER JOIN DIM_PLANEJAMENTO_DE_CRIACAO_X_CABECALHO_DE_ESPECIFICACAO ESPC
-        ON ESPC.cod_planejamento_de_criacao = PL.cod_planejamento_de_criacao
-    WHERE PL.D_E_L_E_T IS NULL
-    AND ESPC.D_E_L_E_T IS NULL
-    AND (
-        PL.evento LIKE '%embalagem%'
-        OR PL.evento LIKE '%matéria prima%'
-        OR PL.evento LIKE '%Químicos%'
-    )
-  `, []);
+    // CIP — três sub-tipos independentes
+    [
+      'cip-processo',
+      `cod_laboratorio IN (1, 15, 25) AND cod_centro_de_custo IN (450050, 450070, 460000, 430000, 430010, 430020, 410010, 470020)
+       AND lote_de_controle_de_qualidade COLLATE utf8mb4_unicode_ci IN (
+        SELECT L.lote_de_controle_de_qualidade COLLATE utf8mb4_unicode_ci
+        FROM FAT_CIP C
+        INNER JOIN FAT_LOTE_DE_CONTROLE_DE_QUALIDADE L
+            ON L.cod_lote_de_controle_de_qualidade = C.cod_lote_de_controle_de_qualidade
+        WHERE C.tipo_cip IN ('CIP COMPLETO', 'CIP CAUSTICO', 'CIP COMPLETO ALCALINO CLORADO', 'ASSEPSIA ALCALINO CLORADO',
+            'ASSEPSIA ALCALINO',
+            'CIP COMPLETO (BRASSAGEM)',
+            'CIP PASSIVAÇÃO',
+            'CIP SANITIZAÇÃO')
+          AND C.data BETWEEN ? AND ?
+          AND C.D_E_L_E_T IS NULL
+           AND L.D_E_L_E_T IS NULL
+      )`,
+      [diInt, dfInt]
+    ],
+    [
+      'cip-envasamento-novo',
+      `cod_laboratorio IN (4, 16, 25) AND cod_centro_de_custo IN (450010, 450060,450030, 450040, 450020)
+       AND lote_de_controle_de_qualidade COLLATE utf8mb4_unicode_ci IN (
+        SELECT L.lote_de_controle_de_qualidade COLLATE utf8mb4_unicode_ci
+        FROM FAT_CIP C
+        INNER JOIN FAT_LOTE_DE_CONTROLE_DE_QUALIDADE L
+            ON L.cod_lote_de_controle_de_qualidade = C.cod_lote_de_controle_de_qualidade
+        WHERE C.tipo_cip IN ('CIP COMPLETO', 'CIP CAUSTICO', 'CIP COMPLETO ALCALINO CLORADO', 'ASSEPSIA ALCALINO CLORADO',
+            'ASSEPSIA ALCALINO',
+            'CIP COMPLETO (BRASSAGEM)',
+            'CIP PASSIVAÇÃO',
+            'CIP SANITIZAÇÃO')
+          AND C.data BETWEEN ? AND ?
+          AND C.D_E_L_E_T IS NULL
+           AND L.D_E_L_E_T IS NULL
+      )`,
+      [diInt, dfInt]
+    ],
+    ['cip-envasamento-antigo', `cod_laboratorio IN (4, 16, 25) AND cod_operacao IN (31, 55, 68, 27)`, []],
 
-  const cabecalhosPorCat: Record<string, string[]> = {};
-  for (const row of q1bRows) {
-    if (!row.categoria) continue;
-    if (!cabecalhosPorCat[row.categoria]) cabecalhosPorCat[row.categoria] = [];
-    cabecalhosPorCat[row.categoria].push(row.chave);
-  }
-  for (const cat of Object.keys(cabecalhosPorCat)) {
-    cabecalhosPorCat[cat] = [...new Set(cabecalhosPorCat[cat])];
-  }
-
-  // ─── QUERY 2 — Resolução de cod_amostra para CIP e Físico ────────────────
-  const amostrasPorCat: Record<string, string[]> = {};
-
-  // CIP — identificado por laboratório CIP (cod_laboratorio IN 1,4,15,16,25) + período.
-  // Não depende de lotes da Query 1: roda sempre que o período for válido.
-  {
-    const cipRows = await blabQuery<{ cod_amostra: string }>(`
-      SELECT DISTINCT CAST(A.cod_amostra AS CHAR) AS cod_amostra
-      FROM FAT_AMOSTRA A
-      WHERE A.cod_laboratorio IN (1, 4, 15, 16, 25)
-      AND A.data_da_coleta BETWEEN ? AND ?
-      AND A.D_E_L_E_T IS NULL
-    `, [di, df]);
-    amostrasPorCat['cip'] = cipRows.map(r => String(r.cod_amostra)).filter(Boolean);
-  }
-
-  // Físico — via FAT_AMOSTRA com cod_cabecalho_de_especificacao por sub-categoria
-  for (const catFisico of ['fisico-embalagem', 'fisico-materia-prima', 'fisico-quimicos'] as const) {
-    const cabs = cabecalhosPorCat[catFisico] ?? [];
-    if (cabs.length === 0) continue;
-    const fisicoRows = await blabQuery<{ cod_amostra: string }>(`
-      SELECT DISTINCT CAST(A.cod_amostra AS CHAR) AS cod_amostra
-      FROM FAT_AMOSTRA A
-      WHERE A.cod_cabecalho_de_especificacao IN (${ph(cabs)})
-      AND A.data_da_coleta BETWEEN ? AND ?
-      AND A.D_E_L_E_T IS NULL
-    `, [...cabs, di, df]);
-    amostrasPorCat[catFisico] = fisicoRows.map(r => String(r.cod_amostra)).filter(Boolean);
-  }
-
-  // ─── QUERY 3 — Agregação final no DW_FAT_RESULTADO ───────────────────────
-  // Monta os fragmentos condicionais do CASE WHEN dinamicamente para evitar
-  // cláusulas IN () vazias que causariam erro de sintaxe SQL.
-
-  type CasePart = { sql: string; params: string[] };
-  const caseParts: CasePart[] = [];
-
-  // Grupo A — filtro direto (sem dependência de âncora)
-  caseParts.push({ sql: `WHEN cod_skip_lote IN ('68', '69') THEN 'fermento'`, params: [] });
-  caseParts.push({
-    sql: `WHEN (cod_skip_lote NOT IN ('36', '54') OR cod_skip_lote IS NULL) AND lote_de_controle_de_qualidade LIKE 'LCQMB%' THEN 'microbiologia-estabilidade-micro'`,
-    params: [],
-  });
-  caseParts.push({
-    sql: `WHEN cod_skip_lote IN ('36', '54') AND lote_de_controle_de_qualidade LIKE 'LCQMB%' THEN 'microbiologia-estabilidade-envase'`,
-    params: [],
-  });
-  caseParts.push({
-    sql: `WHEN lote_de_controle_de_qualidade LIKE 'LCQE%' AND cod_skip_lote = '33' THEN 'envase-produto-acabado'`,
-    params: [],
-  });
-  caseParts.push({
-    sql: `WHEN cod_centro_de_custo = 450050 THEN 'envase-chopp'`,
-    params: [],
-  });
-  caseParts.push({
-    sql: `WHEN operacao LIKE '%ARROLHAMENTO%' THEN 'envase-arrolhamento'`,
-    params: [],
-  });
-  caseParts.push({
-    sql: `WHEN operacao LIKE '%ASSOPRADOR%' THEN 'envase-assoprador'`,
-    params: [],
-  });
-  caseParts.push({
-    sql: `WHEN operacao LIKE '%LUBRIFICANTE%' THEN 'envase-lubrificante'`,
-    params: [],
-  });
-  caseParts.push({
-    sql: `WHEN operacao LIKE '%RECRAVAÇÃO%' THEN 'envase-recravacao'`,
-    params: [],
-  });
-  caseParts.push({
-    sql: `WHEN operacao LIKE '%PASTEURIZ%' THEN 'envase-pasteurizador'`,
-    params: [],
-  });
-  caseParts.push({
-    sql: `WHEN cod_amostra_interunidade IS NOT NULL THEN 'envase-interunidades'`,
-    params: [],
-  });
-  caseParts.push({
-    sql: `WHEN cod_produto IN (303, 304) THEN 'residuos'`,
-    params: [],
-  });
-  caseParts.push({
-    sql: `WHEN cod_produto IN (153, 160) AND cod_laboratorio NOT IN (5, 17, 6, 20) THEN 'ar-co2'`,
-    params: [],
-  });
-  caseParts.push({
-    sql: `WHEN cod_produto = 15 THEN 'microbiologia-agua-enxague'`,
-    params: [],
-  });
-  caseParts.push({
-    sql: `WHEN cod_produto = 14 THEN 'microbiologia-swab'`,
-    params: [],
-  });
-  caseParts.push({
-    sql: `WHEN lote_de_controle_de_qualidade LIKE 'LCQMB%' THEN 'microbiologia-resultados'`,
-    params: [],
-  });
-
-  // Grupo B simples — lotes resolvidos na Query 1
-  const gruposB: [string, string][] = [
-    ['fermentacao', 'fermentacao'],
-    ['filtracao', 'filtracao'],
-    ['brassagem', 'brassagem'],
-    ['maturacao', 'maturacao'],
-    ['desalcoolizacao', 'desalcoolizacao'],
-    ['captacao', 'captacao'],
-    ['tratamento-efluentes', 'tratamento-efluentes'],
+    // Físico — subquery inline sobre tabelas de dimensão (estáticas, pequenas)
+    ['fisico-embalagem', FISICO_IN, ['%embalagem%']],
+    ['fisico-materia-prima', FISICO_IN, ['%matéria prima%']],
+    ['fisico-quimicos', FISICO_IN, ['%Químicos%']],
   ];
-  for (const [cat, label] of gruposB) {
-    const lotes = lotesPorCat[cat] ?? [];
-    if (lotes.length === 0) continue;
-    caseParts.push({
-      sql: `WHEN lote_de_controle_de_qualidade IN (${ph(lotes)}) THEN '${label}'`,
-      params: lotes,
-    });
+
+  // ── SQL único: CTE materializa o período UMA vez; UNION ALL agrega por categoria ──
+  const AGG = `
+      COUNT(DISTINCT cod_amostra)                                       AS amostras,
+      SUM(CASE WHEN conformidade = 'NÃO CONFORME' THEN 1 ELSE 0 END)  AS nc`;
+
+  const unionParts = ramos.map(([, where]) => `
+  SELECT ? AS categoria, ${AGG}
+  FROM dados d
+  WHERE (${where})`);
+
+  // Params: [di, df] do CTE, depois para cada ramo: [id, ...extra_where_params]
+  const allParams: unknown[] = [di, df];
+  for (const [id, , extra] of ramos) {
+    allParams.push(id, ...extra);
   }
 
-  // CIP e Físico — amostras resolvidas na Query 2
-  for (const [cat] of [
-    ['cip'],
-    ['fisico-embalagem'],
-    ['fisico-materia-prima'],
-    ['fisico-quimicos'],
-  ] as [string][]) {
-    const amostras = amostrasPorCat[cat] ?? [];
-    if (amostras.length === 0) continue;
-    caseParts.push({
-      sql: `WHEN cod_amostra IN (${ph(amostras)}) THEN '${cat}'`,
-      params: amostras,
-    });
-  }
-
-  if (caseParts.length === 0) return [];
-
-  const caseWhenSql = caseParts.map(p => p.sql).join('\n            ');
-  const caseParams = caseParts.flatMap(p => p.params);
-
-  const q3Rows = await blabQuery<{ categoria: string; amostras: number; nc: number }>(`
+  const sql = `
+  WITH dados AS (
     SELECT
-        categoria,
-        COUNT(DISTINCT cod_amostra) AS amostras,
-        SUM(CASE WHEN conformidade = 'NÃO CONFORME' THEN 1 ELSE 0 END) AS nc
-    FROM (
-        SELECT
-            cod_amostra,
-            conformidade,
-            CASE
-                ${caseWhenSql}
-            END AS categoria
-        FROM DW_FAT_RESULTADO
-        WHERE data_resultado BETWEEN ? AND ?
-        AND D_E_L_E_T IS NULL
-        AND valor IS NOT NULL AND valor != ''
-        AND (conformidade = 'CONFORME' OR conformidade = 'NÃO CONFORME')
-    ) X
-    WHERE categoria IS NOT NULL
-    GROUP BY categoria
-  `, [...caseParams, di, df]);
+      cod_amostra,
+      conformidade,
+      cod_skip_lote,
+      lote_de_controle_de_qualidade,
+      operacao,
+      cod_centro_de_custo,
+      cod_laboratorio,
+      cod_area,
+      cod_produto,
+      cod_amostra_interunidade,
+      cod_cabecalho_de_especificacao,
+      cod_operacao
+    FROM DW_FAT_RESULTADO
+    WHERE D_E_L_E_T IS NULL
+      AND conformidade != 'NÃO AVALIADO'
+      AND valor IS NOT NULL AND valor != ''
+      AND data_resultado BETWEEN ? AND ?
+  )
+  ${unionParts.join('\n  UNION ALL')}`;
 
-  return q3Rows
+  // Timeout maior para esta query composta (padrão 15s pode ser insuficiente)
+  const rows = await blabQuery<{ categoria: string; amostras: number; nc: number }>(
+    sql, allParams, 600_000,
+  );
+
+  return rows
+    .filter(r => Number(r.amostras) > 0)
     .map(r => ({
       id: r.categoria,
       nome: LABELS_CATEGORIA[r.categoria] ?? r.categoria,
@@ -1287,6 +1217,7 @@ export async function getRankingProcessos(
     .sort((a, b) => b.nc - a.nc);
 }
 
+
 // 3. Ranking por produto
 export async function getRankingProdutos(periodo: FiltroPeriodo, limit = 20) {
   const rows = await blabQuery<any>(`
@@ -1294,10 +1225,11 @@ export async function getRankingProdutos(periodo: FiltroPeriodo, limit = 20) {
       cod_produto                                                          AS id,
       produto                                                              AS nome,
       COUNT(DISTINCT cod_amostra)                                          AS amostras,
-      SUM(CASE WHEN conformidade != 'CONFORME' THEN 1 ELSE 0 END)         AS nc
+      SUM(CASE WHEN conformidade = 'NÃO CONFORME' THEN 1 ELSE 0 END)       AS nc
     FROM DW_FAT_RESULTADO
     WHERE D_E_L_E_T IS NULL
-      AND (conformidade = 'CONFORME' OR conformidade = 'NÃO CONFORME')
+      AND conformidade != 'NÃO AVALIADO'
+      AND valor IS NOT NULL AND valor != ''
       AND cod_produto IS NOT NULL
       AND data_resultado BETWEEN ? AND ?
     GROUP BY cod_produto, produto
@@ -1320,10 +1252,11 @@ export async function getRankingEnsaios(periodo: FiltroPeriodo, limit = 20) {
       cod_ensaio                                                           AS id,
       ensaio                                                               AS nome,
       COUNT(DISTINCT cod_amostra)                                          AS amostras,
-      SUM(CASE WHEN conformidade != 'CONFORME' THEN 1 ELSE 0 END)         AS nc
+      SUM(CASE WHEN conformidade = 'NÃO CONFORME' THEN 1 ELSE 0 END)       AS nc
     FROM DW_FAT_RESULTADO
     WHERE D_E_L_E_T IS NULL
-      AND (conformidade = 'CONFORME' OR conformidade = 'NÃO CONFORME')
+      AND conformidade != 'NÃO AVALIADO'
+      AND valor IS NOT NULL AND valor != ''
       AND cod_ensaio IS NOT NULL
       AND data_resultado BETWEEN ? AND ?
     GROUP BY cod_ensaio, ensaio
