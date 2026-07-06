@@ -11,7 +11,8 @@ export function filialGuard(req: Request, res: Response, next: NextFunction): vo
   }
 
   // Valida que o usuário autenticado tem acesso à filial solicitada
-  const temAcesso = req.usuario?.filiais?.some(f => f.cod_filial === filialId);
+  const usuarioLogado = req.usuario as any;
+  const temAcesso = usuarioLogado?.filiais?.some((f: any) => f.cod_filial === filialId);
   if (!temAcesso) {
     res.status(403).json({ erro: 'Acesso negado a esta filial.' });
     return;

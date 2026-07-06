@@ -9,7 +9,6 @@ import { FaixaComparacaoChart } from '../charts/FaixaComparacaoChart';
 import { CategoricoComparacaoChart } from '../charts/CategoricoComparacaoChart';
 import { AmostraDetalheDrawer } from '../amostra/AmostraDetalheDrawer';
 import { useContexto } from '../../contexts/ContextoProvider';
-import { getAmostraDetalhe } from '../../services/analitica.api';
 import type { ContextoAnalise } from '@qlab/types';
 
 interface Props {
@@ -28,44 +27,27 @@ export function DrawerAnalitica({ open, ctx, onClose }: Props) {
     const { modoAnalyse } = useContexto();
     const { rodar, familia, dados, carregando, erro, limpar } = useAnalitica();
 
-    const [amostraOpen, setAmostraOpen] = useState(false);
-    const [amostraDetalhe, setAmostraDetalhe] = useState<unknown[] | null>(null);
-    const [amostraCarregando, setAmostraCarregando] = useState(false);
-    const [amostraErro, setAmostraErro] = useState<string | null>(null);
-    const [amostraId, setAmostraId] = useState<string | null>(null);
+    const [selectedCodAmostra, setSelectedCodAmostra] = useState<string | null>(null);
+    const [selectedCodEnsaio, setSelectedCodEnsaio] = useState<string | undefined>(undefined);
 
     useEffect(() => {
         if (open && ctx?.codEnsaio) rodar(ctx);
         if (!open) {
             limpar();
-            setAmostraOpen(false);
-            setAmostraDetalhe(null);
-            setAmostraErro(null);
-            setAmostraId(null);
+            setSelectedCodAmostra(null);
+            setSelectedCodEnsaio(undefined);
         }
     }, [open]);
 
-    async function handlePontoClick(info: { codAmostra?: string; codEnsaioAtual?: string }) {
+    function handlePontoClick(info: { codAmostra?: string; codEnsaioAtual?: string }) {
         if (!info.codAmostra) return;
         const codEnsaio = info.codEnsaioAtual ?? (ctx?.codEnsaio ? String(ctx.codEnsaio) : undefined);
 
-        setAmostraOpen(true);
-        setAmostraDetalhe(null);
-        setAmostraErro(null);
-        setAmostraCarregando(true);
-        setAmostraId(info.codAmostra);
-
-        try {
-            const detalhe = await getAmostraDetalhe(info.codAmostra, codEnsaio);
-            setAmostraDetalhe(detalhe);
-        } catch (err: any) {
-            setAmostraErro(err?.message ?? 'Erro ao carregar detalhe da amostra.');
-        } finally {
-            setAmostraCarregando(false);
-        }
+        setSelectedCodAmostra(info.codAmostra);
+        setSelectedCodEnsaio(codEnsaio);
     }
 
-    const handleHistogramaBinClick = (_info: HistogramaBinInfo) => {};
+    const handleHistogramaBinClick = (_info: HistogramaBinInfo) => { };
 
     const overlayStyle: CSSProperties = {
         position: 'fixed',
@@ -215,13 +197,10 @@ export function DrawerAnalitica({ open, ctx, onClose }: Props) {
             </div>
 
             <AmostraDetalheDrawer
-                open={amostraOpen}
-                onClose={() => { setAmostraOpen(false); setAmostraDetalhe(null); setAmostraErro(null); setAmostraId(null); }}
-                amostraId={amostraId}
-                amostra={amostraDetalhe}
-                carregando={amostraCarregando}
-                erro={amostraErro}
-                zIndex={120}
+                open={!!selectedCodAmostra}
+                onClose={() => { setSelectedCodAmostra(null); setSelectedCodEnsaio(undefined); }}
+                codAmostra={selectedCodAmostra}
+                codEnsaioAtual={selectedCodEnsaio}
             />
         </>
     );

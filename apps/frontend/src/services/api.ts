@@ -4,7 +4,7 @@
 const BASE_URL = import.meta.env.VITE_API_URL;
 const DEFAULT_REQUEST_TIMEOUT_MS = Number(import.meta.env.VITE_API_TIMEOUT_MS ?? 120000) || 120000;
 
-type HttpMethod = 'GET' | 'POST' | 'PATCH' | 'DELETE';
+type HttpMethod = 'GET' | 'POST' | 'PATCH' | 'DELETE' | 'PUT';
 
 interface RequestOptions {
     method?: HttpMethod;

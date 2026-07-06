@@ -10,6 +10,7 @@ import { getRankingProdutos } from './analitica.service';
 interface ResumoParams {
   dataInicio: string;
   dataFim: string;
+  filialId: number;
 }
 
 export async function getResumoDashboard(params: ResumoParams) {

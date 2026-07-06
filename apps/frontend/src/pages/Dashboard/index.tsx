@@ -214,7 +214,7 @@ export default function DashboardPage() {
       </div>
 
       <div style={{ marginBottom: '28px' }}>
-        <ResumoAutomatico dataInicio={periodo.dataInicio} dataFim={periodo.dataFim} />
+        <ResumoAutomatico dataInicio={periodo.dataInicio} dataFim={periodo.dataFim} filialId={filialId} />
       </div>
 
       {/* Categorias com dados reais */}

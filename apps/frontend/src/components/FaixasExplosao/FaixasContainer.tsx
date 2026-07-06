@@ -87,7 +87,7 @@ export const FaixasContainer: React.FC<FaixasContainerProps> = ({
         }
     }, [id, codEnsaio]);
 
-    const handleToggleExpand = (key: string, Faixa: Faixa) => {
+    const handleToggleExpand = (key: string, _faixa: Faixa) => {
         setExpandedFaixaKeys(prev => {
             const next = { ...prev, [key]: !prev[key] };
             if (onActiveFaixasChange) {

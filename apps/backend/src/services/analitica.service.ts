@@ -816,7 +816,7 @@ export async function categoricoComparacao(params: any) {
 }
 
 export async function getAmostrasPorBin(ctx: ContextoAnalise, binInicio: number, binFim: number) {
-  const { where, params } = buildEnvelope(ctx);
+  const { where, params } = await buildEnvelope(ctx);
 
   return blabQuery(`
     SELECT

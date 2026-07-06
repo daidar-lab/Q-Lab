@@ -17,9 +17,9 @@ export const MicrobiologiaController = {
       const { filialId, data_inicial, data_final } = req.body;
       if (!filialId) { res.status(400).json({ erro: 'filialId é obrigatório.' }); return; }
       const data = await getEstabilidadeBiologicaMicro({
-        filialId:     Number(filialId),
+        filialId: Number(filialId),
         data_inicial: String(data_inicial),
-        data_final:   String(data_final),
+        data_final: String(data_final),
       });
       res.json({ ok: true, data });
     } catch (err) {
@@ -32,9 +32,9 @@ export const MicrobiologiaController = {
       const { filialId, data_inicial, data_final } = req.body;
       if (!filialId) { res.status(400).json({ erro: 'filialId é obrigatório.' }); return; }
       const data = await getEstabilidadeBiologicaEnvase({
-        filialId:     Number(filialId),
+        filialId: Number(filialId),
         data_inicial: String(data_inicial),
-        data_final:   String(data_final),
+        data_final: String(data_final),
       });
       res.json({ ok: true, data });
     } catch (err) {
@@ -47,9 +47,10 @@ export const MicrobiologiaController = {
       // cod_filial já era obrigatório neste endpoint — sem mudança de assinatura
       const { cod_filial, data_inicial, data_final } = req.body;
       const data = await getResultadosMicrobiologicos({
-        cod_filial:   Number(cod_filial),
+        filialId: Number(cod_filial),
+        cod_filial: Number(cod_filial),
         data_inicial: String(data_inicial),
-        data_final:   String(data_final),
+        data_final: String(data_final),
       });
       res.json({ ok: true, data });
     } catch (err) {
@@ -62,9 +63,9 @@ export const MicrobiologiaController = {
       const { filialId, data_inicial, data_final } = req.body;
       if (!filialId) { res.status(400).json({ erro: 'filialId é obrigatório.' }); return; }
       const data = await getAguaDeEnxague({
-        filialId:     Number(filialId),
+        filialId: Number(filialId),
         data_inicial: String(data_inicial),
-        data_final:   String(data_final),
+        data_final: String(data_final),
       });
       res.json({ ok: true, data });
     } catch (err) {
@@ -77,9 +78,9 @@ export const MicrobiologiaController = {
       const { filialId, data_inicial, data_final } = req.body;
       if (!filialId) { res.status(400).json({ erro: 'filialId é obrigatório.' }); return; }
       const data = await getSwab({
-        filialId:     Number(filialId),
+        filialId: Number(filialId),
         data_inicial: String(data_inicial),
-        data_final:   String(data_final),
+        data_final: String(data_final),
       });
       res.json({ ok: true, data });
     } catch (err) {
@@ -92,9 +93,9 @@ export const MicrobiologiaController = {
       const { filialId, data_inicial, data_final } = req.body;
       if (!filialId) { res.status(400).json({ erro: 'filialId é obrigatório.' }); return; }
       const data = await getAnaliseMicrobiologia({
-        filialId:     Number(filialId),
+        filialId: Number(filialId),
         data_inicial: String(data_inicial),
-        data_final:   String(data_final),
+        data_final: String(data_final),
       });
       res.json({ ok: true, data });
     } catch (err) {

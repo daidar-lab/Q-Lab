@@ -1,7 +1,7 @@
 // apps/backend/src/controllers/auth.controller.ts
 
 import type { Request, Response, NextFunction } from 'express';
-import { login, ErroAuth } from '../services/auth.service';
+import { login, renovarToken, ErroAuth } from '../services/auth.service';
 
 export async function handleLogin(
     req: Request,
@@ -40,7 +40,6 @@ export async function handleRefresh(req: Request, res: Response, next: NextFunct
             res.status(401).json({ erro: 'Token inválido' });
             return;
         }
-        const { renovarToken } = await import('../services/auth.service');
         const resultado = await renovarToken(req.usuario.sub);
         res.json(resultado);
     } catch (err) {

@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useContexto } from '../../../contexts/ContextoProvider';
 import { useAnalitica } from '../../../hooks/useAnalitica';
 import { NumericoChart, type HistogramaBinInfo } from '../../../components/charts/NumericoChart';
-import { getAmostraDetalhe, getAmostrasPorBin } from '../../../services/analitica.api';
+import { getAmostrasPorBin } from '../../../services/analitica.api';
 import { AmostraDetalheDrawer } from '../../../components/amostra/AmostraDetalheDrawer';
 import { BinAmostrasDrawer } from '../../../components/amostra/BinAmostrasDrawer';
 import type { ContextoAnalise } from '@qlab/types';
@@ -14,11 +14,8 @@ export default function NumericoPage() {
     const { rodar, dados, carregando, erro } = useAnalitica();
 
     // ── Estado: detalhe de amostra (ponto de série / shewhart) ───────────────
-    const [amostraOpen, setAmostraOpen] = useState(false);
-    const [amostraDetalhe, setAmostraDetalhe] = useState<unknown[] | null>(null);
-    const [amostraCarregando, setAmostraCarregando] = useState(false);
-    const [amostraErro, setAmostraErro] = useState<string | null>(null);
-    const [amostraId, setAmostraId] = useState<string | null>(null);
+    const [selectedCodAmostra, setSelectedCodAmostra] = useState<string | null>(null);
+    const [selectedCodEnsaio, setSelectedCodEnsaio] = useState<string | undefined>(undefined);
 
     // ── Estado: amostras de bin do histograma (nível 1) ──────────────────────
     const [binOpen, setBinOpen] = useState(false);
@@ -34,33 +31,18 @@ export default function NumericoPage() {
     }, [ctx]);
 
     // ── Clique em ponto da série temporal ou Shewhart ────────────────────────
-    async function handlePontoClick(info: { codAmostra?: string; codEnsaioAtual?: string }) {
+    function handlePontoClick(info: { codAmostra?: string; codEnsaioAtual?: string }) {
         if (!info.codAmostra) return;
 
         // Usa ctx.codEnsaio como fallback caso o chart não saiba o cod_ensaio
         const codEnsaio = info.codEnsaioAtual ?? (ctx?.codEnsaio ? String(ctx.codEnsaio) : undefined);
-
-        setAmostraOpen(true);
-        setAmostraDetalhe(null);
-        setAmostraErro(null);
-        setAmostraCarregando(true);
-        setAmostraId(info.codAmostra);
-
-        try {
-            const detalhe = await getAmostraDetalhe(info.codAmostra, codEnsaio);
-            setAmostraDetalhe(detalhe);
-        } catch (err: any) {
-            setAmostraErro(err?.message ?? 'Erro ao carregar detalhe da amostra.');
-        } finally {
-            setAmostraCarregando(false);
-        }
+        setSelectedCodAmostra(info.codAmostra);
+        setSelectedCodEnsaio(codEnsaio);
     }
 
     function fecharAmostra() {
-        setAmostraOpen(false);
-        setAmostraDetalhe(null);
-        setAmostraErro(null);
-        setAmostraId(null);
+        setSelectedCodAmostra(null);
+        setSelectedCodEnsaio(undefined);
     }
 
     // ── Clique em barra do histograma (nível 1: lista de amostras do bin) ────
@@ -91,23 +73,10 @@ export default function NumericoPage() {
     }
 
     // ── Clique em "Ver" dentro do BinAmostrasDrawer (nível 2: detalhe) ───────
-    async function handleVerAmostraDoBin(codAmostra: string) {
+    function handleVerAmostraDoBin(codAmostra: string) {
         const codEnsaio = ctx?.codEnsaio ? String(ctx.codEnsaio) : undefined;
-
-        setAmostraOpen(true);
-        setAmostraDetalhe(null);
-        setAmostraErro(null);
-        setAmostraCarregando(true);
-        setAmostraId(codAmostra);
-
-        try {
-            const detalhe = await getAmostraDetalhe(codAmostra, codEnsaio);
-            setAmostraDetalhe(detalhe);
-        } catch (err: any) {
-            setAmostraErro(err?.message ?? 'Erro ao carregar detalhe da amostra.');
-        } finally {
-            setAmostraCarregando(false);
-        }
+        setSelectedCodAmostra(codAmostra);
+        setSelectedCodEnsaio(codEnsaio);
     }
 
     if (!ctx?.codEnsaio) {
@@ -190,13 +159,10 @@ export default function NumericoPage() {
 
             {/* Nível 2: detalhe de uma amostra específica (z=120 para ficar acima do BinDrawer z=110) */}
             <AmostraDetalheDrawer
-                open={amostraOpen}
+                open={!!selectedCodAmostra}
                 onClose={fecharAmostra}
-                amostraId={amostraId}
-                amostra={amostraDetalhe}
-                carregando={amostraCarregando}
-                erro={amostraErro}
-                zIndex={120}
+                codAmostra={selectedCodAmostra}
+                codEnsaioAtual={selectedCodEnsaio}
             />
         </div>
     );

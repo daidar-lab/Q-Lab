@@ -8,9 +8,10 @@ import styles from './ResumoAutomatico.module.css';
 interface Props {
   dataInicio: string;
   dataFim:    string;
+  filialId:   number;
 }
 
-export default function ResumoAutomatico({ dataInicio, dataFim }: Props) {
+export default function ResumoAutomatico({ dataInicio, dataFim, filialId }: Props) {
   const [resumo,     setResumo]     = useState<RespostaIA | null>(null);
   const [carregando, setCarregando] = useState(true);
   const [erro,       setErro]       = useState(false);
@@ -21,11 +22,11 @@ export default function ResumoAutomatico({ dataInicio, dataFim }: Props) {
     setResumo(null);
 
     resumoDashboardApi
-      .getResumo(dataInicio, dataFim)
+      .getResumo(dataInicio, dataFim, filialId)
       .then(res => setResumo(res.data))
       .catch(() => setErro(true))
       .finally(() => setCarregando(false));
-  }, [dataInicio, dataFim]);
+  }, [dataInicio, dataFim, filialId]);
 
   if (carregando) {
     return (
