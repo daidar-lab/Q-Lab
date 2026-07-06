@@ -85,4 +85,37 @@ export const detalheApi = {
             params: { ensaio: codEnsaio },
         });
     },
-};
+
+    getListaEnsaiosInformativos: async (dataInicio: string, dataFim: string, filialId: number) => {
+        const res = await request<{ ok: boolean; data: { cod_ensaio: number; ensaio: string; total_realizado: number }[] }>(
+            '/api/detalhe/informativos/ensaios',
+            { params: { dataInicio, dataFim, filialId } }
+        );
+        return res.data;
+    },
+
+    getCentrosCustoInformativos: async (codEnsaio: number, dataInicio: string, dataFim: string, filialId: number) => {
+        const res = await request<{ ok: boolean; data: { cod_centro_de_custo: number; centro_de_custo: string; total_realizado: number }[] }>(
+            '/api/detalhe/informativos/centros-custo',
+            { params: { codEnsaio, dataInicio, dataFim, filialId } }
+        );
+        return res.data;
+    },
+
+    getProdutosInformativos: async (codEnsaio: number, codCentroCusto: number, dataInicio: string, dataFim: string, filialId: number) => {
+        const res = await request<{ ok: boolean; data: { cod_produto: number; produto: string; ultimo_resultado_texto: string; total_realizado: number }[] }>(
+            '/api/detalhe/informativos/produtos',
+            { params: { codEnsaio, codCentroCusto, dataInicio, dataFim, filialId } }
+        );
+        return res.data;
+    },
+
+    getAmostrasInformativos: async (codEnsaio: number, codCentroCusto: number, codProduto: number, valor: string | null, dataInicio: string, dataFim: string, filialId: number) => {
+        const res = await request<{ ok: boolean; data: { cod_amostra: number; numero_de_controle: string; data_resultado: string; hora_resultado: string; ultimo_resultado_texto: string }[] }>(
+            '/api/detalhe/informativos/amostras',
+            { params: { codEnsaio, codCentroCusto, codProduto, valor: valor || '', dataInicio, dataFim, filialId } }
+        );
+        return res.data;
+    },
+};
+

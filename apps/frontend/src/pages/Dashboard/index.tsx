@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useContexto } from '../../contexts/ContextoProvider';
 import { useDashboard } from '../../hooks/useDashboard';
 import ResumoAutomatico from '../../components/dashboard/ResumoAutomatico';
+import InformativosDrawer from '../../components/dashboard/InformativosDrawer';
 
 const CATEGORIAS_META = [
   { tipo: 'processos', label: 'Macro Processos', icon: '≡' },
@@ -80,6 +81,7 @@ export default function DashboardPage() {
   const dadosPorTipo: Record<string, typeof processos> = { processos, produtos, ensaios };
   const [expandedCategories, setExpandedCategories] = useState<Record<string, boolean>>({});
   const [expandedMacros, setExpandedMacros] = useState<Record<string, boolean>>({});
+  const [informativosOpen, setInformativosOpen] = useState(false);
 
   if (filialId === null) {
     return (
@@ -200,17 +202,30 @@ export default function DashboardPage() {
             label: 'CONFORMIDADE', value: `${kpis.conformidade.valor}%`,
             delta: { texto: `— meta ${metaConformidade}%`, cor: 'var(--clr-text-3)' }
           },
-        ].map(k => (
-          <div key={k.label} style={kpiCard}>
-            <div style={{ fontSize: '11px', fontWeight: 600, color: 'var(--clr-text-3)', letterSpacing: '0.06em', marginBottom: '8px' }}>
-              {k.label}
+        ].map(k => {
+          const isInformativos = k.label === 'ENSAIOS INFORMATIVOS';
+          return (
+            <div
+              key={k.label}
+              style={{
+                ...kpiCard,
+                cursor: isInformativos ? 'pointer' : 'default',
+                transition: 'box-shadow 0.15s',
+              }}
+              onClick={isInformativos ? () => setInformativosOpen(true) : undefined}
+              onMouseEnter={isInformativos ? e => (e.currentTarget.style.boxShadow = '0 0 0 2px var(--clr-primary)') : undefined}
+              onMouseLeave={isInformativos ? e => (e.currentTarget.style.boxShadow = 'none') : undefined}
+            >
+              <div style={{ fontSize: '11px', fontWeight: 600, color: 'var(--clr-text-3)', letterSpacing: '0.06em', marginBottom: '8px' }}>
+                {k.label}
+              </div>
+              <div style={{ fontSize: '32px', fontWeight: 800, color: 'var(--clr-text)', lineHeight: 1, marginBottom: '8px' }}>
+                {k.value}
+              </div>
+              <div style={{ fontSize: '12px', color: k.delta.cor }}>{k.delta.texto}</div>
             </div>
-            <div style={{ fontSize: '32px', fontWeight: 800, color: 'var(--clr-text)', lineHeight: 1, marginBottom: '8px' }}>
-              {k.value}
-            </div>
-            <div style={{ fontSize: '12px', color: k.delta.cor }}>{k.delta.texto}</div>
-          </div>
-        ))}
+          );
+        })}
       </div>
 
       <div style={{ marginBottom: '28px' }}>
@@ -351,6 +366,14 @@ export default function DashboardPage() {
           );
         })}
       </div>
+
+      <InformativosDrawer
+        isOpen={informativosOpen}
+        onClose={() => setInformativosOpen(false)}
+        dataInicio={periodo.dataInicio}
+        dataFim={periodo.dataFim}
+        filialId={filialId}
+      />
     </div>
   );
 }

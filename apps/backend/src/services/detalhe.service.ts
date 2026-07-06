@@ -314,10 +314,16 @@ export async function getCentrosCustoPorProdutoEEnsaio(params: {
 interface FiltroInformativos {
   dataInicio: string;
   dataFim: string;
+  filialId: number;
 }
 
 // Nível 1: Lista todos os ensaios informativos (Disparado ao expandir o card)
 export async function getListaEnsaiosInformativos(params: FiltroInformativos) {
+  const labs = await resolveFilialLaboratorios(params.filialId);
+  const labFilter = labs.length > 0
+    ? `AND cod_laboratorio IN (${labs.map(() => '?').join(', ')})`
+    : '';
+
   return blabQuery(`
     SELECT
       cod_ensaio,
@@ -326,14 +332,20 @@ export async function getListaEnsaiosInformativos(params: FiltroInformativos) {
     FROM DW_FAT_RESULTADO
     WHERE D_E_L_E_T IS NULL
       AND conformidade = 'NÃO AVALIADO'
+      ${labFilter}
       AND data_resultado BETWEEN ? AND ?
     GROUP BY cod_ensaio, ensaio
     ORDER BY total_realizado DESC
-  `, [params.dataInicio, params.dataFim]);
+  `, [...labs, params.dataInicio, params.dataFim]);
 }
 
 // Nível 2: Ao clicar no Ensaio Informativo, descobre os Centros de Custo dele
 export async function getCentrosCustoPorInformativo(params: FiltroInformativos & { codEnsaio: number }) {
+  const labs = await resolveFilialLaboratorios(params.filialId);
+  const labFilter = labs.length > 0
+    ? `AND cod_laboratorio IN (${labs.map(() => '?').join(', ')})`
+    : '';
+
   return blabQuery(`
     SELECT
       cod_centro_de_custo,
@@ -343,17 +355,23 @@ export async function getCentrosCustoPorInformativo(params: FiltroInformativos &
     WHERE D_E_L_E_T IS NULL
       AND conformidade = 'NÃO AVALIADO'
       AND cod_ensaio = ?
+      ${labFilter}
       AND cod_centro_de_custo IS NOT NULL
       AND data_resultado BETWEEN ? AND ?
     GROUP BY cod_centro_de_custo, centro_de_custo
     ORDER BY total_realizado DESC
-  `, [params.codEnsaio, params.dataInicio, params.dataFim]);
+  `, [params.codEnsaio, ...labs, params.dataInicio, params.dataFim]);
 }
 
 // Nível 3: Ao clicar no Centro de Custo, abre os Produtos e seus respectivos valores qualitativos
 export async function getProdutosPorInformativoECentro(
   params: FiltroInformativos & { codEnsaio: number; codCentroCusto: number }
 ) {
+  const labs = await resolveFilialLaboratorios(params.filialId);
+  const labFilter = labs.length > 0
+    ? `AND cod_laboratorio IN (${labs.map(() => '?').join(', ')})`
+    : '';
+
   return blabQuery(`
     SELECT
       cod_produto,
@@ -365,8 +383,43 @@ export async function getProdutosPorInformativoECentro(
       AND conformidade = 'NÃO AVALIADO'
       AND cod_ensaio = ?
       AND cod_centro_de_custo = ?
+      ${labFilter}
       AND data_resultado BETWEEN ? AND ?
     GROUP BY cod_produto, produto, valor
     ORDER BY total_realizado DESC
-  `, [params.codEnsaio, params.codCentroCusto, params.dataInicio, params.dataFim]);
+  `, [params.codEnsaio, params.codCentroCusto, ...labs, params.dataInicio, params.dataFim]);
 }
+
+// Nível 4: Ao clicar no Produto/Resultado, abre a lista de Amostras
+export async function getAmostrasPorInformativoECentroEProduto(
+  params: FiltroInformativos & { codEnsaio: number; codCentroCusto: number; codProduto: number; valor: string | null }
+) {
+  const labs = await resolveFilialLaboratorios(params.filialId);
+  const labFilter = labs.length > 0
+    ? `AND cod_laboratorio IN (${labs.map(() => '?').join(', ')})`
+    : '';
+
+  const valorCondition = params.valor ? 'AND valor = ?' : 'AND valor IS NULL';
+  const queryParams = params.valor
+    ? [params.codEnsaio, params.codCentroCusto, params.codProduto, params.valor, ...labs, params.dataInicio, params.dataFim]
+    : [params.codEnsaio, params.codCentroCusto, params.codProduto, ...labs, params.dataInicio, params.dataFim];
+
+  return blabQuery(`
+    SELECT
+      cod_amostra,
+      numero_de_controle,
+      data_resultado,
+      hora_resultado,
+      valor AS ultimo_resultado_texto
+    FROM DW_FAT_RESULTADO
+    WHERE D_E_L_E_T IS NULL
+      AND conformidade = 'NÃO AVALIADO'
+      AND cod_ensaio = ?
+      AND cod_centro_de_custo = ?
+      AND cod_produto = ?
+      ${valorCondition}
+      ${labFilter}
+      AND data_resultado BETWEEN ? AND ?
+    ORDER BY data_resultado DESC, hora_resultado DESC
+  `, queryParams);
+}

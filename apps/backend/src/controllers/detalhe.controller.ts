@@ -101,4 +101,78 @@ export async function getResumoDetalheIAController(req: Request, res: Response, 
     next(err);
   }
 }
+export async function getListaEnsaiosInformativosController(req: Request, res: Response, next: NextFunction) {
+  try {
+    const { dataInicio, dataFim, filialId: filialIdStr } = req.query as Record<string, string>;
+    const filialId = parseInt(filialIdStr);
+    if (!filialId || isNaN(filialId)) {
+      return res.status(400).json({ ok: false, error: 'filialId é obrigatório.' });
+    }
+    const data = await DetalheService.getListaEnsaiosInformativos({ dataInicio, dataFim, filialId });
+    res.json({ ok: true, data });
+  } catch (err) {
+    next(err);
+  }
+}
+
+export async function getCentrosCustoPorInformativoController(req: Request, res: Response, next: NextFunction) {
+  try {
+    const { dataInicio, dataFim, codEnsaio, filialId: filialIdStr } = req.query as Record<string, string>;
+    const filialId = parseInt(filialIdStr);
+    if (!filialId || isNaN(filialId)) {
+      return res.status(400).json({ ok: false, error: 'filialId é obrigatório.' });
+    }
+    const data = await DetalheService.getCentrosCustoPorInformativo({
+      dataInicio,
+      dataFim,
+      filialId,
+      codEnsaio: Number(codEnsaio),
+    });
+    res.json({ ok: true, data });
+  } catch (err) {
+    next(err);
+  }
+}
+
+export async function getProdutosPorInformativoECentroController(req: Request, res: Response, next: NextFunction) {
+  try {
+    const { dataInicio, dataFim, codEnsaio, codCentroCusto, filialId: filialIdStr } = req.query as Record<string, string>;
+    const filialId = parseInt(filialIdStr);
+    if (!filialId || isNaN(filialId)) {
+      return res.status(400).json({ ok: false, error: 'filialId é obrigatório.' });
+    }
+    const data = await DetalheService.getProdutosPorInformativoECentro({
+      dataInicio,
+      dataFim,
+      filialId,
+      codEnsaio: Number(codEnsaio),
+      codCentroCusto: Number(codCentroCusto),
+    });
+    res.json({ ok: true, data });
+  } catch (err) {
+    next(err);
+  }
+}
+
+export async function getAmostrasPorInformativoECentroEProdutoController(req: Request, res: Response, next: NextFunction) {
+  try {
+    const { dataInicio, dataFim, codEnsaio, codCentroCusto, codProduto, valor, filialId: filialIdStr } = req.query as Record<string, string>;
+    const filialId = parseInt(filialIdStr);
+    if (!filialId || isNaN(filialId)) {
+      return res.status(400).json({ ok: false, error: 'filialId é obrigatório.' });
+    }
+    const data = await DetalheService.getAmostrasPorInformativoECentroEProduto({
+      dataInicio,
+      dataFim,
+      filialId,
+      codEnsaio: Number(codEnsaio),
+      codCentroCusto: Number(codCentroCusto),
+      codProduto: Number(codProduto),
+      valor: valor || null,
+    });
+    res.json({ ok: true, data });
+  } catch (err) {
+    next(err);
+  }
+}
 
