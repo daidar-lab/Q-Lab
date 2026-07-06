@@ -920,9 +920,6 @@ export function resolverFiltroPorId(id: string | number): { sql: string; params:
       params: [],
     },
     'co2-beneficiado': {
-      // CO2 beneficiado é ancorado em FAT_LAUDO — sem filtro direto no DW por produto.
-      // Usar lote prefixo LCQCO2 se existir, caso contrário tratar como sem filtro específico.
-      // ATENÇÃO: validar prefixo real no banco antes de usar em produção.
       sql: `lote_de_controle_de_qualidade LIKE 'LCQCO2%'`,
       params: [],
     },
@@ -1030,6 +1027,18 @@ export function resolverFiltroPorId(id: string | number): { sql: string; params:
       )`,
       params: [],
     },
+    'desalcoolizacao': {
+      sql: `lote_de_controle_de_qualidade COLLATE utf8mb4_unicode_ci IN (
+    SELECT L.lote_de_controle_de_qualidade COLLATE utf8mb4_unicode_ci
+    FROM FAT_ATRIBUTOS_DA_AMOSTRA ATR
+    INNER JOIN FAT_LOTE_DE_CONTROLE_DE_QUALIDADE L
+        ON CAST(ATR.valor AS UNSIGNED) = L.cod_lote_de_controle_de_qualidade
+    WHERE ATR.cod_atributo_da_amostra = 53
+      AND ATR.D_E_L_E_T IS NULL
+      AND L.D_E_L_E_T IS NULL
+  )`,
+      params: [],
+    },
   };
 
   if (slugDireto[idStr]) return slugDireto[idStr];
@@ -1041,13 +1050,11 @@ export function resolverFiltroPorId(id: string | number): { sql: string; params:
     'fermentacao': 'LCQF',
     'brassagem': 'LCQB',
     'maturacao': 'LCQM',
-    'desalcoolizacao': 'LCQD',
-    'captacao': 'LCQCP',   // deve vir antes de cip
+    'captacao': 'LCQCA',
     'tratamento-efluentes': 'LCQTE',
-    // 'cip' foi movido para slugDireto (cod_laboratorio) — sem âncora via lote
     'envase-produto-acabado': 'LCQE',
     'microbiologia-resultados': 'LCQMB',
-    'envase-interunidades': 'LCQE',    // mesma âncora do produto acabado, skip_lote diferencia
+    'envase-interunidades': 'LCQE',
   };
 
   if (prefixMap[idStr]) {
@@ -1126,6 +1133,42 @@ export async function getRankingProcessos(
     ? `AND cod_laboratorio IN (${labs.map(() => '?').join(', ')})`
     : '';
 
+  // Antes de montar o SQL, resolve os lotes pesados em paralelo
+  const [lotesDesalcoolizacao, lotesCip] = await Promise.all([
+    // desalcoolizacao — atributo 53
+    blabQuery<{ lote: string }>(`
+      SELECT L.lote_de_controle_de_qualidade AS lote
+      FROM FAT_ATRIBUTOS_DA_AMOSTRA ATR
+      INNER JOIN FAT_LOTE_DE_CONTROLE_DE_QUALIDADE L
+          ON CAST(ATR.valor AS UNSIGNED) = L.cod_lote_de_controle_de_qualidade
+      WHERE ATR.cod_atributo_da_amostra = 53
+        AND ATR.D_E_L_E_T IS NULL
+        AND L.D_E_L_E_T IS NULL
+    `, []).then(rows => rows.map(r => r.lote)),
+
+    // cip
+    blabQuery<{ lote: string }>(`
+      SELECT L.lote_de_controle_de_qualidade AS lote
+      FROM FAT_CIP C
+      INNER JOIN FAT_LOTE_DE_CONTROLE_DE_QUALIDADE L
+          ON L.cod_lote_de_controle_de_qualidade = C.cod_lote_de_controle_de_qualidade
+      WHERE C.tipo_cip IN ('CIP COMPLETO','CIP CAUSTICO','CIP COMPLETO ALCALINO CLORADO',
+          'ASSEPSIA ALCALINO CLORADO','ASSEPSIA ALCALINO','CIP COMPLETO (BRASSAGEM)',
+          'CIP PASSIVAÇÃO','CIP SANITIZAÇÃO')
+        AND C.data BETWEEN ? AND ?
+        AND C.D_E_L_E_T IS NULL
+        AND L.D_E_L_E_T IS NULL
+    `, [diInt, dfInt]).then(rows => rows.map(r => r.lote)),
+  ]);
+
+  const placeholdersDesalc = lotesDesalcoolizacao.length > 0
+    ? lotesDesalcoolizacao.map(() => '?').join(',')
+    : 'NULL';
+
+  const placeholdersCip = lotesCip.length > 0
+    ? lotesCip.map(() => '?').join(',')
+    : 'NULL';
+
   // Subquery reutilizável para Físico — resolve cod_cabecalho_de_especificacao
   // via tabela de dimensão (pequena, resolvida 1x pelo otimizador MySQL)
   const FISICO_IN = `
@@ -1168,8 +1211,14 @@ export async function getRankingProcessos(
     ['fermentacao', `lote_de_controle_de_qualidade LIKE 'LCQF%' AND lote_de_controle_de_qualidade NOT LIKE 'LCQFI%'`, []],
     ['brassagem', `lote_de_controle_de_qualidade LIKE 'LCQB%'`, []],
     ['maturacao', `lote_de_controle_de_qualidade LIKE 'LCQM%' AND lote_de_controle_de_qualidade NOT LIKE 'LCQMB%'`, []],
-    ['desalcoolizacao', `lote_de_controle_de_qualidade LIKE 'LCQD%'`, []],
-    ['captacao', `lote_de_controle_de_qualidade LIKE 'LCQCP%'`, []],
+    [
+      'desalcoolizacao',
+      lotesDesalcoolizacao.length > 0
+        ? `lote_de_controle_de_qualidade COLLATE utf8mb4_unicode_ci IN (${placeholdersDesalc})`
+        : `1=0`,
+      lotesDesalcoolizacao
+    ],
+    ['captacao', `lote_de_controle_de_qualidade LIKE 'LCQCA%'`, []],
     ['tratamento-efluentes', `lote_de_controle_de_qualidade LIKE 'LCQTE%'`, []],
     ['residuos', `cod_produto IN (303, 304)`, []],
     ['ar-co2', `cod_produto IN (153, 160) AND cod_laboratorio NOT IN (5, 17, 6, 20)`, []],
@@ -1177,41 +1226,17 @@ export async function getRankingProcessos(
     // CIP — três sub-tipos independentes
     [
       'cip-processo',
-      `cod_laboratorio IN (1, 15, 25) AND cod_centro_de_custo IN (450050, 450070, 460000, 430000, 430010, 430020, 410010, 470020)
-       AND lote_de_controle_de_qualidade COLLATE utf8mb4_unicode_ci IN (
-        SELECT L.lote_de_controle_de_qualidade COLLATE utf8mb4_unicode_ci
-        FROM FAT_CIP C
-        INNER JOIN FAT_LOTE_DE_CONTROLE_DE_QUALIDADE L
-            ON L.cod_lote_de_controle_de_qualidade = C.cod_lote_de_controle_de_qualidade
-        WHERE C.tipo_cip IN ('CIP COMPLETO', 'CIP CAUSTICO', 'CIP COMPLETO ALCALINO CLORADO', 'ASSEPSIA ALCALINO CLORADO',
-            'ASSEPSIA ALCALINO',
-            'CIP COMPLETO (BRASSAGEM)',
-            'CIP PASSIVAÇÃO',
-            'CIP SANITIZAÇÃO')
-          AND C.data BETWEEN ? AND ?
-          AND C.D_E_L_E_T IS NULL
-           AND L.D_E_L_E_T IS NULL
-      )`,
-      [diInt, dfInt]
+      lotesCip.length > 0
+        ? `cod_laboratorio IN (1, 15, 25) AND cod_centro_de_custo IN (450050, 450070, 460000, 430000, 430010, 430020, 410010, 470020) AND lote_de_controle_de_qualidade COLLATE utf8mb4_unicode_ci IN (${placeholdersCip})`
+        : `1=0`,
+      lotesCip
     ],
     [
       'cip-envasamento-novo',
-      `cod_laboratorio IN (4, 16, 25) AND cod_centro_de_custo IN (450010, 450060,450030, 450040, 450020)
-       AND lote_de_controle_de_qualidade COLLATE utf8mb4_unicode_ci IN (
-        SELECT L.lote_de_controle_de_qualidade COLLATE utf8mb4_unicode_ci
-        FROM FAT_CIP C
-        INNER JOIN FAT_LOTE_DE_CONTROLE_DE_QUALIDADE L
-            ON L.cod_lote_de_controle_de_qualidade = C.cod_lote_de_controle_de_qualidade
-        WHERE C.tipo_cip IN ('CIP COMPLETO', 'CIP CAUSTICO', 'CIP COMPLETO ALCALINO CLORADO', 'ASSEPSIA ALCALINO CLORADO',
-            'ASSEPSIA ALCALINO',
-            'CIP COMPLETO (BRASSAGEM)',
-            'CIP PASSIVAÇÃO',
-            'CIP SANITIZAÇÃO')
-          AND C.data BETWEEN ? AND ?
-          AND C.D_E_L_E_T IS NULL
-           AND L.D_E_L_E_T IS NULL
-      )`,
-      [diInt, dfInt]
+      lotesCip.length > 0
+        ? `cod_laboratorio IN (4, 16, 25) AND cod_centro_de_custo IN (450010, 450060,450030, 450040, 450020) AND lote_de_controle_de_qualidade COLLATE utf8mb4_unicode_ci IN (${placeholdersCip})`
+        : `1=0`,
+      lotesCip
     ],
     ['cip-envasamento-antigo', `cod_laboratorio IN (4, 16, 25) AND cod_operacao IN (31, 55, 68, 27)`, []],
 
@@ -1295,7 +1320,6 @@ export async function getRankingProdutos(periodo: FiltroPeriodo, limit = 20) {
     FROM DW_FAT_RESULTADO
     WHERE D_E_L_E_T IS NULL
       AND conformidade != 'NÃO AVALIADO'
-      AND valor IS NOT NULL AND valor != ''
       AND cod_produto IS NOT NULL
       AND data_resultado BETWEEN ? AND ?
       ${labFilter}
@@ -1328,7 +1352,6 @@ export async function getRankingEnsaios(periodo: FiltroPeriodo, limit = 20) {
     FROM DW_FAT_RESULTADO
     WHERE D_E_L_E_T IS NULL
       AND conformidade != 'NÃO AVALIADO'
-      AND valor IS NOT NULL AND valor != ''
       AND cod_ensaio IS NOT NULL
       AND data_resultado BETWEEN ? AND ?
       ${labFilter}

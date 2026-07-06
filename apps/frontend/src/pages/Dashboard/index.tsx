@@ -105,7 +105,7 @@ export default function DashboardPage() {
             marginBottom: '16px',
             color: 'var(--clr-primary)'
           }}>
-            🏢
+
           </div>
           <h2 style={{
             fontSize: '20px',

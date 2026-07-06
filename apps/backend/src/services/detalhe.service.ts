@@ -11,169 +11,18 @@ interface DetalheParams {
   topN?: number; // default 4
 }
 
-function getFiltroSql(
+function buildFiltroDetalhe(
   tipo: 'processo' | 'produto' | 'ensaio',
-  id: string | number,
-  dataInicio?: string,
-  dataFim?: string,
-  alias = ''
-): { sql: string; params: any[] } {
-  const prefix = alias ? `${alias}.` : '';
-  if (tipo === 'produto') {
-    return { sql: `${prefix}cod_produto = ?`, params: [id] };
-  }
-  if (tipo === 'ensaio') {
-    return { sql: `${prefix}cod_ensaio = ?`, params: [Number(id)] };
-  }
-
-  // tipo === 'processo'
-  const procId = String(id);
-  switch (procId) {
-    case 'fermento':
-      return { sql: `${prefix}cod_skip_lote IN ('68', '69')`, params: [] };
-    case 'microbiologia-estabilidade-micro':
-      return { sql: `(${prefix}cod_skip_lote NOT IN ('36', '54') OR ${prefix}cod_skip_lote IS NULL) AND ${prefix}lote_de_controle_de_qualidade LIKE 'LCQMB%'`, params: [] };
-    case 'microbiologia-estabilidade-envase':
-      return { sql: `${prefix}cod_skip_lote IN ('36', '54') AND ${prefix}lote_de_controle_de_qualidade LIKE 'LCQMB%'`, params: [] };
-    case 'envase-arrolhamento':
-      return { sql: `${prefix}operacao LIKE '%ARROLHAMENTO%'`, params: [] };
-    case 'envase-provas-horarias':
-      return { sql: `${prefix}cod_skip_lote IN ('29', '36', '31', '54') AND ${prefix}cod_laboratorio IN (16, 18, 20, 4, 6, 8, 5)`, params: [] };
-    case 'envase-interunidades':
-      return { sql: `${prefix}cod_amostra_interunidade IS NOT NULL`, params: [] };
-    case 'filtracao':
-      return { sql: `${prefix}lote_de_controle_de_qualidade LIKE 'LCQFI%'`, params: [] };
-    case 'fermentacao':
-      return { sql: `${prefix}lote_de_controle_de_qualidade LIKE 'LCQF%'`, params: [] };
-    case 'brassagem':
-      return { sql: `${prefix}lote_de_controle_de_qualidade LIKE 'LCQB%'`, params: [] };
-    case 'maturacao':
-      return { sql: `${prefix}lote_de_controle_de_qualidade LIKE 'LCQM%' AND ${prefix}lote_de_controle_de_qualidade NOT LIKE 'LCQMB%'`, params: [] };
-    case 'desalcoolizacao':
-      return { sql: `${prefix}lote_de_controle_de_qualidade LIKE 'LCQD%'`, params: [] };
-    case 'captacao':
-      return { sql: `${prefix}lote_de_controle_de_qualidade LIKE 'LCQCP%'`, params: [] };
-    case 'tratamento-efluentes':
-      return { sql: `${prefix}lote_de_controle_de_qualidade LIKE 'LCQTE%'`, params: [] };
-    case 'cip':
-      return { sql: `${prefix}cod_laboratorio IN (1, 4, 15, 16, 25)`, params: [] };
-    case 'cip-processo': {
-      const diInt = dataInicio ? Number(dataInicio.substring(0, 10).replace(/-/g, '')) : 0;
-      const dfInt = dataFim ? Number(dataFim.substring(0, 10).replace(/-/g, '')) : 99999999;
-      return {
-        sql: `${prefix}cod_laboratorio IN (1, 15, 25)
-          AND ${prefix}cod_centro_de_custo IN (450050, 450070, 460000, 430000, 430010, 430020, 410010, 470020)
-          AND ${prefix}lote_de_controle_de_qualidade COLLATE utf8mb4_unicode_ci IN (
-            SELECT L.lote_de_controle_de_qualidade COLLATE utf8mb4_unicode_ci
-            FROM FAT_CIP C
-            INNER JOIN FAT_LOTE_DE_CONTROLE_DE_QUALIDADE L
-                ON L.cod_lote_de_controle_de_qualidade = C.cod_lote_de_controle_de_qualidade
-            WHERE C.tipo_cip IN (
-                'CIP COMPLETO', 'CIP CAUSTICO', 'CIP COMPLETO ALCALINO CLORADO',
-                'ASSEPSIA ALCALINO CLORADO', 'ASSEPSIA ALCALINO',
-                'CIP COMPLETO (BRASSAGEM)', 'CIP PASSIVAÇÃO', 'CIP SANITIZAÇÃO'
-              )
-              AND C.data BETWEEN ? AND ?
-              AND C.D_E_L_E_T IS NULL
-              AND L.D_E_L_E_T IS NULL
-          )`,
-        params: [diInt, dfInt],
-      };
-    }
-    case 'cip-envasamento-novo': {
-      const diInt = dataInicio ? Number(dataInicio.substring(0, 10).replace(/-/g, '')) : 0;
-      const dfInt = dataFim ? Number(dataFim.substring(0, 10).replace(/-/g, '')) : 99999999;
-      return {
-        sql: `${prefix}cod_laboratorio IN (4, 16, 25)
-          AND ${prefix}cod_centro_de_custo IN (450010, 450060, 450030, 450040, 450020)
-          AND ${prefix}lote_de_controle_de_qualidade COLLATE utf8mb4_unicode_ci IN (
-            SELECT L.lote_de_controle_de_qualidade COLLATE utf8mb4_unicode_ci
-            FROM FAT_CIP C
-            INNER JOIN FAT_LOTE_DE_CONTROLE_DE_QUALIDADE L
-                ON L.cod_lote_de_controle_de_qualidade = C.cod_lote_de_controle_de_qualidade
-            WHERE C.tipo_cip IN (
-                'CIP COMPLETO', 'CIP CAUSTICO', 'CIP COMPLETO ALCALINO CLORADO',
-                'ASSEPSIA ALCALINO CLORADO', 'ASSEPSIA ALCALINO',
-                'CIP COMPLETO (BRASSAGEM)', 'CIP PASSIVAÇÃO', 'CIP SANITIZAÇÃO'
-              )
-              AND C.data BETWEEN ? AND ?
-              AND C.D_E_L_E_T IS NULL
-              AND L.D_E_L_E_T IS NULL
-          )`,
-        params: [diInt, dfInt],
-      };
-    }
-    case 'microbiologia-analise-microbiologia':
-      return { sql: `${prefix}cod_laboratorio IN (5, 17) AND ${prefix}cod_area IN (73, 75)`, params: [] };
-    case 'fisico-embalagem':
-      return {
-        sql: `${prefix}cod_cabecalho_de_especificacao IN (
-          SELECT ESPC.cod_cabecalho_de_especificacao
-          FROM DIM_PLANEJAMENTO_DE_CRIACAO PL
-          INNER JOIN DIM_PLANEJAMENTO_DE_CRIACAO_X_CABECALHO_DE_ESPECIFICACAO ESPC
-              ON ESPC.cod_planejamento_de_criacao = PL.cod_planejamento_de_criacao
-          WHERE PL.D_E_L_E_T IS NULL
-            AND ESPC.D_E_L_E_T IS NULL
-            AND PL.evento LIKE '%embalagem%'
-        )`,
-        params: [],
-      };
-    case 'fisico-materia-prima':
-      return {
-        sql: `${prefix}cod_cabecalho_de_especificacao IN (
-          SELECT ESPC.cod_cabecalho_de_especificacao
-          FROM DIM_PLANEJAMENTO_DE_CRIACAO PL
-          INNER JOIN DIM_PLANEJAMENTO_DE_CRIACAO_X_CABECALHO_DE_ESPECIFICACAO ESPC
-              ON ESPC.cod_planejamento_de_criacao = PL.cod_planejamento_de_criacao
-          WHERE PL.D_E_L_E_T IS NULL
-            AND ESPC.D_E_L_E_T IS NULL
-            AND PL.evento LIKE '%matéria prima%'
-        )`,
-        params: [],
-      };
-    case 'fisico-quimicos':
-      return {
-        sql: `${prefix}cod_cabecalho_de_especificacao IN (
-          SELECT ESPC.cod_cabecalho_de_especificacao
-          FROM DIM_PLANEJAMENTO_DE_CRIACAO PL
-          INNER JOIN DIM_PLANEJAMENTO_DE_CRIACAO_X_CABECALHO_DE_ESPECIFICACAO ESPC
-              ON ESPC.cod_planejamento_de_criacao = PL.cod_planejamento_de_criacao
-          WHERE PL.D_E_L_E_T IS NULL
-            AND ESPC.D_E_L_E_T IS NULL
-            AND PL.evento LIKE '%Químicos%'
-        )`,
-        params: [],
-      };
-    default:
-      if (isNaN(Number(procId))) {
-        const res = resolverFiltroPorId(procId);
-        if (alias) {
-          let sql = res.sql;
-          const columns = [
-            'cod_skip_lote',
-            'cod_produto',
-            'cod_laboratorio',
-            'lote_de_controle_de_qualidade',
-            'operacao',
-            'cod_centro_de_custo',
-            'cod_amostra_interunidade',
-            'cod_cabecalho_de_especificacao',
-          ];
-          for (const col of columns) {
-            const regex = new RegExp(`\\b${col}\\b`, 'g');
-            sql = sql.replace(regex, `${prefix}${col}`);
-          }
-          return { sql, params: res.params };
-        }
-        return res;
-      }
-      return { sql: `${prefix}cod_centro_de_custo = ?`, params: [Number(id)] };
-  }
+  id: string | number
+): { sql: string; params: unknown[] } {
+  if (tipo === 'produto') return { sql: 'cod_produto = ?', params: [id] };
+  if (tipo === 'ensaio') return { sql: 'cod_ensaio = ?', params: [Number(id)] };
+  return resolverFiltroPorId(id);
 }
 
 // 1. Série temporal de conformidade agregada (dinâmica)
 export async function getSerieConformidade(params: DetalheParams) {
-  const filter = getFiltroSql(params.tipo, params.id, params.dataInicio, params.dataFim);
+  const filter = buildFiltroDetalhe(params.tipo, params.id);
   const labs = await resolveFilialLaboratorios(params.filialId);
   const labFilter = labs.length > 0
     ? `AND cod_laboratorio IN (${labs.map(() => '?').join(', ')})`
@@ -248,7 +97,7 @@ export async function getSerieConformidade(params: DetalheParams) {
 
 // 2. Resumo macro (conformidade, NC, lotes afetados)
 export async function getResumoMacro(params: DetalheParams) {
-  const filter = getFiltroSql(params.tipo, params.id, params.dataInicio, params.dataFim);
+  const filter = buildFiltroDetalhe(params.tipo, params.id);
   const labs = await resolveFilialLaboratorios(params.filialId);
   const labFilter = labs.length > 0
     ? `AND cod_laboratorio IN (${labs.map(() => '?').join(', ')})`
@@ -280,8 +129,8 @@ export async function getTopEnsaios(params: DetalheParams) {
     return [{ cod_ensaio: params.id }];
   }
 
-  const filter = getFiltroSql(params.tipo, params.id, params.dataInicio, params.dataFim);
-  const topN = params.topN ?? 4;
+  const filter = buildFiltroDetalhe(params.tipo, params.id);
+  const topN = params.topN ?? 100;
   const labs = await resolveFilialLaboratorios(params.filialId);
   const labFilter = labs.length > 0
     ? `AND cod_laboratorio IN (${labs.map(() => '?').join(', ')})`
@@ -313,10 +162,20 @@ export async function getFaixasEspecificacao(
     return [];
   }
 
-  const filter = getFiltroSql(params.tipo, params.id, params.dataInicio, params.dataFim);
-  const filterDw = getFiltroSql(params.tipo, params.id, params.dataInicio, params.dataFim, 'dw');
+  const filter = buildFiltroDetalhe(params.tipo, params.id);
 
   const placeholders = ensaioIds.map(() => '?').join(',');
+
+  const columnsToPrefix = [
+    'cod_skip_lote', 'cod_produto', 'cod_laboratorio',
+    'lote_de_controle_de_qualidade', 'operacao', 'cod_centro_de_custo',
+    'cod_amostra_interunidade', 'cod_cabecalho_de_especificacao', 'cod_ensaio'
+  ];
+  let filterDwSql = filter.sql;
+  for (const col of columnsToPrefix) {
+    const regex = new RegExp(`(?<!\\.)\\b${col}\\b`, 'g');
+    filterDwSql = filterDwSql.replace(regex, `dw.${col}`);
+  }
 
   const rows = await blabQuery(`
     WITH contexto_produtos AS (
@@ -353,13 +212,13 @@ export async function getFaixasEspecificacao(
     JOIN contexto_produtos cp ON cp.cod_ensaio = dw.cod_ensaio
     WHERE dw.D_E_L_E_T IS NULL
       AND dw.conformidade != 'NÃO AVALIADO'
-      AND ${filterDw.sql}
+      AND ${filterDwSql}
       AND dw.cod_ensaio IN (${placeholders})
       AND dw.data_resultado BETWEEN ? AND ?
     GROUP BY dw.cod_ensaio, dw.ensaio, cp.qtd_produtos
   `, [
     ...filter.params, ...ensaioIds, params.dataInicio, params.dataFim,
-    ...filterDw.params, ...ensaioIds, params.dataInicio, params.dataFim,
+    ...filter.params, ...ensaioIds, params.dataInicio, params.dataFim,
   ]);
 
   // Decide o modo de exibição para cada linha
