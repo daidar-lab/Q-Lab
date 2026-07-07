@@ -36,7 +36,7 @@ export async function salvarCache(
   await qlabPool.execute(
     `INSERT INTO cache_ia (id, tipo_bloco, resposta_json)
      VALUES (?, ?, ?)
-     ON DUPLICATE KEY UPDATE resposta_json = ?, createdAt = CURRENT_TIMESTAMP`,
+     ON DUPLICATE KEY UPDATE resposta_json = ?, criado_em = CURRENT_TIMESTAMP`,
     [chave, tipoBloco, JSON.stringify(resposta), JSON.stringify(resposta)],
   );
 }
