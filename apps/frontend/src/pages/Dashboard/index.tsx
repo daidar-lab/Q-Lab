@@ -194,7 +194,19 @@ export default function DashboardPage() {
 
 
   return (
-    <div style={{ padding: '28px 24px', maxWidth: '1200px', margin: '0 auto' }}>
+    <div className="db-root" style={{ padding: '28px 24px', maxWidth: '1200px', margin: '0 auto' }}>
+      <style>{`
+        /* Dashboard mobile overrides */
+        @media (max-width: 640px) {
+          .db-root { padding: 16px 12px !important; }
+          .db-kpi-grid { gap: 10px !important; }
+          .db-kpi-grid > div { flex: 1 1 calc(50% - 5px) !important; min-width: 0 !important; padding: 14px 12px !important; }
+          .db-kpi-grid > div > div:nth-child(2) { font-size: 24px !important; }
+          .db-cat-grid { flex-direction: column !important; }
+          .db-section-header { flex-direction: column !important; align-items: flex-start !important; gap: 4px !important; }
+          .db-section-header span { display: none; }
+        }
+      `}</style>
 
       <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '16px' }}>
         <button
@@ -203,7 +215,7 @@ export default function DashboardPage() {
           style={{
             padding: '8px 16px', background: 'var(--clr-primary)', color: '#fff',
             border: 'none', borderRadius: 'var(--r-md)', cursor: 'pointer', fontWeight: 600,
-            opacity: exportando ? 0.7 : 1
+            opacity: exportando ? 0.7 : 1, fontSize: '13px',
           }}
         >
           {exportando ? 'Gerando PDF...' : 'Exportar PDF'}
@@ -211,7 +223,7 @@ export default function DashboardPage() {
       </div>
 
       {/* KPIs reais */}
-      <div style={{ display: 'flex', gap: '16px', marginBottom: '28px', flexWrap: 'wrap' }}>
+      <div className="db-kpi-grid" style={{ display: 'flex', gap: '16px', marginBottom: '28px', flexWrap: 'wrap' }}>
         {kpis && [
           { label: 'AMOSTRAS ANALISADAS', value: kpis.amostras.valor.toLocaleString('pt-BR'), delta: formatDelta(kpis.amostras.deltaPct) },
           { label: 'ENSAIOS REALIZADOS', value: kpis.ensaios.valor.toLocaleString('pt-BR'), delta: formatDelta(kpis.ensaios.deltaPct) },
@@ -252,12 +264,12 @@ export default function DashboardPage() {
       </div>
 
       {/* Categorias com dados reais */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
+      <div className="db-section-header" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
         <h2 style={{ margin: 0, fontSize: '16px', fontWeight: 700, color: 'var(--clr-text)' }}>Explorar por categoria</h2>
         <span style={{ fontSize: '13px', color: 'var(--clr-text-3)' }}>Clique em qualquer item para abrir o histórico</span>
       </div>
 
-      <div style={{ display: 'flex', gap: '16px', flexWrap: 'wrap' }}>
+      <div className="db-cat-grid" style={{ display: 'flex', gap: '16px', flexWrap: 'wrap' }}>
         {CATEGORIAS_META.map(cat => {
           const isProcessos = cat.tipo === 'processos';
           const totalItens = isProcessos ? macroGruposAglutinados : (dadosPorTipo[cat.tipo] ?? []);

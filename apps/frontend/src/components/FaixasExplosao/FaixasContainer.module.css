@@ -90,3 +90,27 @@
     transform: rotate(360deg);
   }
 }
+
+/* ── Mobile ──────────────────────────────────────────────── */
+@media (max-width: 640px) {
+  .container {
+    gap: 10px;
+  }
+
+  .grid {
+    gap: 8px;
+  }
+
+  .title {
+    font-size: 15px;
+  }
+
+  .loading {
+    padding: 20px 0;
+    gap: 10px;
+  }
+
+  .empty {
+    padding: 20px 12px;
+  }
+}

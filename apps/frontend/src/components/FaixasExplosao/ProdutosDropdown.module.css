@@ -157,3 +157,81 @@
     transform: rotate(360deg);
   }
 }
+
+/* ── Mobile: tabela vira card-list (CSS-only, sem mudancas no .tsx) ── */
+@media (max-width: 640px) {
+  /* Wrapper sem overflow-x para nao ter scroll horizontal */
+  .tableWrapper {
+    overflow-x: visible;
+  }
+
+  /* Table e filhos se comportam como block/flex */
+  .table,
+  .table tbody,
+  .table tr {
+    display: block;
+    width: 100%;
+  }
+
+  /* Cabecalho some */
+  .table thead {
+    display: none;
+  }
+
+  /* Cada linha vira um card */
+  .tr {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 12px;
+    border: 1px solid var(--clr-border, #E7E5E4);
+    border-radius: 8px;
+    margin-bottom: 6px;
+    border-top: 1px solid var(--clr-border, #E7E5E4);
+    background: var(--clr-surface, #fff);
+  }
+
+  .tr:hover {
+    background-color: var(--clr-surface-2, #F4F1EA);
+  }
+
+  /* Celula do checkbox — tamanho fixo */
+  .td.tdSelect {
+    flex: 0 0 auto;
+    padding: 0;
+  }
+
+  /* Celula do nome — cresce */
+  .td.productName {
+    flex: 1;
+    min-width: 0;
+    padding: 0;
+    font-size: 13px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  /* Coluna de amostras — esconde em mobile (ocupa espaco desnecessario) */
+  .td.samples {
+    display: none;
+  }
+
+  /* Badge de conformidade — ocupa apenas o necessario */
+  .td.compliance {
+    flex: 0 0 auto;
+    padding: 0;
+  }
+
+  /* Checkbox maior para toque */
+  .checkbox {
+    width: 22px;
+    height: 22px;
+  }
+
+  /* Badge menor em mobile */
+  .badge {
+    font-size: 11px;
+    padding: 2px 6px;
+  }
+}

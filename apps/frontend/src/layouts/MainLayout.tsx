@@ -26,32 +26,6 @@ export default function MainLayout() {
   const breadcrumb = useBreadcrumb();
   const isAdmin = usuario?.role === 'admin';
 
-  const header: CSSProperties = {
-    background: 'var(--clr-nav-bg)',
-    borderBottom: '1px solid var(--clr-nav-border)',
-    padding: '0 24px',
-    height: '56px',
-    display: 'flex',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    position: 'sticky',
-    top: 0,
-    zIndex: 50,
-  };
-
-  const logoIcon: CSSProperties = {
-    width: '32px', height: '32px',
-    background: 'var(--clr-primary)',
-    borderRadius: '8px',
-    display: 'flex', alignItems: 'center', justifyContent: 'center',
-    fontSize: '15px', fontWeight: 800, color: '#fff',
-    flexShrink: 0,
-  };
-
-  const logoText: CSSProperties = {
-    display: 'flex', flexDirection: 'column', gap: '1px',
-  };
-
   const ghostBtn: CSSProperties = {
     padding: '5px 12px',
     borderRadius: 'var(--r-md)',
@@ -62,57 +36,160 @@ export default function MainLayout() {
     color: 'var(--clr-nav-text)',
     fontFamily: 'var(--font)',
     transition: 'background var(--t-fast)',
+    whiteSpace: 'nowrap' as const,
   };
 
   return (
     <div style={{ minHeight: '100dvh', display: 'flex', flexDirection: 'column', background: 'var(--clr-bg)' }}>
-      <header style={header}>
-        {/* Esquerda — logo */}
-        <Link to="/" style={{ display: 'flex', alignItems: 'center', gap: '10px', textDecoration: 'none' }}>
-          <div style={logoIcon}>Q</div>
-          <div style={logoText}>
-            <span style={{ fontSize: '14px', fontWeight: 700, color: 'var(--clr-nav-text)', lineHeight: 1 }}>
-              Controle de Qualidade
-            </span>
-            <span style={{ fontSize: '10px', fontWeight: 500, color: 'var(--clr-nav-text-2)', letterSpacing: '0.08em', textTransform: 'uppercase' }}>
-              Laboratório · Cervejaria
-            </span>
-          </div>
-        </Link>
+      <style>{`
+        /* ── MainLayout Mobile Responsive ──────────────────── */
 
-        {/* Centro — seletor de período + filial */}
-        <div style={{ flex: 1, display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '16px', paddingLeft: '24px', paddingRight: '24px' }}>
-          <FilialSelector />
-          <PeriodSelector />
+        .ml-header {
+          background: var(--clr-nav-bg);
+          border-bottom: 1px solid var(--clr-nav-border);
+          position: sticky;
+          top: 0;
+          z-index: 50;
+        }
+
+        /* ── Desktop: linha única ──────────────────────────── */
+        .ml-header-top {
+          padding: 0 24px;
+          height: 56px;
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+        }
+
+        .ml-selectors {
+          flex: 1;
+          display: flex;
+          justify-content: center;
+          align-items: center;
+          gap: 16px;
+          padding: 0 24px;
+        }
+
+        .ml-header-sub {
+          display: none;
+        }
+
+        /* ── Mobile: 2 linhas (≤640px) ─────────────────────── */
+        @media (max-width: 640px) {
+          .ml-header-top {
+            padding: 0 16px;
+            height: 52px;
+          }
+
+          /* Esconde seletores do centro em mobile */
+          .ml-selectors {
+            display: none;
+          }
+
+          /* Sub-header: linha 2 com seletores */
+          .ml-header-sub {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 12px;
+            border-top: 1px solid var(--clr-nav-border);
+            background: var(--clr-nav-bg);
+          }
+
+          .ml-header-sub > * {
+            flex: 1;
+            min-width: 0;
+          }
+
+          /* Oculta o nome do usuário em mobile (economiza espaço) */
+          .ml-username {
+            display: none;
+          }
+        }
+
+        /* ── Breadcrumb ─────────────────────────────────────── */
+        .ml-breadcrumb {
+          padding: 10px 24px;
+          border-bottom: 1px solid var(--clr-border);
+          background: var(--clr-surface);
+          display: flex;
+          align-items: center;
+          gap: 6px;
+          font-size: 13px;
+          color: var(--clr-text-3);
+          flex-wrap: wrap;
+        }
+
+        @media (max-width: 640px) {
+          .ml-breadcrumb {
+            padding: 8px 16px;
+            font-size: 12px;
+          }
+        }
+      `}</style>
+
+      <header className="ml-header">
+        {/* Linha 1: Logo + ações */}
+        <div className="ml-header-top">
+          {/* Esquerda — logo */}
+          <Link to="/" style={{ display: 'flex', alignItems: 'center', gap: '10px', textDecoration: 'none' }}>
+            <div style={{
+              width: '32px', height: '32px',
+              background: 'var(--clr-primary)',
+              borderRadius: '8px',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              fontSize: '15px', fontWeight: 800, color: '#fff',
+              flexShrink: 0,
+            }}>Q</div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '1px' }}>
+              <span style={{ fontSize: '14px', fontWeight: 700, color: 'var(--clr-nav-text)', lineHeight: 1 }}>
+                Controle de Qualidade
+              </span>
+              <span style={{ fontSize: '10px', fontWeight: 500, color: 'var(--clr-nav-text-2)', letterSpacing: '0.08em', textTransform: 'uppercase' }}>
+                Laboratório · Cervejaria
+              </span>
+            </div>
+          </Link>
+
+          {/* Centro — seletores (desktop only) */}
+          <div className="ml-selectors">
+            <FilialSelector />
+            <PeriodSelector />
+          </div>
+
+          {/* Direita — usuário + ações */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            {usuario && (
+              <span className="ml-username" style={{ fontSize: '13px', color: 'var(--clr-nav-text-2)' }}>
+                {usuario.nome}
+              </span>
+            )}
+            {isAdmin && (
+              <button style={ghostBtn} onClick={() => navigate('/config')}
+                onMouseEnter={e => (e.currentTarget.style.background = 'rgba(255,255,255,0.14)')}
+                onMouseLeave={e => (e.currentTarget.style.background = 'rgba(255,255,255,0.08)')}>
+                Config
+              </button>
+            )}
+            <button style={{ ...ghostBtn, border: '1px solid rgba(220,38,38,0.4)', color: '#FCA5A5' }}
+              onClick={logout}
+              onMouseEnter={e => (e.currentTarget.style.background = 'rgba(220,38,38,0.15)')}
+              onMouseLeave={e => (e.currentTarget.style.background = 'rgba(255,255,255,0.08)')}>
+              Sair
+            </button>
+          </div>
         </div>
 
-
-        {/* Direita — usuário + ações */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-          {usuario && (
-            <span style={{ fontSize: '13px', color: 'var(--clr-nav-text-2)' }}>
-              {usuario.nome}
-            </span>
-          )}
-          {isAdmin && (
-            <button style={ghostBtn} onClick={() => navigate('/config')}
-              onMouseEnter={e => (e.currentTarget.style.background = 'rgba(255,255,255,0.14)')}
-              onMouseLeave={e => (e.currentTarget.style.background = 'rgba(255,255,255,0.08)')}>
-              Config
-            </button>
-          )}
-          <button style={{ ...ghostBtn, border: '1px solid rgba(220,38,38,0.4)', color: '#FCA5A5' }}
-            onClick={logout}
-            onMouseEnter={e => (e.currentTarget.style.background = 'rgba(220,38,38,0.15)')}
-            onMouseLeave={e => (e.currentTarget.style.background = 'rgba(255,255,255,0.08)')}>
-            Sair
-          </button>
+        {/* Linha 2 (mobile only): seletores full-width */}
+        <div className="ml-header-sub">
+          <FilialSelector />
+          <PeriodSelector />
         </div>
       </header>
 
       {/* Breadcrumb — só aparece quando não está na home */}
       {breadcrumb && (
-        <div style={{ padding: '10px 24px', borderBottom: '1px solid var(--clr-border)', background: 'var(--clr-surface)', display: 'flex', alignItems: 'center', gap: '6px', fontSize: '13px', color: 'var(--clr-text-3)' }}>
+        <div className="ml-breadcrumb">
           <span style={{ cursor: 'pointer', color: 'var(--clr-text-3)' }} onClick={() => navigate('/')}>Visão geral</span>
           {breadcrumb.map((b, i) => (
             <span key={i} style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>

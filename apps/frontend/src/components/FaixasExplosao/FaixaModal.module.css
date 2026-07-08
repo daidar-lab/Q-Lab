@@ -1,9 +1,10 @@
+/* ── Overlay ──────────────────────────────────────────────────────── */
 .overlay {
   position: fixed;
   top: 0;
   left: 0;
   width: 100vw;
-  height: 100vh;
+  height: 100dvh;
   background-color: rgba(0, 0, 0, 0.45);
   backdrop-filter: blur(4px);
   display: flex;
@@ -12,6 +13,7 @@
   z-index: 1000;
 }
 
+/* ── Modal — Desktop (padrão) ─────────────────────────────────────── */
 .modal {
   background-color: var(--clr-surface, #ffffff);
   border: 1px solid var(--clr-border, #e7e5e4);
@@ -26,18 +28,33 @@
   animation: modalFadeIn 0.2s ease-out;
 }
 
-@keyframes modalFadeIn {
-  from {
-    opacity: 0;
-    transform: scale(0.95);
+/* ── Modal — Mobile: bottom sheet ────────────────────────────────── */
+@media (max-width: 640px) {
+  .overlay {
+    align-items: flex-end;
   }
 
-  to {
-    opacity: 1;
-    transform: scale(1);
+  .modal {
+    width: 100%;
+    max-width: 100%;
+    height: 100dvh;
+    border-radius: 20px 20px 0 0;
+    border-bottom: none;
+    animation: modalSlideUp 0.28s cubic-bezier(0.34, 1.56, 0.64, 1);
   }
 }
 
+@keyframes modalFadeIn {
+  from { opacity: 0; transform: scale(0.95); }
+  to   { opacity: 1; transform: scale(1); }
+}
+
+@keyframes modalSlideUp {
+  from { opacity: 0; transform: translateY(100%); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* ── Header ──────────────────────────────────────────────────────── */
 .header {
   display: flex;
   justify-content: space-between;
@@ -45,6 +62,13 @@
   padding: var(--sp-base, 16px) var(--sp-lg, 24px);
   border-bottom: 1px solid var(--clr-border, #e7e5e4);
   background-color: var(--clr-background, #fafaf9);
+  flex-shrink: 0;
+}
+
+@media (max-width: 640px) {
+  .header {
+    padding: 12px 16px;
+  }
 }
 
 .headerTitle {
@@ -54,10 +78,22 @@
   color: var(--clr-text, #1c1917);
 }
 
+@media (max-width: 640px) {
+  .headerTitle {
+    font-size: 15px;
+  }
+}
+
 .headerSubtitle {
   margin: 2px 0 0 0;
   font-size: 13px;
   color: var(--clr-text-2, #78716c);
+}
+
+@media (max-width: 640px) {
+  .headerSubtitle {
+    font-size: 11px;
+  }
 }
 
 .closeBtn {
@@ -70,6 +106,7 @@
   border-radius: var(--r-md, 6px);
   line-height: 1;
   transition: all var(--t-fast, 0.15s);
+  flex-shrink: 0;
 }
 
 .closeBtn:hover {
@@ -77,6 +114,7 @@
   color: var(--clr-text, #1c1917);
 }
 
+/* ── Body ─────────────────────────────────────────────────────────── */
 .body {
   display: flex;
   flex: 1;
@@ -85,6 +123,7 @@
   min-height: 0;
 }
 
+/* ── Desktop: side-by-side ───────────────────────────────────────── */
 .leftCol {
   flex: 1;
   min-width: 0;
@@ -105,6 +144,38 @@
   background-color: var(--clr-background, #fafaf9);
 }
 
+/* ── Mobile: coluna única empilhada ──────────────────────────────── */
+@media (max-width: 640px) {
+  .body {
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  /* Gráfico vem PRIMEIRO (sticky/fixo no topo) */
+  .rightCol {
+    flex: 0 0 auto;
+    height: 260px;
+    min-height: 0;
+    padding: 12px;
+    gap: 8px;
+    overflow: hidden;
+    border-bottom: 1px solid var(--clr-border, #e7e5e4);
+    border-right: none;
+    background-color: var(--clr-background, #fafaf9);
+  }
+
+  /* Faixas/SKUs ficam abaixo e rolam */
+  .leftCol {
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+    padding: 12px;
+    border-right: none;
+    -webkit-overflow-scrolling: touch;
+  }
+}
+
+/* ── Chart Container ──────────────────────────────────────────────── */
 .chartContainer {
   background-color: var(--clr-surface, #ffffff);
   border: 1px solid var(--clr-border, #e7e5e4);
@@ -117,10 +188,20 @@
   overflow: visible;
 }
 
+@media (max-width: 640px) {
+  .chartContainer {
+    padding: 10px;
+    gap: 6px;
+    border-radius: var(--r-lg, 10px);
+    height: 100%;
+  }
+}
+
 .chartHeader {
   display: flex;
   flex-direction: column;
   gap: 2px;
+  flex-shrink: 0;
 }
 
 .chartTitle {
@@ -130,10 +211,22 @@
   color: var(--clr-text, #1c1917);
 }
 
+@media (max-width: 640px) {
+  .chartTitle {
+    font-size: 13px;
+  }
+}
+
 .chartSubtitle {
   margin: 0;
   font-size: 13px;
   color: var(--clr-text-2, #78716c);
+}
+
+@media (max-width: 640px) {
+  .chartSubtitle {
+    font-size: 11px;
+  }
 }
 
 .chartWrapper {
@@ -142,6 +235,15 @@
   overflow: visible;
 }
 
+@media (max-width: 640px) {
+  .chartWrapper {
+    height: 160px;
+    flex: 1;
+    min-height: 0;
+  }
+}
+
+/* ── No Data / Loading states ─────────────────────────────────────── */
 .noData {
   display: flex;
   flex-direction: column;
@@ -156,6 +258,15 @@
   background-color: var(--clr-surface, #ffffff);
 }
 
+@media (max-width: 640px) {
+  .noData {
+    height: auto;
+    min-height: 100px;
+    padding: 12px;
+    font-size: 12px;
+  }
+}
+
 .noDataTitle {
   font-weight: var(--fw-bold, 700);
   margin-bottom: 4px;
@@ -163,6 +274,12 @@
 
 .noDataText {
   font-size: 13px;
+}
+
+@media (max-width: 640px) {
+  .noDataText {
+    font-size: 11px;
+  }
 }
 
 .loadingChart {
@@ -173,8 +290,14 @@
   color: var(--clr-text-2, #78716c);
 }
 
-/* ─── SelecionarCentroCustoModal overrides ─────────────────────────────────── */
+@media (max-width: 640px) {
+  .loadingChart {
+    height: 100px;
+    font-size: 12px;
+  }
+}
 
+/* ── SelecionarCentroCustoModal overrides ─────────────────────────── */
 .modalPequeno {
   max-width: 480px;
   height: auto;
