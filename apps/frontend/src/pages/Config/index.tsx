@@ -14,6 +14,14 @@ export default function ConfigPage() {
     const [usuarios, setUsuarios] = useState<UsuarioSemSenha[]>([]);
     const [loading, setLoading] = useState(true);
     const [erro, setErro] = useState<string | null>(null);
+    const [isMobile, setIsMobile] = useState(false);
+
+    useEffect(() => {
+        const checkMobile = () => setIsMobile(window.innerWidth < 600);
+        checkMobile();
+        window.addEventListener('resize', checkMobile);
+        return () => window.removeEventListener('resize', checkMobile);
+    }, []);
 
     // Form states
     const [editingUser, setEditingUser] = useState<UsuarioSemSenha | null>(null);
@@ -261,7 +269,7 @@ export default function ConfigPage() {
             <div style={{ ...card, marginBottom: '28px', flexDirection: 'column', alignItems: 'flex-start', gap: '16px' }}>
                 <h3 style={{ margin: 0, fontSize: '16px', fontWeight: 700, color: '#0f172a' }}>Minha Meta de Conformidade</h3>
                 <p style={{ fontSize: '13px', color: '#64748b', margin: '0 0 -8px' }}>Essa meta será o alvo para os cálculos no Dashboard.</p>
-                <div style={{ display: 'flex', gap: '12px', alignItems: 'center', width: '100%' }}>
+                <div style={{ display: 'flex', gap: '12px', alignItems: 'center', width: '100%', flexWrap: 'wrap' }}>
                     <input
                         type="number"
                         min="0"
@@ -269,19 +277,19 @@ export default function ConfigPage() {
                         step="0.1"
                         value={metaValue}
                         onChange={e => setMetaValue(e.target.value)}
-                        style={{ ...input, width: '120px' }}
+                        style={{ ...input, width: isMobile ? '80px' : '120px', flexGrow: isMobile ? 1 : 0 }}
                     />
                     <span style={{ fontSize: '15px', color: '#64748b', fontWeight: 600 }}>%</span>
-                    <button style={button} onClick={handleSaveMeta} disabled={savingMeta}>
+                    <button style={{ ...button, flexGrow: isMobile ? 2 : 0 }} onClick={handleSaveMeta} disabled={savingMeta}>
                         {savingMeta ? 'Salvando...' : 'Salvar Meta'}
                     </button>
                 </div>
                 {msgMeta && <span style={{ fontSize: '13px', color: '#166534', fontWeight: 500 }}>{msgMeta}</span>}
             </div>
 
-            <div style={header}>
+            <div style={{ ...header, flexDirection: isMobile ? 'column' : 'row', alignItems: isMobile ? 'stretch' : 'center', gap: '12px' }}>
                 <h2 style={title}>Gerenciar Usuários</h2>
-                <button style={button} onClick={handleAddNew}>
+                <button style={{ ...button, alignSelf: isMobile ? 'stretch' : 'auto' }} onClick={handleAddNew}>
                     + Novo Usuário
                 </button>
             </div>
@@ -293,26 +301,48 @@ export default function ConfigPage() {
             ) : (
                 <div style={list}>
                     {usuarios.map(user => (
-                        <div key={user.id} style={card}>
+                        <div key={user.id} style={{ ...card, flexDirection: isMobile ? 'column' : 'row', alignItems: isMobile ? 'stretch' : 'center', gap: isMobile ? '12px' : '16px' }}>
                             <div>
-                                <div style={{ display: 'flex', alignItems: 'center' }}>
-                                    <strong style={{ fontSize: '15px', color: '#0f172a' }}>{user.nome}</strong>
+                                <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: '4px' }}>
+                                    <strong style={{ fontSize: '15px', color: '#0f172a', wordBreak: 'break-word' }}>{user.nome}</strong>
                                     <span style={badge(user.ativo)}>{user.ativo ? 'Ativo' : 'Inativo'}</span>
                                 </div>
                                 <div style={{ fontSize: '12px', color: '#64748b', marginTop: '4px' }}>
                                     Login: {user.login} | Role: {user.role}
                                 </div>
                             </div>
-                            <div style={{ display: 'flex', gap: '8px' }}>
-                                <button style={{...secondaryButton, borderColor: '#bfdbfe', background: '#eff6ff', color: '#1d4ed8'}} onClick={() => setShowFiliaisModal(user)}>
+                            <div style={{ display: 'flex', gap: '8px', width: isMobile ? '100%' : 'auto' }}>
+                                <button
+                                    style={{
+                                        ...secondaryButton,
+                                        flex: isMobile ? 1 : 'unset',
+                                        padding: isMobile ? '8px 8px' : secondaryButton.padding,
+                                        borderColor: '#bfdbfe',
+                                        background: '#eff6ff',
+                                        color: '#1d4ed8',
+                                        textAlign: 'center'
+                                    }}
+                                    onClick={() => setShowFiliaisModal(user)}
+                                >
                                     Filiais
                                 </button>
-                                <button style={secondaryButton} onClick={() => handleEdit(user)}>
+                                <button
+                                    style={{
+                                        ...secondaryButton,
+                                        flex: isMobile ? 1 : 'unset',
+                                        padding: isMobile ? '8px 8px' : secondaryButton.padding,
+                                        textAlign: 'center'
+                                    }}
+                                    onClick={() => handleEdit(user)}
+                                >
                                     Editar
                                 </button>
                                 <button
                                     style={{
                                         ...secondaryButton,
+                                        flex: isMobile ? 1.2 : 'unset',
+                                        padding: isMobile ? '8px 8px' : secondaryButton.padding,
+                                        textAlign: 'center',
                                         color: user.ativo ? '#991b1b' : '#166534',
                                         borderColor: user.ativo ? '#fca5a5' : '#86efac',
                                         background: user.ativo ? '#fee2e2' : '#dcfce7',

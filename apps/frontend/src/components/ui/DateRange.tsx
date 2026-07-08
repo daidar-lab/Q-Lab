@@ -6,9 +6,10 @@ interface Props {
     dataFim: string;
     onChange: (campo: 'dataInicio' | 'dataFim', val: string) => void;
     label?: string;
+    isMobile?: boolean;
 }
 
-export function DateRange({ dataInicio, dataFim, onChange, label }: Props) {
+export function DateRange({ dataInicio, dataFim, onChange, label, isMobile }: Props) {
     const [focused, setFocused] = useState<'inicio' | 'fim' | null>(null);
 
     const inputStyle = (field: 'inicio' | 'fim'): CSSProperties => ({
@@ -51,7 +52,7 @@ export function DateRange({ dataInicio, dataFim, onChange, label }: Props) {
                     {label}
                 </label>
             )}
-            <div style={{ display: 'flex', gap: '8px' }}>
+            <div style={{ display: 'flex', gap: '8px', flexDirection: isMobile ? 'column' : 'row' }}>
                 <div style={{ flex: 1 }}>
                     <span style={labelStyle}>De</span>
                     <input

@@ -1,4 +1,4 @@
-import { useState, type CSSProperties } from 'react';
+import { useState, useEffect, type CSSProperties } from 'react';
 import { useContexto } from '../../contexts/ContextoProvider';
 import { DateRange } from './DateRange';
 
@@ -34,6 +34,14 @@ export function PeriodSelector() {
   const [aberto, setAberto] = useState(false);
   const [customInicio, setCustomInicio] = useState(ctx.dataInicio ?? '');
   const [customFim, setCustomFim] = useState(ctx.dataFim ?? '');
+  const [isMobile, setIsMobile] = useState(false);
+
+  useEffect(() => {
+    const checkMobile = () => setIsMobile(window.innerWidth < 600);
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
 
   const aplicarAtalho = (tipo: string) => {
     const periodo = calcularPeriodo(tipo as any);
@@ -106,7 +114,7 @@ export function PeriodSelector() {
           style={{
             position: 'absolute',
             top: '100%',
-            left: 0,
+            right: 0,
             marginTop: '8px',
             background: 'var(--clr-surface)',
             border: '1.5px solid var(--clr-border)',
@@ -114,7 +122,9 @@ export function PeriodSelector() {
             boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
             zIndex: 100,
             padding: '12px',
-            minWidth: '280px',
+            width: isMobile ? 'calc(100vw - 32px)' : 'auto',
+            minWidth: isMobile ? 'unset' : '280px',
+            maxWidth: '300px',
             display: 'flex',
             flexDirection: 'column',
             gap: '10px',
@@ -190,6 +200,7 @@ export function PeriodSelector() {
                 if (campo === 'dataInicio') setCustomInicio(val);
                 else setCustomFim(val);
               }}
+              isMobile={isMobile}
             />
             {customInicio && customFim && customInicio > customFim && (
               <span style={{ color: 'var(--clr-danger, #ef4444)', fontSize: '11px', fontWeight: 500 }}>
