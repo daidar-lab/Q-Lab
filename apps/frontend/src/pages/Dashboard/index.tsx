@@ -2,6 +2,7 @@ import { useState, type CSSProperties } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useContexto } from '../../contexts/ContextoProvider';
 import { useDashboard } from '../../hooks/useDashboard';
+import { useExportPDF } from '../../hooks/useExport';
 import ResumoAutomatico from '../../components/dashboard/ResumoAutomatico';
 import InformativosDrawer from '../../components/dashboard/InformativosDrawer';
 
@@ -75,13 +76,16 @@ const MACRO_GRUPOS_CONFIG = [
 
 export default function DashboardPage() {
   const navigate = useNavigate();
-  const { ctx, filialId } = useContexto();
+  const { ctx, filialId, filialLabel } = useContexto();
   const periodo = { filialId, dataInicio: ctx.dataInicio ?? '', dataFim: ctx.dataFim ?? '' };
   const { kpis, processos, produtos, ensaios, carregando, erro } = useDashboard(periodo);
   const dadosPorTipo: Record<string, typeof processos> = { processos, produtos, ensaios };
   const [expandedCategories, setExpandedCategories] = useState<Record<string, boolean>>({});
   const [expandedMacros, setExpandedMacros] = useState<Record<string, boolean>>({});
   const [informativosOpen, setInformativosOpen] = useState(false);
+
+  const { exportar, exportando } = useExportPDF('dashboard');
+
 
   if (filialId === null) {
     return (
@@ -188,8 +192,23 @@ export default function DashboardPage() {
   const parsedMeta = metaSalva ? parseFloat(metaSalva) : 95.0;
   const metaConformidade = isNaN(parsedMeta) ? 95.0 : parsedMeta;
 
+
   return (
     <div style={{ padding: '28px 24px', maxWidth: '1200px', margin: '0 auto' }}>
+
+      <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '16px' }}>
+        <button
+          onClick={() => exportar({ filialId, dataInicio: periodo.dataInicio, dataFim: periodo.dataFim, filialNome: filialLabel || 'Dashboard Q/Lab' })}
+          disabled={exportando}
+          style={{
+            padding: '8px 16px', background: 'var(--clr-primary)', color: '#fff',
+            border: 'none', borderRadius: 'var(--r-md)', cursor: 'pointer', fontWeight: 600,
+            opacity: exportando ? 0.7 : 1
+          }}
+        >
+          {exportando ? 'Gerando PDF...' : 'Exportar PDF'}
+        </button>
+      </div>
 
       {/* KPIs reais */}
       <div style={{ display: 'flex', gap: '16px', marginBottom: '28px', flexWrap: 'wrap' }}>

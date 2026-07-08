@@ -79,6 +79,7 @@ export async function getSerieConformidade(params: DetalheParams) {
     SELECT
       ${selectPeriodo}                                                AS periodo,
       COUNT(*)                                                        AS total,
+      SUM(conformidade != 'CONFORME')                                 AS n_nao_conforme,
       SUM(conformidade = 'CONFORME')                                  AS n_conforme,
       ROUND(SUM(conformidade = 'CONFORME') * 1.0 / COUNT(*) * 100, 1) AS pct_conforme
     FROM DW_FAT_RESULTADO

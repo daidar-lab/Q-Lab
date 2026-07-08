@@ -9,14 +9,14 @@ import FaixaModal from '../../components/FaixasExplosao/FaixaModal';
 import SelecionarCentroCustoModal from '../../components/FaixasExplosao/SelecionarCentroCustoModal';
 import ResumoIADetalhe from '../../components/detalhe/ResumoIADetalhe';
 import styles from './DetalhePage.module.css';
-
+import { useExportPDF } from '../../hooks/useExport';
 
 
 export default function DetalhePage() {
     const { tipo, id, origem, natureza } = useParams();
     const tipoNormalizado = tipo?.toLowerCase() ?? '';
     const navigate = useNavigate();
-    const { ctx, filialId } = useContexto();
+    const { ctx, filialId, filialLabel } = useContexto();
     const dataInicio = ctx.dataInicio ?? '';
     const dataFim = ctx.dataFim ?? '';
 
@@ -60,53 +60,6 @@ export default function DetalhePage() {
             setCarregando(false);
         }
     }, [tipo, id, origem, natureza, dataInicio, dataFim, filialId]);
-
-    if (filialId === null) {
-        return (
-            <div style={{
-                display: 'flex',
-                flexDirection: 'column',
-                alignItems: 'center',
-                justifyContent: 'center',
-                minHeight: '60dvh',
-                padding: '24px',
-                textAlign: 'center',
-            }}>
-                <div style={{
-                    background: 'var(--clr-surface)',
-                    border: '1px solid var(--clr-border)',
-                    borderRadius: 'var(--r-lg)',
-                    padding: '40px 32px',
-                    maxWidth: '480px',
-                    boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)'
-                }}>
-                    <div style={{
-                        fontSize: '48px',
-                        marginBottom: '16px',
-                        color: 'var(--clr-primary)'
-                    }}>
-                        🏢
-                    </div>
-                    <h2 style={{
-                        fontSize: '20px',
-                        fontWeight: 700,
-                        color: 'var(--clr-text)',
-                        marginBottom: '10px'
-                    }}>
-                        Nenhuma filial selecionada
-                    </h2>
-                    <p style={{
-                        fontSize: '14px',
-                        color: 'var(--clr-text-3)',
-                        lineHeight: '1.5',
-                        margin: 0
-                    }}>
-                        Selecione uma filial no topo da tela para carregar os detalhes do ensaio correspondente.
-                    </p>
-                </div>
-            </div>
-        );
-    }
 
 
     useEffect(() => {
@@ -179,14 +132,85 @@ export default function DetalhePage() {
         setModalFaixaAberto(true);
     }
 
+    const { exportar, exportando } = useExportPDF('detalhe');
+
+    if (filialId === null) {
+        return (
+            <div style={{
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                justifyContent: 'center',
+                minHeight: '60dvh',
+                padding: '24px',
+                textAlign: 'center',
+            }}>
+                <div style={{
+                    background: 'var(--clr-surface)',
+                    border: '1px solid var(--clr-border)',
+                    borderRadius: 'var(--r-lg)',
+                    padding: '40px 32px',
+                    maxWidth: '480px',
+                    boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)'
+                }}>
+                    <div style={{
+                        fontSize: '48px',
+                        marginBottom: '16px',
+                        color: 'var(--clr-primary)'
+                    }}>
+                        🏢
+                    </div>
+                    <h2 style={{
+                        fontSize: '20px',
+                        fontWeight: 700,
+                        color: 'var(--clr-text)',
+                        marginBottom: '10px'
+                    }}>
+                        Nenhuma filial selecionada
+                    </h2>
+                    <p style={{
+                        fontSize: '14px',
+                        color: 'var(--clr-text-3)',
+                        lineHeight: '1.5',
+                        margin: 0
+                    }}>
+                        Selecione uma filial no topo da tela para carregar os detalhes do ensaio correspondente.
+                    </p>
+                </div>
+            </div>
+        );
+    }
+
     if (carregando) return <div className={styles.loading}>Carregando...</div>;
     if (!dados) return null;
 
     return (
         <div className={styles.page}>
-            <button onClick={() => navigate(-1)} className={styles.voltar}>
-                ← Voltar à visão geral
-            </button>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+                <button onClick={() => navigate(-1)} className={styles.voltar} style={{ margin: 0 }}>
+                    ← Voltar à visão geral
+                </button>
+
+                <button
+                    onClick={() => exportar({
+                        tipo: tipoNormalizado,
+                        id,
+                        filialId,
+                        dataInicio,
+                        dataFim,
+                        filialNome: filialLabel || 'Filial Q/Lab',
+                        processoNome: dados.resumo?.nome || 'Detalhe'
+                    })}
+                    disabled={exportando}
+                    style={{
+                        padding: '8px 16px', background: 'var(--clr-primary)', color: '#fff',
+                        border: 'none', borderRadius: 'var(--r-md)', cursor: 'pointer', fontWeight: 600,
+                        opacity: exportando ? 0.7 : 1
+                    }}
+                >
+                    {exportando ? 'Gerando PDF...' : 'Exportar PDF'}
+                </button>
+            </div>
 
             <div className={styles.resumoCards}>
                 <div className={styles.card}>

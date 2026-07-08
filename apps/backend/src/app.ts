@@ -19,6 +19,7 @@ import processoRoutes from './routes/processo.routes';
 import microbiologiaRoutes from './routes/microbiologia.routes';
 import filiaisRoutes from './routes/filiais.routes';
 import perfilRoutes from './routes/perfil.routes';
+import exportRoutes from './export/export.routes';
 import { errorMiddleware } from './middlewares/error.middleware';
 
 const app = express();
@@ -51,6 +52,7 @@ app.use('/qlab/processo', processoRoutes);
 app.use('/qlab', microbiologiaRoutes);
 app.use('/api/filiais', filiaisRoutes);
 app.use('/api/perfil', perfilRoutes);
+app.use('/api/v1/export', exportRoutes);
 
 // ─── Health check ─────────────────────────────────────────────────────────────
 

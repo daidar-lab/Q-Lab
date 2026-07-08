@@ -14,6 +14,7 @@ import { detalheApi } from '../../services/detalhe.api';
 import { useContexto } from '../../contexts/ContextoProvider';
 import FaixasContainer from './FaixasContainer';
 import { AmostraDetalheDrawer } from '../amostra/AmostraDetalheDrawer';
+import { useExportPDF } from '../../hooks/useExport';
 import styles from './FaixaModal.module.css';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
@@ -186,7 +187,7 @@ export const FaixaModal: React.FC<FaixaModalProps> = ({
     dataFim,
     operacao,
 }) => {
-    const { filialId } = useContexto();
+    const { filialId, filialLabel } = useContexto();
     const [selectedSkus, setSelectedSkus] = useState<string[]>([]);
     const [activeFaixas, setActiveFaixas] = useState<{ lie: number; lse: number }[]>([]);
     const [samples, setSamples] = useState<SamplePoint[]>([]);
@@ -198,6 +199,8 @@ export const FaixaModal: React.FC<FaixaModalProps> = ({
     // States para o detalhe da amostra (Drawer)
     const [drawerOpen, setDrawerOpen] = useState<boolean>(false);
     const [selectedCodAmostra, setSelectedCodAmostra] = useState<string | null>(null);
+
+    const { exportar, exportando } = useExportPDF('faixa');
 
     // Diferença de dias entre o range filtrado — define o formato do label X
     const diffDias = calcDiffDias(dataInicio, dataFim);
@@ -366,9 +369,35 @@ export const FaixaModal: React.FC<FaixaModalProps> = ({
                             {operacao ? `${operacao} · ` : ''}Explosão de SKUs e histórico cronológico de amostras
                         </p>
                     </div>
-                    <button className={styles.closeBtn} onClick={onClose} aria-label="Fechar modal">
-                        &times;
-                    </button>
+                    <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                        <button
+                            onClick={() => exportar({
+                                id,
+                                codEnsaio,
+                                ensaioNome,
+                                lie: activeFaixas.length === 1 ? activeFaixas[0].lie : null,
+                                lse: activeFaixas.length === 1 ? activeFaixas[0].lse : null,
+                                codProdutos: selectedSkus,
+                                filialId,
+                                dataInicio,
+                                dataFim,
+                                filialNome: filialLabel || 'Filial Q/Lab',
+                                processoNome: typeof id === 'string' && isNaN(Number(id)) ? id : 'Centro de Custo ' + id,
+                                operacao
+                            })}
+                            disabled={exportando}
+                            style={{
+                                padding: '6px 12px', background: 'var(--clr-primary)', color: '#fff',
+                                border: 'none', borderRadius: '4px', cursor: 'pointer',
+                                fontWeight: 600, opacity: exportando ? 0.7 : 1, fontSize: '13px'
+                            }}
+                        >
+                            {exportando ? 'Exportando...' : 'Exportar PDF'}
+                        </button>
+                        <button className={styles.closeBtn} onClick={onClose} aria-label="Fechar modal">
+                            &times;
+                        </button>
+                    </div>
                 </div>
 
                 <div className={styles.body}>

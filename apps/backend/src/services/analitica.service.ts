@@ -1122,7 +1122,7 @@ const LABELS_CATEGORIA: Record<string, string> = {
 
 export async function getRankingProcessos(
   periodo: FiltroPeriodo,
-): Promise<{ id: string; nome: string; amostras: number; nc: number }[]> {
+): Promise<{ id: string; nome: string; amostras: number; ensaios: number; nc: number }[]> {
   const { dataInicio: di, dataFim: df } = periodo;
   const diInt = Number(di.substring(0, 10).replace(/-/g, ''));
   const dfInt = Number(df.substring(0, 10).replace(/-/g, ''));
@@ -1249,6 +1249,7 @@ export async function getRankingProcessos(
   // ── SQL único: CTE materializa o período UMA vez; UNION ALL agrega por categoria ──
   const AGG = `
       COUNT(DISTINCT cod_amostra)                                       AS amostras,
+      COUNT(1)                                                          AS ensaios,
       SUM(CASE WHEN conformidade = 'NÃO CONFORME' THEN 1 ELSE 0 END)  AS nc`;
 
   const unionParts = ramos.map(([, where]) => `
@@ -1288,7 +1289,7 @@ export async function getRankingProcessos(
   ${unionParts.join('\n  UNION ALL')}`;
 
   // Timeout maior para esta query composta (padrão 15s pode ser insuficiente)
-  const rows = await blabQuery<{ categoria: string; amostras: number; nc: number }>(
+  const rows = await blabQuery<{ categoria: string; amostras: number; ensaios: number; nc: number }>(
     sql, allParams, 600_000,
   );
 
@@ -1298,6 +1299,7 @@ export async function getRankingProcessos(
       id: r.categoria,
       nome: LABELS_CATEGORIA[r.categoria] ?? r.categoria,
       amostras: Number(r.amostras),
+      ensaios: Number(r.ensaios),
       nc: Number(r.nc),
     }))
     .sort((a, b) => b.nc - a.nc);
@@ -1316,6 +1318,7 @@ export async function getRankingProdutos(periodo: FiltroPeriodo, limit = 20) {
       cod_produto                                                          AS id,
       produto                                                              AS nome,
       COUNT(DISTINCT cod_amostra)                                          AS amostras,
+      COUNT(1)                                                             AS ensaios,
       SUM(CASE WHEN conformidade = 'NÃO CONFORME' THEN 1 ELSE 0 END)       AS nc
     FROM DW_FAT_RESULTADO
     WHERE D_E_L_E_T IS NULL
@@ -1332,6 +1335,7 @@ export async function getRankingProdutos(periodo: FiltroPeriodo, limit = 20) {
     id: Number(r.id),
     nome: r.nome,
     amostras: Number(r.amostras),
+    ensaios: Number(r.ensaios),
     nc: Number(r.nc),
   }));
 }
@@ -1348,6 +1352,7 @@ export async function getRankingEnsaios(periodo: FiltroPeriodo, limit = 20) {
       cod_ensaio                                                           AS id,
       ensaio                                                               AS nome,
       COUNT(DISTINCT cod_amostra)                                          AS amostras,
+      COUNT(1)                                                             AS ensaios,
       SUM(CASE WHEN conformidade = 'NÃO CONFORME' THEN 1 ELSE 0 END)       AS nc
     FROM DW_FAT_RESULTADO
     WHERE D_E_L_E_T IS NULL
@@ -1364,6 +1369,7 @@ export async function getRankingEnsaios(periodo: FiltroPeriodo, limit = 20) {
     id: Number(r.id),
     nome: r.nome,
     amostras: Number(r.amostras),
+    ensaios: Number(r.ensaios),
     nc: Number(r.nc),
   }));
 }
