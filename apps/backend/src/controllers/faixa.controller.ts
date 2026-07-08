@@ -17,8 +17,9 @@ export async function handleGetFaixas(
     next: NextFunction
 ): Promise<void> {
     try {
-        const { id, codEnsaio, dataInicio, dataFim, filialId: filialIdStr } = req.query;
+        const { id, codEnsaio, dataInicio, dataFim, filialId: filialIdStr, operacao: operacaoStr } = req.query;
         const filialId = parseInt(filialIdStr as string);
+        const operacao = operacaoStr ? String(operacaoStr) : undefined;
 
         if (!id || typeof id !== 'string') {
             res.status(400).json({ erro: 'O parâmetro "id" (código do centro de custo) é obrigatório.' });
@@ -45,7 +46,7 @@ export async function handleGetFaixas(
             return;
         }
 
-        const result = await getExplosaoFaixas(id, codEnsaio, dataInicio, dataFim, filialId);
+        const result = await getExplosaoFaixas(id, codEnsaio, dataInicio, dataFim, filialId, operacao);
         res.json(result);
     } catch (err) {
         next(err);
@@ -61,8 +62,9 @@ export async function handleGetProdutosPorFaixa(
     next: NextFunction
 ): Promise<void> {
     try {
-        const { id, codEnsaio, lie, lse, dataInicio, dataFim, filialId: filialIdStr } = req.query;
+        const { id, codEnsaio, lie, lse, dataInicio, dataFim, filialId: filialIdStr, operacao: operacaoStr } = req.query;
         const filialId = parseInt(filialIdStr as string);
+        const operacao = operacaoStr ? String(operacaoStr) : undefined;
 
         if (id === undefined || id === null || typeof id !== 'string') {
             res.status(400).json({ erro: 'O parâmetro "id" é obrigatório e deve ser texto.' });
@@ -112,7 +114,7 @@ export async function handleGetProdutosPorFaixa(
             return;
         }
 
-        const result = await getProdutosPorFaixa(id, codEnsaio, parsedLie, parsedLse, dataInicio, dataFim, filialId);
+        const result = await getProdutosPorFaixa(id, codEnsaio, parsedLie, parsedLse, dataInicio, dataFim, filialId, operacao);
         res.json(result);
     } catch (err) {
         next(err);
@@ -128,8 +130,9 @@ export async function handleGetHistoricoProdutosFaixa(
     next: NextFunction
 ): Promise<void> {
     try {
-        const { id, codEnsaio, lie, lse, dataInicio, dataFim, produtos, filialId: filialIdStr } = req.query;
+        const { id, codEnsaio, lie, lse, dataInicio, dataFim, produtos, filialId: filialIdStr, operacao: operacaoStr } = req.query;
         const filialId = parseInt(filialIdStr as string);
+        const operacao = operacaoStr ? String(operacaoStr) : undefined;
 
         if (!id || typeof id !== 'string') {
             res.status(400).json({ erro: 'O parâmetro "id" (código do centro de custo) é obrigatório.' });
@@ -187,7 +190,7 @@ export async function handleGetHistoricoProdutosFaixa(
             return;
         }
 
-        const result = await getHistoricoProdutosFaixa(id, codEnsaio, parsedLie, parsedLse, dataInicio, dataFim, parsedProdutos, filialId);
+        const result = await getHistoricoProdutosFaixa(id, codEnsaio, parsedLie, parsedLse, dataInicio, dataFim, parsedProdutos, filialId, operacao);
         res.json(result);
     } catch (err) {
         next(err);
@@ -203,8 +206,9 @@ export async function handleGetProdutosSemFaixa(
     next: NextFunction
 ): Promise<void> {
     try {
-        const { id, codEnsaio, dataInicio, dataFim, filialId: filialIdStr } = req.query;
+        const { id, codEnsaio, dataInicio, dataFim, filialId: filialIdStr, operacao: operacaoStr } = req.query;
         const filialId = parseInt(filialIdStr as string);
+        const operacao = operacaoStr ? String(operacaoStr) : undefined;
 
         if (!id || typeof id !== 'string') {
             res.status(400).json({ erro: 'O parâmetro "id" é obrigatório.' });
@@ -227,7 +231,7 @@ export async function handleGetProdutosSemFaixa(
             return;
         }
 
-        const result = await getProdutosSemFaixa(id, codEnsaio, dataInicio, dataFim, filialId);
+        const result = await getProdutosSemFaixa(id, codEnsaio, dataInicio, dataFim, filialId, operacao);
         res.json(result);
     } catch (err) {
         next(err);
@@ -243,8 +247,9 @@ export async function handleGetHistoricoProdutosSemFaixa(
     next: NextFunction
 ): Promise<void> {
     try {
-        const { id, codEnsaio, dataInicio, dataFim, produtos, filialId: filialIdStr } = req.query;
+        const { id, codEnsaio, dataInicio, dataFim, produtos, filialId: filialIdStr, operacao: operacaoStr } = req.query;
         const filialId = parseInt(filialIdStr as string);
+        const operacao = operacaoStr ? String(operacaoStr) : undefined;
 
         if (!id || typeof id !== 'string') {
             res.status(400).json({ erro: 'O parâmetro "id" é obrigatório.' });
@@ -279,7 +284,7 @@ export async function handleGetHistoricoProdutosSemFaixa(
             return;
         }
 
-        const result = await getHistoricoProdutosSemFaixa(id, codEnsaio, dataInicio, dataFim, parsedProdutos, filialId);
+        const result = await getHistoricoProdutosSemFaixa(id, codEnsaio, dataInicio, dataFim, parsedProdutos, filialId, operacao);
         res.json(result);
     } catch (err) {
         next(err);

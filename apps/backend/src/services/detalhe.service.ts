@@ -124,7 +124,7 @@ END)                                            AS lotes_afetados
 }
 
 // 3. Top N ensaios por volume (só para processo/produto — ensaio é fixo)
-export async function getTopEnsaios(params: DetalheParams) {
+export async function getTopEnsaios(params: DetalheParams & { isBrassagem?: boolean }) {
   if (params.tipo === 'ensaio') {
     return [{ cod_ensaio: params.id }];
   }
@@ -136,10 +136,13 @@ export async function getTopEnsaios(params: DetalheParams) {
     ? `AND cod_laboratorio IN (${labs.map(() => '?').join(', ')})`
     : '';
 
+  const selectOperacao = params.isBrassagem ? ', operacao' : '';
+  const groupOperacao = params.isBrassagem ? ', operacao' : '';
+
   return blabQuery(`
     SELECT
       cod_ensaio,
-      ensaio,
+      ensaio${selectOperacao},
       COUNT(*) AS n_amostras
     FROM DW_FAT_RESULTADO
     WHERE D_E_L_E_T IS NULL
@@ -147,7 +150,7 @@ export async function getTopEnsaios(params: DetalheParams) {
       AND ${filter.sql}
       AND data_resultado BETWEEN ? AND ?
       ${labFilter}
-    GROUP BY cod_ensaio, ensaio
+    GROUP BY cod_ensaio, ensaio${groupOperacao}
     ORDER BY n_amostras DESC
     LIMIT ?
   `, [...filter.params, params.dataInicio, params.dataFim, ...labs, topN]);
@@ -156,13 +159,30 @@ export async function getTopEnsaios(params: DetalheParams) {
 // 4. Faixas de especificação dos ensaios (com decisão de modo)
 export async function getFaixasEspecificacao(
   params: DetalheParams,
-  ensaioIds: number[]
+  chaves: { cod_ensaio: number; operacao?: string }[]
 ) {
-  if (ensaioIds.length === 0) {
+  if (chaves.length === 0) {
     return [];
   }
 
   const filter = buildFiltroDetalhe(params.tipo, params.id);
+
+  const ensaioIds = chaves.map(c => c.cod_ensaio);
+  const isBrassagem = chaves.some(c => c.operacao !== undefined);
+
+  let filterOperacaoSql = '';
+  let filterOperacaoParams: any[] = [];
+  let filterDwOperacaoSql = '';
+  
+  if (isBrassagem) {
+    const tuples = chaves.map(() => '(?,?)').join(',');
+    filterOperacaoSql = `\n        AND (cod_ensaio, operacao) IN (${tuples})`;
+    filterDwOperacaoSql = `\n      AND (dw.cod_ensaio, dw.operacao) IN (${tuples})`;
+    filterOperacaoParams = chaves.flatMap(c => [c.cod_ensaio, c.operacao]);
+  }
+
+  const selectOperacao = isBrassagem ? ', dw.operacao' : '';
+  const groupOperacao = isBrassagem ? ', dw.operacao' : '';
 
   const placeholders = ensaioIds.map(() => '?').join(',');
 
@@ -186,13 +206,13 @@ export async function getFaixasEspecificacao(
       WHERE D_E_L_E_T IS NULL
         AND conformidade != 'NÃO AVALIADO'
         AND ${filter.sql}
-        AND cod_ensaio IN (${placeholders})
+        AND cod_ensaio IN (${placeholders})${filterOperacaoSql}
         AND data_resultado BETWEEN ? AND ?
       GROUP BY cod_ensaio
     )
     SELECT
       dw.cod_ensaio,
-      dw.ensaio,
+      dw.ensaio${selectOperacao},
       cp.qtd_produtos,
       COUNT(*)                                                           AS n,
       ROUND(SUM(dw.conformidade = 'CONFORME') * 1.0 / COUNT(*) * 100, 1) AS pct_conforme,
@@ -213,12 +233,12 @@ export async function getFaixasEspecificacao(
     WHERE dw.D_E_L_E_T IS NULL
       AND dw.conformidade != 'NÃO AVALIADO'
       AND ${filterDwSql}
-      AND dw.cod_ensaio IN (${placeholders})
+      AND dw.cod_ensaio IN (${placeholders})${filterDwOperacaoSql}
       AND dw.data_resultado BETWEEN ? AND ?
-    GROUP BY dw.cod_ensaio, dw.ensaio, cp.qtd_produtos
+    GROUP BY dw.cod_ensaio, dw.ensaio${groupOperacao}, cp.qtd_produtos
   `, [
-    ...filter.params, ...ensaioIds, params.dataInicio, params.dataFim,
-    ...filter.params, ...ensaioIds, params.dataInicio, params.dataFim,
+    ...filter.params, ...ensaioIds, ...filterOperacaoParams, params.dataInicio, params.dataFim,
+    ...filter.params, ...ensaioIds, ...filterOperacaoParams, params.dataInicio, params.dataFim,
   ]);
 
   // Decide o modo de exibição para cada linha
@@ -244,14 +264,19 @@ export async function getFaixasEspecificacao(
 
 // Função orquestradora — chamada pelo controller
 export async function getDetalheCompleto(params: DetalheParams) {
+  const isBrassagem = params.tipo === 'processo' && params.id === 'brassagem';
+
   const [serie, resumo, topEnsaios] = await Promise.all([
     getSerieConformidade(params),
     getResumoMacro(params),
-    getTopEnsaios(params),
+    getTopEnsaios({ ...params, isBrassagem }),
   ]);
 
-  const ensaioIds = topEnsaios.map((e: any) => e.cod_ensaio);
-  const faixas = await getFaixasEspecificacao(params, ensaioIds);
+  const chaves = isBrassagem
+    ? topEnsaios.map((e: any) => ({ cod_ensaio: e.cod_ensaio, operacao: e.operacao }))
+    : topEnsaios.map((e: any) => ({ cod_ensaio: e.cod_ensaio }));
+
+  const faixas = await getFaixasEspecificacao(params, chaves);
 
   return { serie, resumo, topEnsaios, faixas };
 }

@@ -11,6 +11,7 @@ interface FaixasContainerProps {
     codEnsaio: string;
     dataInicio: string;
     dataFim: string;
+    operacao?: string;
     selectedSkus: string[];
     onSelectedSkusChange: (skus: string[]) => void;
     onActiveFaixasChange?: (limits: { lie: number; lse: number }[]) => void;
@@ -23,6 +24,7 @@ export const FaixasContainer: React.FC<FaixasContainerProps> = ({
     codEnsaio,
     dataInicio,
     dataFim,
+    operacao,
     selectedSkus,
     onSelectedSkusChange,
     onActiveFaixasChange,
@@ -51,6 +53,7 @@ export const FaixasContainer: React.FC<FaixasContainerProps> = ({
                         dataInicio,
                         dataFim,
                         filialId,
+                        ...(operacao ? { operacao } : {}),
                     },
                 });
 
@@ -77,7 +80,7 @@ export const FaixasContainer: React.FC<FaixasContainerProps> = ({
         if (id && codEnsaio) {
             fetchFaixas();
         }
-    }, [id, codEnsaio, dataInicio, dataFim]);
+    }, [id, codEnsaio, dataInicio, dataFim, operacao]);
 
     // Reset parent active limits and local expanded key when codEnsaio changes
     useEffect(() => {

@@ -34,6 +34,10 @@ export default function DetalhePage() {
     const [centroCustoResolvido, setCentroCustoResolvido] = useState<{ id: number; nome: string } | null>(null);
     const [carregandoCentroCusto, setCarregandoCentroCusto] = useState(false);
 
+    const isBrassagem =
+        (tipoNormalizado === 'processos' || tipoNormalizado === 'processo') &&
+        String(id).toLowerCase() === 'brassagem';
+
     useEffect(() => {
         if (filialId === null) {
             setCarregando(false);
@@ -211,16 +215,26 @@ export default function DetalhePage() {
                 <SerieConformidade dados={dados.serie} limites={faixaAtiva} />
                 <div className={styles.faixasContainer}>
                     <span className={styles.label}>Faixas de especificação</span>
-                    {dados.faixas.map((faixa: any) => (
-                        <div
-                            key={faixa.cod_ensaio}
-                            onClick={() => handleClickFaixa(faixa)}
-                            className={`${styles.faixaCardWrapper} ${faixaSelecionadaObjeto?.cod_ensaio === faixa.cod_ensaio ? styles.active : ''
-                                }`}
-                        >
-                            <FaixaEspecificacao dados={faixa} />
-                        </div>
-                    ))}
+                    {dados.faixas.map((faixa: any) => {
+                        const faixaKey = isBrassagem && faixa.operacao
+                            ? `${faixa.cod_ensaio}_${faixa.operacao}`
+                            : String(faixa.cod_ensaio);
+
+                        const isActive = isBrassagem
+                            ? faixaSelecionadaObjeto?.cod_ensaio === faixa.cod_ensaio &&
+                              faixaSelecionadaObjeto?.operacao    === faixa.operacao
+                            : faixaSelecionadaObjeto?.cod_ensaio === faixa.cod_ensaio;
+
+                        return (
+                            <div
+                                key={faixaKey}
+                                onClick={() => handleClickFaixa(faixa)}
+                                className={`${styles.faixaCardWrapper} ${isActive ? styles.active : ''}`}
+                            >
+                                <FaixaEspecificacao dados={faixa} />
+                            </div>
+                        );
+                    })}
                 </div>
             </div>
 
@@ -259,6 +273,7 @@ export default function DetalhePage() {
                     ensaioNome={faixaSelecionadaObjeto.ensaio}
                     dataInicio={dataInicio}
                     dataFim={dataFim}
+                    operacao={faixaSelecionadaObjeto.operacao}
                 />
             )}
 

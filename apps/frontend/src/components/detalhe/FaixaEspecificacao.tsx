@@ -8,8 +8,8 @@ interface FaixaProps {
         media: number | null;
         lie: number | null;
         lse: number | null;
-        pct_conforme: number;
         pct_nao_conforme: number;
+        operacao?: string;
     };
 }
 
@@ -24,7 +24,12 @@ export default function FaixaEspecificacao({ dados }: FaixaProps) {
         return (
             <div className={styles.card}>
                 <div className={styles.header}>
-                    <strong>{dados.ensaio}</strong>
+                    <div>
+                        <strong>{dados.ensaio}</strong>
+                        {dados.operacao && (
+                            <span className={styles.operacaoLabel}>{dados.operacao}</span>
+                        )}
+                    </div>
                     <span className={styles.valorAtual}>{media}</span>
                 </div>
                 <div className={styles.regua}>
@@ -46,7 +51,12 @@ export default function FaixaEspecificacao({ dados }: FaixaProps) {
     return (
         <div className={styles.card}>
             <div className={styles.header}>
-                <strong>{dados.ensaio}</strong>
+                <div>
+                    <strong>{dados.ensaio}</strong>
+                    {dados.operacao && (
+                        <span className={styles.operacaoLabel}>{dados.operacao}</span>
+                    )}
+                </div>
                 {/* Alterado para mostrar a % de Não Conformidade */}
                 <span className={styles.valorAtual}>{dados.pct_nao_conforme}% Não Conforme</span>
             </div>

@@ -26,6 +26,7 @@ interface FaixaModalProps {
     ensaioNome: string;
     dataInicio: string;
     dataFim: string;
+    operacao?: string;
 }
 
 interface SamplePoint {
@@ -183,6 +184,7 @@ export const FaixaModal: React.FC<FaixaModalProps> = ({
     ensaioNome,
     dataInicio,
     dataFim,
+    operacao,
 }) => {
     const { filialId } = useContexto();
     const [selectedSkus, setSelectedSkus] = useState<string[]>([]);
@@ -231,6 +233,7 @@ export const FaixaModal: React.FC<FaixaModalProps> = ({
                         dataFim,
                         selectedSkus,
                         filialId,
+                        operacao,
                     );
                 } else {
                     // Ensaio com LIE/LSE: usa endpoint original sem especificar uma única faixa para carregar todas
@@ -243,6 +246,7 @@ export const FaixaModal: React.FC<FaixaModalProps> = ({
                         dataFim,
                         selectedSkus,
                         filialId,
+                        operacao,
                     );
                 }
 
@@ -265,7 +269,7 @@ export const FaixaModal: React.FC<FaixaModalProps> = ({
 
         fetchHistory();
         return () => { cancelled = true; };
-    }, [id, codEnsaio, activeFaixas, selectedSkus, dataInicio, dataFim, modoSemFaixa]);
+    }, [id, codEnsaio, activeFaixas, selectedSkus, dataInicio, dataFim, modoSemFaixa, operacao]);
 
     // Reset ao abrir modal ou trocar ensaio
     useEffect(() => {
@@ -358,7 +362,9 @@ export const FaixaModal: React.FC<FaixaModalProps> = ({
                 <div className={styles.header}>
                     <div>
                         <h2 className={styles.headerTitle}>{ensaioNome}</h2>
-                        <p className={styles.headerSubtitle}>Explosão de SKUs e histórico cronológico de amostras</p>
+                        <p className={styles.headerSubtitle}>
+                            {operacao ? `${operacao} · ` : ''}Explosão de SKUs e histórico cronológico de amostras
+                        </p>
                     </div>
                     <button className={styles.closeBtn} onClick={onClose} aria-label="Fechar modal">
                         &times;
@@ -374,6 +380,7 @@ export const FaixaModal: React.FC<FaixaModalProps> = ({
                             codEnsaio={codEnsaio}
                             dataInicio={dataInicio}
                             dataFim={dataFim}
+                            operacao={operacao}
                             selectedSkus={selectedSkus}
                             onSelectedSkusChange={setSelectedSkus}
                             onActiveFaixasChange={setActiveFaixas}

@@ -46,10 +46,11 @@ export const detalheApi = {
         dataInicio: string,
         dataFim: string,
         produtos: string[],
-        filialId: number
+        filialId: number,
+        operacao?: string
     ) => {
         return request<any[]>('/api/analitica/detalhe/faixas/produtos/historico', {
-            params: { id, codEnsaio, lie, lse, dataInicio, dataFim, produtos: produtos.join(','), filialId },
+            params: { id, codEnsaio, lie, lse, dataInicio, dataFim, produtos: produtos.join(','), filialId, ...(operacao ? { operacao } : {}) },
         });
     },
 
@@ -60,10 +61,11 @@ export const detalheApi = {
         dataInicio: string,
         dataFim: string,
         produtos: string[],
-        filialId: number
+        filialId: number,
+        operacao?: string
     ) => {
         return request<any[]>('/api/analitica/detalhe/faixas/sem-faixa/historico', {
-            params: { id, codEnsaio, dataInicio, dataFim, produtos: produtos.join(','), filialId },
+            params: { id, codEnsaio, dataInicio, dataFim, produtos: produtos.join(','), filialId, ...(operacao ? { operacao } : {}) },
         });
     },
 
