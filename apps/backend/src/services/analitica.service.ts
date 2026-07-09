@@ -21,6 +21,7 @@ async function buildEnvelope(ctx: ContextoAnalise): Promise<{ where: string; par
 
   const conditions: string[] = [
     'D_E_L_E_T IS NULL',
+    "conformidade        != 'NÃO AVALIADO'",
     'cod_produto         = ?',
     'cod_centro_de_custo = ?',
     'cod_ensaio          = ?',
@@ -363,6 +364,7 @@ export async function numericoComparacao(params: any) {
         lse
       FROM DW_FAT_RESULTADO
       WHERE D_E_L_E_T IS NULL
+        AND conformidade != 'NÃO AVALIADO'
         AND valor REGEXP '^-?[0-9]+([.,][0-9]+)?$'
         AND LENGTH(data_resultado) = 10
         AND data_resultado REGEXP '^[0-9]{4}-[0-9]{2}-[0-9]{2}$'
@@ -381,6 +383,7 @@ export async function numericoComparacao(params: any) {
         lse
       FROM DW_FAT_RESULTADO
       WHERE D_E_L_E_T IS NULL
+        AND conformidade != 'NÃO AVALIADO'
         AND valor REGEXP '^-?[0-9]+([.,][0-9]+)?$'
         AND LENGTH(data_resultado) = 10
         AND data_resultado REGEXP '^[0-9]{4}-[0-9]{2}-[0-9]{2}$'
@@ -435,6 +438,7 @@ export async function numericoComparacao(params: any) {
           MAX(CAST(REPLACE(valor,',','.') AS DECIMAL(10,4))) AS vmax
         FROM DW_FAT_RESULTADO
         WHERE D_E_L_E_T IS NULL
+          AND conformidade != 'NÃO AVALIADO'
           AND valor REGEXP '^-?[0-9]+([.,][0-9]+)?$'
           ${commonSql}
           AND (
@@ -458,6 +462,7 @@ export async function numericoComparacao(params: any) {
         COUNT(*)                                                       AS frequencia
       FROM DW_FAT_RESULTADO dw, bounds b
       WHERE D_E_L_E_T IS NULL
+        AND dw.conformidade != 'NÃO AVALIADO'
         AND dw.valor REGEXP '^-?[0-9]+([.,][0-9]+)?$'
         ${commonSql}
         AND (
@@ -585,6 +590,7 @@ export async function faixaComparacao(params: any) {
         ) * 100, 1)          AS pct
       FROM DW_FAT_RESULTADO
       WHERE D_E_L_E_T IS NULL
+        AND conformidade != 'NÃO AVALIADO'
         AND valor REGEXP '^-?[0-9]+([.,][0-9]+)?\\\\s*[-/]\\\\s*-?[0-9]+([.,][0-9]+)?$'
         AND LENGTH(data_resultado) = 10
         AND data_resultado REGEXP '^[0-9]{4}-[0-9]{2}-[0-9]{2}$'
@@ -650,6 +656,7 @@ export async function faixaComparacao(params: any) {
         ) * 100, 1)                               AS pct_no_periodo
       FROM DW_FAT_RESULTADO
       WHERE D_E_L_E_T IS NULL
+        AND conformidade != 'NÃO AVALIADO'
         AND valor REGEXP '^-?[0-9]+([.,][0-9]+)?\\\\s*[-/]\\\\s*-?[0-9]+([.,][0-9]+)?$'
         AND LENGTH(data_resultado) = 10
         AND data_resultado REGEXP '^[0-9]{4}-[0-9]{2}-[0-9]{2}$'
@@ -702,6 +709,7 @@ export async function categoricoComparacao(params: any) {
         ) * 100, 1)          AS pct
       FROM DW_FAT_RESULTADO
       WHERE D_E_L_E_T IS NULL
+        AND conformidade != 'NÃO AVALIADO'
         AND LENGTH(data_resultado) = 10
         AND data_resultado REGEXP '^[0-9]{4}-[0-9]{2}-[0-9]{2}$'
         ${commonSql}
@@ -802,6 +810,7 @@ export async function categoricoComparacao(params: any) {
         ) * 100, 1)                                                     AS pct_no_periodo
       FROM DW_FAT_RESULTADO
       WHERE D_E_L_E_T IS NULL
+        AND conformidade != 'NÃO AVALIADO'
         AND LENGTH(data_resultado) = 10
         AND data_resultado REGEXP '^[0-9]{4}-[0-9]{2}-[0-9]{2}$'
         ${commonSql}

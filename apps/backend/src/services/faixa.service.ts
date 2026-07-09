@@ -102,6 +102,7 @@ export async function getExplosaoFaixas(
       ${labFilter}
       AND dw.cod_ensaio = ?
       ${operacaoFilter}
+      AND dw.conformidade != 'NÃO AVALIADO'
       AND dw.lie IS NOT NULL
       AND dw.lse IS NOT NULL
       AND dw.data_resultado BETWEEN ? AND ?
@@ -149,6 +150,7 @@ export async function getProdutosPorFaixa(
       ${labFilter}
       AND dw.cod_ensaio = ?
       ${operacaoFilter}
+      AND dw.conformidade != 'NÃO AVALIADO'
       AND CAST(REPLACE(dw.lie, ',', '.') AS DECIMAL(10,4)) = ?
       AND CAST(REPLACE(dw.lse, ',', '.') AS DECIMAL(10,4)) = ?
       AND dw.data_resultado BETWEEN ? AND ?
@@ -226,6 +228,7 @@ export async function getHistoricoProdutosFaixa(
       ${labFilter}
       AND dw.cod_ensaio = ?
       ${operacaoFilter}
+      AND dw.conformidade != 'NÃO AVALIADO'
       ${lieLseSql}
       AND dw.data_resultado BETWEEN ? AND ?
       AND dw.cod_produto IN (${placeholders})
@@ -284,6 +287,7 @@ export async function getProdutosSemFaixa(
       ${labFilter}
       AND dw.cod_ensaio = ?
       ${operacaoFilter}
+      AND dw.conformidade != 'NÃO AVALIADO'
       AND dw.data_resultado BETWEEN ? AND ?
     GROUP BY dw.cod_produto, dw.produto
     ORDER BY n_amostras DESC
@@ -333,6 +337,7 @@ export async function getHistoricoProdutosSemFaixa(
       ${labFilter}
       AND dw.cod_ensaio = ?
       ${operacaoFilter}
+      AND dw.conformidade != 'NÃO AVALIADO'
       AND dw.data_resultado BETWEEN ? AND ?
       AND dw.cod_produto IN (${placeholders})
       AND dw.conformidade IS NOT NULL
