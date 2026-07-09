@@ -50,7 +50,6 @@ const MACRO_GRUPOS_CONFIG = [
     subids: [
       'microbiologia-estabilidade-micro',
       'microbiologia-estabilidade-envase',
-      'microbiologia-resultados',
       'microbiologia-agua-enxague',
       'microbiologia-swab',
       'microbiologia-analise-microbiologia',
