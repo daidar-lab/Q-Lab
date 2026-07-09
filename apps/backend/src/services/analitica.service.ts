@@ -1134,7 +1134,8 @@ export async function getRankingProcessos(
   // Resolve labs da filial para filtro na CTE
   const labs = await resolveFilialLaboratorios(periodo.filialId);
   const labFilter = labs.length > 0
-    ? `AND cod_laboratorio IN (${labs.map(() => '?').join(', ')})`
+    // Alias R. para evitar ambiguidade com o JOIN na DIM
+    ? `AND R.cod_laboratorio IN (${labs.map(() => '?').join(', ')})`
     : '';
 
   // Antes de montar o SQL, resolve os lotes pesados em paralelo
@@ -1271,24 +1272,27 @@ export async function getRankingProcessos(
   const sql = `
   WITH dados AS (
     SELECT
-      cod_amostra,
-      conformidade,
-      cod_skip_lote,
-      lote_de_controle_de_qualidade,
-      operacao,
-      cod_centro_de_custo,
-      cod_laboratorio,
-      cod_area,
-      cod_produto,
-      cod_amostra_interunidade,
-      cod_cabecalho_de_especificacao,
-      cod_operacao,
-      produto
-    FROM DW_FAT_RESULTADO
-    WHERE D_E_L_E_T IS NULL
-      AND conformidade != 'NÃO AVALIADO'
-      AND valor IS NOT NULL AND valor != ''
-      AND data_resultado BETWEEN ? AND ?
+      R.cod_amostra,
+      R.conformidade,
+      CAB.cod_skip_lote, -- Buscando da tabela dimensão (fonte autoritativa)
+      R.lote_de_controle_de_qualidade,
+      R.operacao,
+      R.cod_centro_de_custo,
+      R.cod_laboratorio,
+      R.cod_area,
+      R.cod_produto,
+      R.cod_amostra_interunidade,
+      R.cod_cabecalho_de_especificacao,
+      R.cod_operacao,
+      R.produto
+    FROM DW_FAT_RESULTADO R
+    -- LEFT JOIN para garantir que cod_skip_lote venha da dimensão, não da desnormalização
+    LEFT JOIN DIM_CABECALHO_DE_ESPECIFICACAO CAB
+      ON CAB.cod_cabecalho_de_especificacao = R.cod_cabecalho_de_especificacao
+    WHERE R.D_E_L_E_T IS NULL
+      AND R.conformidade != 'NÃO AVALIADO'
+      AND R.valor IS NOT NULL AND R.valor != ''
+      AND R.data_resultado BETWEEN ? AND ?
       ${labFilter}
   )
   ${unionParts.join('\n  UNION ALL')}`;

@@ -20,6 +20,22 @@ function buildFiltroDetalhe(
   return resolverFiltroPorId(id);
 }
 
+// Prefixador de colunas para garantir que filtros dinâmicos encontrem o alias correto
+function prefixFilterDw(filterSql: string): string {
+  let prefixed = filterSql;
+  const colsR = [
+    'cod_produto', 'cod_laboratorio', 'lote_de_controle_de_qualidade',
+    'operacao', 'cod_centro_de_custo', 'cod_amostra_interunidade',
+    'cod_cabecalho_de_especificacao', 'cod_ensaio', 'cod_area', 'produto'
+  ];
+  for (const col of colsR) {
+    prefixed = prefixed.replace(new RegExp(`(?<!\\.)\\b${col}\\b`, 'g'), `R.${col}`);
+  }
+  // cod_skip_lote é a única que vem obrigatoriamente da dimensão
+  prefixed = prefixed.replace(/(?<!\.)\bcod_skip_lote\b/g, 'CAB.cod_skip_lote');
+  return prefixed;
+}
+
 // 1. Série temporal de conformidade agregada (dinâmica)
 export async function getSerieConformidade(params: DetalheParams) {
   const filter = buildFiltroDetalhe(params.tipo, params.id);
@@ -75,23 +91,27 @@ export async function getSerieConformidade(params: DetalheParams) {
     orderBy = "periodo ASC";
   }
 
+  const filterSql = prefixFilterDw(filter.sql);
+
   const dados = await blabQuery(`
     SELECT
       ${selectPeriodo}                                                AS periodo,
       COUNT(*)                                                        AS total,
-      SUM(conformidade != 'CONFORME')                                 AS n_nao_conforme,
-      SUM(conformidade = 'CONFORME')                                  AS n_conforme,
-      ROUND(SUM(conformidade = 'CONFORME') * 1.0 / COUNT(*) * 100, 1) AS pct_conforme
-    FROM DW_FAT_RESULTADO
-    WHERE D_E_L_E_T IS NULL
-      AND conformidade != 'NÃO AVALIADO'
-      AND ${filter.sql}
-      AND LENGTH(data_resultado) = 10
-      AND data_resultado REGEXP '^[0-9]{4}-[0-9]{2}-[0-9]{2}$'
-      AND data_resultado BETWEEN ? AND ?
-      ${labFilter}
-    GROUP BY ${groupBy}
-    ORDER BY ${orderBy}
+      SUM(R.conformidade != 'CONFORME')                                 AS n_nao_conforme,
+      SUM(R.conformidade = 'CONFORME')                                  AS n_conforme,
+      ROUND(SUM(R.conformidade = 'CONFORME') * 1.0 / COUNT(*) * 100, 1) AS pct_conforme
+    FROM DW_FAT_RESULTADO R
+    LEFT JOIN DIM_CABECALHO_DE_ESPECIFICACAO CAB
+      ON CAB.cod_cabecalho_de_especificacao = R.cod_cabecalho_de_especificacao
+    WHERE R.D_E_L_E_T IS NULL
+      AND R.conformidade != 'NÃO AVALIADO'
+      AND ${filterSql}
+      AND LENGTH(R.data_resultado) = 10
+      AND R.data_resultado REGEXP '^[0-9]{4}-[0-9]{2}-[0-9]{2}$'
+      AND R.data_resultado BETWEEN ? AND ?
+      ${labFilter.replace(/cod_laboratorio/g, 'R.cod_laboratorio')}
+    GROUP BY ${groupBy.replace(/data_resultado/g, 'R.data_resultado').replace(/hora_resultado/g, 'R.hora_resultado')}
+    ORDER BY ${orderBy.replace(/data_resultado/g, 'R.data_resultado').replace(/hora_resultado/g, 'R.hora_resultado')}
   `, [...filter.params, params.dataInicio, params.dataFim, ...labs]);
   return { granularidade, dados };
 }
@@ -104,21 +124,25 @@ export async function getResumoMacro(params: DetalheParams) {
     ? `AND cod_laboratorio IN (${labs.map(() => '?').join(', ')})`
     : '';
 
+  const filterSql = prefixFilterDw(filter.sql);
+
   const [resumo] = await blabQuery(`
     SELECT
       COUNT(*)                                                        AS total,
-      SUM(conformidade != 'CONFORME')                                 AS n_nao_conforme,
-      ROUND(SUM(conformidade = 'CONFORME') * 1.0 / COUNT(*) * 100, 1) AS pct_conforme,
-COUNT(DISTINCT lote_de_controle_de_qualidade)  AS total_lotes,
-COUNT(DISTINCT CASE
-  WHEN conformidade != 'CONFORME' THEN lote_de_controle_de_qualidade
-END)                                            AS lotes_afetados
-    FROM DW_FAT_RESULTADO
-    WHERE D_E_L_E_T IS NULL
-      AND conformidade != 'NÃO AVALIADO'
-      AND ${filter.sql}
-      AND data_resultado BETWEEN ? AND ?
-      ${labFilter}
+      SUM(R.conformidade != 'CONFORME')                                 AS n_nao_conforme,
+      ROUND(SUM(R.conformidade = 'CONFORME') * 1.0 / COUNT(*) * 100, 1) AS pct_conforme,
+      COUNT(DISTINCT R.lote_de_controle_de_qualidade)  AS total_lotes,
+      COUNT(DISTINCT CASE
+        WHEN R.conformidade != 'CONFORME' THEN R.lote_de_controle_de_qualidade
+      END)                                            AS lotes_afetados
+    FROM DW_FAT_RESULTADO R
+    LEFT JOIN DIM_CABECALHO_DE_ESPECIFICACAO CAB
+      ON CAB.cod_cabecalho_de_especificacao = R.cod_cabecalho_de_especificacao
+    WHERE R.D_E_L_E_T IS NULL
+      AND R.conformidade != 'NÃO AVALIADO'
+      AND ${filterSql}
+      AND R.data_resultado BETWEEN ? AND ?
+      ${labFilter.replace(/cod_laboratorio/g, 'R.cod_laboratorio')}
   `, [...filter.params, params.dataInicio, params.dataFim, ...labs]);
 
   return resumo;
@@ -137,21 +161,24 @@ export async function getTopEnsaios(params: DetalheParams & { isBrassagem?: bool
     ? `AND cod_laboratorio IN (${labs.map(() => '?').join(', ')})`
     : '';
 
-  const selectOperacao = params.isBrassagem ? ', operacao' : '';
-  const groupOperacao = params.isBrassagem ? ', operacao' : '';
+  const filterSql = prefixFilterDw(filter.sql);
+  const selectOperacao = params.isBrassagem ? ', R.operacao' : '';
+  const groupOperacao = params.isBrassagem ? ', R.operacao' : '';
 
   return blabQuery(`
     SELECT
-      cod_ensaio,
-      ensaio${selectOperacao},
+      R.cod_ensaio,
+      R.ensaio${selectOperacao},
       COUNT(*) AS n_amostras
-    FROM DW_FAT_RESULTADO
-    WHERE D_E_L_E_T IS NULL
-      AND conformidade != 'NÃO AVALIADO'
-      AND ${filter.sql}
-      AND data_resultado BETWEEN ? AND ?
-      ${labFilter}
-    GROUP BY cod_ensaio, ensaio${groupOperacao}
+    FROM DW_FAT_RESULTADO R
+    LEFT JOIN DIM_CABECALHO_DE_ESPECIFICACAO CAB
+      ON CAB.cod_cabecalho_de_especificacao = R.cod_cabecalho_de_especificacao
+    WHERE R.D_E_L_E_T IS NULL
+      AND R.conformidade != 'NÃO AVALIADO'
+      AND ${filterSql}
+      AND R.data_resultado BETWEEN ? AND ?
+      ${labFilter.replace(/cod_laboratorio/g, 'R.cod_laboratorio')}
+    GROUP BY R.cod_ensaio, R.ensaio${groupOperacao}
     ORDER BY n_amostras DESC
     LIMIT ?
   `, [...filter.params, params.dataInicio, params.dataFim, ...labs, topN]);
@@ -187,29 +214,23 @@ export async function getFaixasEspecificacao(
 
   const placeholders = ensaioIds.map(() => '?').join(',');
 
-  const columnsToPrefix = [
-    'cod_skip_lote', 'cod_produto', 'cod_laboratorio',
-    'lote_de_controle_de_qualidade', 'operacao', 'cod_centro_de_custo',
-    'cod_amostra_interunidade', 'cod_cabecalho_de_especificacao', 'cod_ensaio'
-  ];
-  let filterDwSql = filter.sql;
-  for (const col of columnsToPrefix) {
-    const regex = new RegExp(`(?<!\\.)\\b${col}\\b`, 'g');
-    filterDwSql = filterDwSql.replace(regex, `dw.${col}`);
-  }
+  // Aqui reaproveitamos a função usando 'dw' ao invés de 'R'
+  const filterDwSql = prefixFilterDw(filter.sql).replace(/R\./g, 'dw.');
 
   const rows = await blabQuery(`
     WITH contexto_produtos AS (
       SELECT
-        cod_ensaio,
-        COUNT(DISTINCT cod_produto) AS qtd_produtos
-      FROM DW_FAT_RESULTADO
-      WHERE D_E_L_E_T IS NULL
-        AND conformidade != 'NÃO AVALIADO'
-        AND ${filter.sql}
-        AND cod_ensaio IN (${placeholders})${filterOperacaoSql}
-        AND data_resultado BETWEEN ? AND ?
-      GROUP BY cod_ensaio
+        dw.cod_ensaio,
+        COUNT(DISTINCT dw.cod_produto) AS qtd_produtos
+      FROM DW_FAT_RESULTADO dw
+      LEFT JOIN DIM_CABECALHO_DE_ESPECIFICACAO CAB
+        ON CAB.cod_cabecalho_de_especificacao = dw.cod_cabecalho_de_especificacao
+      WHERE dw.D_E_L_E_T IS NULL
+        AND dw.conformidade != 'NÃO AVALIADO'
+        AND ${filterDwSql}
+        AND dw.cod_ensaio IN (${placeholders})${filterDwOperacaoSql}
+        AND dw.data_resultado BETWEEN ? AND ?
+      GROUP BY dw.cod_ensaio
     )
     SELECT
       dw.cod_ensaio,
@@ -230,6 +251,8 @@ export async function getFaixasEspecificacao(
         THEN CAST(REPLACE(dw.lse, ',', '.') AS DECIMAL(10,4))
       END)                                                                AS lse
     FROM DW_FAT_RESULTADO dw
+    LEFT JOIN DIM_CABECALHO_DE_ESPECIFICACAO CAB
+      ON CAB.cod_cabecalho_de_especificacao = dw.cod_cabecalho_de_especificacao
     JOIN contexto_produtos cp ON cp.cod_ensaio = dw.cod_ensaio
     WHERE dw.D_E_L_E_T IS NULL
       AND dw.conformidade != 'NÃO AVALIADO'

@@ -11,14 +11,15 @@ interface ResumoParams {
   dataInicio: string;
   dataFim: string;
   filialId: number;
+  kpis: any;
+  processos: any;
+  ensaios: any;
+  produtos: any;
 }
 
 export async function getResumoDashboard(params: ResumoParams) {
-  // 1. Busca os KPIs reais que alimentam o resumo (amostras, ensaios, NCs, conformidade)
-  const kpis = await getKpisDashboard(params);
-  const processos = await getRankingProcessos(params);
-  const ensaios = await getRankingEnsaios(params);
-  const produtos = await getRankingProdutos(params);
+  // 1. Desestrutura os dados recebidos do frontend
+  const { kpis, processos, ensaios, produtos } = params;
 
   // 2. Monta chave de cache com fingerprint dos números reais
   // 2. Monta chave de cache com fingerprint dos números reais

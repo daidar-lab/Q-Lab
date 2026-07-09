@@ -53,7 +53,7 @@ export function DateRange({ dataInicio, dataFim, onChange, label, isMobile }: Pr
                 </label>
             )}
             <div style={{ display: 'flex', gap: '8px', flexDirection: isMobile ? 'column' : 'row' }}>
-                <div style={{ flex: 1 }}>
+                <div style={{ flex: 1, minWidth: 0 }}>
                     <span style={labelStyle}>De</span>
                     <input
                         type="date"
@@ -64,7 +64,7 @@ export function DateRange({ dataInicio, dataFim, onChange, label, isMobile }: Pr
                         onBlur={() => setFocused(null)}
                     />
                 </div>
-                <div style={{ flex: 1 }}>
+                <div style={{ flex: 1, minWidth: 0 }}>
                     <span style={labelStyle}>Até</span>
                     <input
                         type="date"
