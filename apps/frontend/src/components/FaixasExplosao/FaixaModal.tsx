@@ -256,11 +256,19 @@ export const FaixaModal: React.FC<FaixaModalProps> = ({
                 if (cancelled) return;
 
                 // Ordena cronologicamente pelo timestamp bruto
-                const sorted = (response || []).sort((a: any, b: any) => {
+                let sorted = (response || []).sort((a: any, b: any) => {
                     const { data: da, hora: ha } = splitTimestamp(a.timestamp ?? '');
                     const { data: db, hora: hb } = splitTimestamp(b.timestamp ?? '');
                     return `${da} ${ha}`.localeCompare(`${db} ${hb}`);
                 });
+
+                if (!modoSemFaixa && activeFaixas.length > 0) {
+                    sorted = sorted.filter(sample => {
+                        const sLie = Number(sample.lie);
+                        const sLse = Number(sample.lse);
+                        return activeFaixas.some(f => Number(f.lie) === sLie && Number(f.lse) === sLse);
+                    });
+                }
 
                 setSamples(sorted);
             } catch (err) {
