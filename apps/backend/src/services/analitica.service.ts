@@ -972,7 +972,8 @@ export function resolverFiltroPorId(id: string | number): { sql: string; params:
       params: [],
     },
     'envase-produto-acabado': {
-      sql: `lote_de_controle_de_qualidade LIKE 'LCQE%' AND cod_skip_lote IN ('33')`,
+      sql: `lote_de_controle_de_qualidade LIKE 'LCQE%'
+            AND (cod_skip_lote IN ('33') OR (cod_skip_lote IS NULL AND operacao IN ('EMBALAGEM', 'ENCHIMENTO')))`,
       params: [],
     },
     // CIP — amostras realizadas nos laboratórios de CIP (não âncora via lote)
@@ -990,7 +991,8 @@ export function resolverFiltroPorId(id: string | number): { sql: string; params:
     },
     // Microbiologia — análise laboratorial direta
     'microbiologia-analise-microbiologia': {
-      sql: `cod_laboratorio IN (5, 17) AND cod_area IN (73, 75)`,
+      sql: `cod_laboratorio IN (5, 17) AND cod_area IN (73, 75)
+            AND lote_de_controle_de_qualidade NOT LIKE 'LCQMB%'`,
       params: [],
     },
     // Físico
@@ -1027,6 +1029,7 @@ export function resolverFiltroPorId(id: string | number): { sql: string; params:
       )`,
       params: [],
     },
+
     'desalcoolizacao': {
       sql: `lote_de_controle_de_qualidade COLLATE utf8mb4_unicode_ci IN (
     SELECT L.lote_de_controle_de_qualidade COLLATE utf8mb4_unicode_ci
@@ -1053,7 +1056,7 @@ export function resolverFiltroPorId(id: string | number): { sql: string; params:
     'captacao': 'LCQCA',
     'tratamento-efluentes': 'LCQTE',
     'envase-produto-acabado': 'LCQE',
-    'microbiologia-resultados': 'LCQMB',
+
     'envase-interunidades': 'LCQE',
   };
 
@@ -1080,7 +1083,7 @@ const LABELS_CATEGORIA: Record<string, string> = {
   // Microbiologia
   'microbiologia-estabilidade-micro': 'Estabilidade Biológica Micro',
   'microbiologia-estabilidade-envase': 'Estabilidade Biológica Envase',
-  'microbiologia-resultados': 'Resultados Microbiológicos',
+
   'microbiologia-agua-enxague': 'Água de Enxague',
   'microbiologia-swab': 'SWAB',
   'microbiologia-analise-microbiologia': 'Análise Microbiológica',
@@ -1117,6 +1120,7 @@ const LABELS_CATEGORIA: Record<string, string> = {
   'fisico-embalagem': 'Físico — Embalagem',
   'fisico-materia-prima': 'Físico — Matéria-Prima',
   'fisico-quimicos': 'Físico — Químicos',
+
 };
 
 
@@ -1130,7 +1134,8 @@ export async function getRankingProcessos(
   // Resolve labs da filial para filtro na CTE
   const labs = await resolveFilialLaboratorios(periodo.filialId);
   const labFilter = labs.length > 0
-    ? `AND cod_laboratorio IN (${labs.map(() => '?').join(', ')})`
+    // Alias R. para evitar ambiguidade com o JOIN na DIM
+    ? `AND R.cod_laboratorio IN (${labs.map(() => '?').join(', ')})`
     : '';
 
   // Antes de montar o SQL, resolve os lotes pesados em paralelo
@@ -1190,13 +1195,13 @@ export async function getRankingProcessos(
     // Microbiologia
     ['microbiologia-estabilidade-micro', `(cod_skip_lote NOT IN ('36', '54') OR cod_skip_lote IS NULL) AND lote_de_controle_de_qualidade LIKE 'LCQMB%'`, []],
     ['microbiologia-estabilidade-envase', `cod_skip_lote IN ('36', '54') AND lote_de_controle_de_qualidade LIKE 'LCQMB%'`, []],
-    ['microbiologia-resultados', `lote_de_controle_de_qualidade LIKE 'LCQMB%'`, []],
+
     ['microbiologia-agua-enxague', `cod_produto = 15`, []],
     ['microbiologia-swab', `cod_produto = 14`, []],
-    ['microbiologia-analise-microbiologia', `cod_laboratorio IN (5, 17) AND cod_area IN (73, 75)`, []],
+    ['microbiologia-analise-microbiologia', `cod_laboratorio IN (5, 17) AND cod_area IN (73, 75) AND lote_de_controle_de_qualidade NOT LIKE 'LCQMB%'`, []],
 
     // Envase
-    ['envase-produto-acabado', `lote_de_controle_de_qualidade LIKE 'LCQE%' AND cod_skip_lote IN ('33')`, []],
+    ['envase-produto-acabado', `lote_de_controle_de_qualidade LIKE 'LCQE%' AND (cod_skip_lote IN ('33') OR (cod_skip_lote IS NULL AND operacao IN ('EMBALAGEM', 'ENCHIMENTO')))`, []],
     ['envase-chopp', `cod_centro_de_custo = 450050`, []],
     ['envase-arrolhamento', `operacao LIKE '%ARROLHAMENTO%'`, []],
     ['envase-provas-horarias', `cod_skip_lote IN ('29', '36', '31', '54') AND cod_laboratorio IN (16, 18, 20, 4, 6, 8, 5)`, []],
@@ -1244,6 +1249,7 @@ export async function getRankingProcessos(
     ['fisico-embalagem', FISICO_IN, ['%embalagem%']],
     ['fisico-materia-prima', FISICO_IN, ['%matéria prima%']],
     ['fisico-quimicos', FISICO_IN, ['%Químicos%']],
+
   ];
 
   // ── SQL único: CTE materializa o período UMA vez; UNION ALL agrega por categoria ──
@@ -1266,24 +1272,27 @@ export async function getRankingProcessos(
   const sql = `
   WITH dados AS (
     SELECT
-      cod_amostra,
-      conformidade,
-      cod_skip_lote,
-      lote_de_controle_de_qualidade,
-      operacao,
-      cod_centro_de_custo,
-      cod_laboratorio,
-      cod_area,
-      cod_produto,
-      cod_amostra_interunidade,
-      cod_cabecalho_de_especificacao,
-      cod_operacao,
-      produto
-    FROM DW_FAT_RESULTADO
-    WHERE D_E_L_E_T IS NULL
-      AND conformidade != 'NÃO AVALIADO'
-      AND valor IS NOT NULL AND valor != ''
-      AND data_resultado BETWEEN ? AND ?
+      R.cod_amostra,
+      R.conformidade,
+      CAB.cod_skip_lote, -- Buscando da tabela dimensão (fonte autoritativa)
+      R.lote_de_controle_de_qualidade,
+      R.operacao,
+      R.cod_centro_de_custo,
+      R.cod_laboratorio,
+      R.cod_area,
+      R.cod_produto,
+      R.cod_amostra_interunidade,
+      R.cod_cabecalho_de_especificacao,
+      R.cod_operacao,
+      R.produto
+    FROM DW_FAT_RESULTADO R
+    -- LEFT JOIN para garantir que cod_skip_lote venha da dimensão, não da desnormalização
+    LEFT JOIN DIM_CABECALHO_DE_ESPECIFICACAO CAB
+      ON CAB.cod_cabecalho_de_especificacao = R.cod_cabecalho_de_especificacao
+    WHERE R.D_E_L_E_T IS NULL
+      AND R.conformidade != 'NÃO AVALIADO'
+      AND R.valor IS NOT NULL AND R.valor != ''
+      AND R.data_resultado BETWEEN ? AND ?
       ${labFilter}
   )
   ${unionParts.join('\n  UNION ALL')}`;

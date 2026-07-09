@@ -42,13 +42,28 @@ export interface HistoricoProdutoRow {
 // Resolve o filtro usando a nova função resolverFiltroPorId exportada.
 // Mantém suporte a prefixos legados 'LCQ...'.
 
+function prefixFilterDw(filterSql: string): string {
+    let prefixed = filterSql;
+    const colsDw = [
+        'cod_produto', 'cod_laboratorio', 'lote_de_controle_de_qualidade',
+        'operacao', 'cod_centro_de_custo', 'cod_amostra_interunidade',
+        'cod_cabecalho_de_especificacao', 'cod_ensaio', 'cod_area', 'produto'
+    ];
+    for (const col of colsDw) {
+        prefixed = prefixed.replace(new RegExp(`(?<!\\.)\\b${col}\\b`, 'g'), `dw.${col}`);
+    }
+    // cod_skip_lote é a única que vem obrigatoriamente da dimensão
+    prefixed = prefixed.replace(/(?<!\.)\bcod_skip_lote\b/g, 'CAB.cod_skip_lote');
+    return prefixed;
+}
+
 function resolverFiltroContexto(id: string): { sql: string; params: unknown[] } {
     if (id.startsWith('LCQ')) {
         return { sql: 'AND dw.lote_de_controle_de_qualidade LIKE ?', params: [`${id}%`] };
     }
     const filtro = resolverFiltroPorId(id);
     return {
-        sql: `AND (${filtro.sql})`,
+        sql: `AND (${prefixFilterDw(filtro.sql)})`,
         params: filtro.params,
     };
 }
@@ -80,6 +95,8 @@ export async function getExplosaoFaixas(
       COUNT(DISTINCT dw.cod_produto)                      AS n_produtos,
       ROUND(COUNT(*) * 100.0 / SUM(COUNT(*)) OVER (), 1) AS pct_amostras
     FROM DW_FAT_RESULTADO dw
+    LEFT JOIN DIM_CABECALHO_DE_ESPECIFICACAO CAB
+      ON CAB.cod_cabecalho_de_especificacao = dw.cod_cabecalho_de_especificacao
     WHERE dw.D_E_L_E_T IS NULL
       ${filtroCtx}
       ${labFilter}
@@ -125,6 +142,8 @@ export async function getProdutosPorFaixa(
       ROUND(SUM(CASE WHEN dw.conformidade = 'CONFORME' THEN 1 ELSE 0 END) * 100.0
         / COUNT(*), 1)                                                                  AS pct_conforme
     FROM DW_FAT_RESULTADO dw
+    LEFT JOIN DIM_CABECALHO_DE_ESPECIFICACAO CAB
+      ON CAB.cod_cabecalho_de_especificacao = dw.cod_cabecalho_de_especificacao
     WHERE dw.D_E_L_E_T IS NULL
       ${filtroCtx}
       ${labFilter}
@@ -200,6 +219,8 @@ export async function getHistoricoProdutosFaixa(
       CAST(REPLACE(dw.lie, ',', '.') AS DECIMAL(10,4))                     AS lie,
       CAST(REPLACE(dw.lse, ',', '.') AS DECIMAL(10,4))                     AS lse
     FROM DW_FAT_RESULTADO dw
+    LEFT JOIN DIM_CABECALHO_DE_ESPECIFICACAO CAB
+      ON CAB.cod_cabecalho_de_especificacao = dw.cod_cabecalho_de_especificacao
     WHERE dw.D_E_L_E_T IS NULL
       ${filtroCtx}
       ${labFilter}
@@ -256,6 +277,8 @@ export async function getProdutosSemFaixa(
       ROUND(SUM(CASE WHEN dw.conformidade = 'CONFORME' THEN 1 ELSE 0 END) * 100.0
         / COUNT(*), 1)                                                                  AS pct_conforme
     FROM DW_FAT_RESULTADO dw
+    LEFT JOIN DIM_CABECALHO_DE_ESPECIFICACAO CAB
+      ON CAB.cod_cabecalho_de_especificacao = dw.cod_cabecalho_de_especificacao
     WHERE dw.D_E_L_E_T IS NULL
       ${filtroCtx}
       ${labFilter}
@@ -303,6 +326,8 @@ export async function getHistoricoProdutosSemFaixa(
       dw.conformidade,
       CASE WHEN dw.conformidade = 'CONFORME' THEN 1 ELSE 0 END            AS valor
     FROM DW_FAT_RESULTADO dw
+    LEFT JOIN DIM_CABECALHO_DE_ESPECIFICACAO CAB
+      ON CAB.cod_cabecalho_de_especificacao = dw.cod_cabecalho_de_especificacao
     WHERE dw.D_E_L_E_T IS NULL
       ${filtroCtx}
       ${labFilter}

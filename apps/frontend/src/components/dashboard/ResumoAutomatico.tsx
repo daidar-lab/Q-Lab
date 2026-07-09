@@ -9,24 +9,31 @@ interface Props {
   dataInicio: string;
   dataFim:    string;
   filialId:   number;
+  kpis:       any;
+  processos:  any;
+  produtos:   any;
+  ensaios:    any;
 }
 
-export default function ResumoAutomatico({ dataInicio, dataFim, filialId }: Props) {
+export default function ResumoAutomatico({ dataInicio, dataFim, filialId, kpis, processos, produtos, ensaios }: Props) {
   const [resumo,     setResumo]     = useState<RespostaIA | null>(null);
   const [carregando, setCarregando] = useState(true);
   const [erro,       setErro]       = useState(false);
 
   useEffect(() => {
+    // Only call API if all data is present
+    if (!kpis || !processos || !produtos || !ensaios) return;
+
     setCarregando(true);
     setErro(false);
     setResumo(null);
 
     resumoDashboardApi
-      .getResumo(dataInicio, dataFim, filialId)
+      .getResumo(dataInicio, dataFim, filialId, kpis, processos, ensaios, produtos)
       .then(res => setResumo(res.data))
       .catch(() => setErro(true))
       .finally(() => setCarregando(false));
-  }, [dataInicio, dataFim, filialId]);
+  }, [dataInicio, dataFim, filialId, kpis, processos, produtos, ensaios]);
 
   if (carregando) {
     return (

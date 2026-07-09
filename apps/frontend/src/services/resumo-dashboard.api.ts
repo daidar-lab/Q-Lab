@@ -9,9 +9,12 @@ export interface RespostaIA {
 }
 
 export const resumoDashboardApi = {
-  getResumo: (dataInicio: string, dataFim: string, filialId: number) =>
+  getResumo: (dataInicio: string, dataFim: string, filialId: number, kpis: any, processos: any, ensaios: any, produtos: any) =>
     request<{ ok: boolean; data: RespostaIA }>(
       '/api/resumo-dashboard',
-      { params: { dataInicio, dataFim, filialId } },
+      {
+        method: 'POST',
+        body: { dataInicio, dataFim, filialId, kpis, processos, ensaios, produtos },
+      },
     ),
 };
