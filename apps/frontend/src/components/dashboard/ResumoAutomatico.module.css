@@ -46,6 +46,28 @@
   color: #c9d1e0;
 }
 
+.acoes {
+  display: flex;
+  gap: 8px;
+  margin-top: 12px;
+  flex-wrap: wrap;
+}
+
+.botaoAcao {
+  padding: 6px 14px;
+  border-radius: 6px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  background: rgba(139, 92, 246, 0.12);
+  color: #ffffff;
+  font-size: 0.85rem;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.botaoAcao:hover {
+  background: rgba(255, 255, 255, 0.08);
+}
+
 /* Estado de loading */
 .card.loading {
   display: flex;
@@ -67,5 +89,23 @@
 }
 
 @keyframes spin {
-  to { transform: rotate(360deg); }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (max-width: 640px) {
+  .acoes {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+  }
+  .botaoAcao {
+    padding: 6px 4px;
+    font-size: 0.75rem;
+    line-height: 1.2;
+    text-align: center;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
 }

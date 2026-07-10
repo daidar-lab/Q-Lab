@@ -13,7 +13,7 @@ app.listen(PORT, () => {
 
     // Roda todo dia às 05:00
     cron.schedule('0 5 * * *', () => {
-        warmDashboardCache().catch(err => 
+        warmDashboardCache().catch(err =>
             console.error('Cache warmer falhou:', err)
         );
     });

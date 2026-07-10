@@ -75,7 +75,7 @@ const MACRO_GRUPOS_CONFIG = [
 
 export default function DashboardPage() {
   const navigate = useNavigate();
-  const { ctx, filialId, filialLabel } = useContexto();
+  const { ctx, filialId, filialLabel, meta } = useContexto();
   const periodo = { filialId, dataInicio: ctx.dataInicio ?? '', dataFim: ctx.dataFim ?? '' };
   const { kpis, processos, produtos, ensaios, carregando, erro } = useDashboard(periodo);
   const dadosPorTipo: Record<string, typeof processos> = { processos, produtos, ensaios };
@@ -187,9 +187,7 @@ export default function DashboardPage() {
   }).filter(g => g.subitens.length > 0 || g.nc > 0 || g.amostras > 0)
     .sort((a, b) => b.nc - a.nc);
 
-  const metaSalva = localStorage.getItem('qlab_meta_conformidade');
-  const parsedMeta = metaSalva ? parseFloat(metaSalva) : 95.0;
-  const metaConformidade = isNaN(parsedMeta) ? 95.0 : parsedMeta;
+  const metaConformidade = isNaN(meta) ? 95.0 : meta;
 
 
   return (
@@ -259,7 +257,7 @@ export default function DashboardPage() {
       </div>
 
       <div style={{ marginBottom: '28px' }}>
-        <ResumoAutomatico dataInicio={periodo.dataInicio} dataFim={periodo.dataFim} filialId={filialId} kpis={kpis} processos={processos} ensaios={ensaios} produtos={produtos} />
+        <ResumoAutomatico dataInicio={periodo.dataInicio} dataFim={periodo.dataFim} filialId={filialId} kpis={kpis} processos={processos} ensaios={ensaios} produtos={produtos} metaConformidade={metaConformidade} />
       </div>
 
       {/* Categorias com dados reais */}

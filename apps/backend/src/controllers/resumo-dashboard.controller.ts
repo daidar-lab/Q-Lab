@@ -5,7 +5,7 @@ import { getResumoDashboard } from '../services/resumo-dashboard.service';
 
 export async function getResumo(req: Request, res: Response, next: NextFunction) {
   try {
-    const { dataInicio, dataFim, filialId: filialIdStr, kpis, processos, ensaios, produtos } = req.body;
+    const { dataInicio, dataFim, filialId: filialIdStr, kpis, processos, ensaios, produtos, metaConformidade } = req.body;
     const filialId = parseInt(filialIdStr);
 
     if (!dataInicio || !dataFim) {
@@ -24,7 +24,8 @@ export async function getResumo(req: Request, res: Response, next: NextFunction)
       kpis,
       processos,
       ensaios,
-      produtos
+      produtos,
+      metaConformidade
     });
     res.json({ ok: true, data });
   } catch (err) {
