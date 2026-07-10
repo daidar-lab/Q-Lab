@@ -101,6 +101,7 @@ export const SHARED_STYLES = `
     padding: 16px 20px;
     border-radius: 0 6px 6px 0;
     margin-bottom: 24px;
+    page-break-inside: avoid;
   }
   .ia-label {
     font-size: 7pt;

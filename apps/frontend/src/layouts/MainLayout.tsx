@@ -133,14 +133,7 @@ export default function MainLayout() {
         <div className="ml-header-top">
           {/* Esquerda — logo */}
           <Link to="/" style={{ display: 'flex', alignItems: 'center', gap: '10px', textDecoration: 'none' }}>
-            <div style={{
-              width: '32px', height: '32px',
-              background: 'var(--clr-primary)',
-              borderRadius: '8px',
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              fontSize: '15px', fontWeight: 800, color: '#fff',
-              flexShrink: 0,
-            }}>Q</div>
+            <img src="/favicon.svg" alt="Q-Lab Logo" style={{ width: '32px', height: '32px', flexShrink: 0 }} />
             <div style={{ display: 'flex', flexDirection: 'column', gap: '1px' }}>
               <span style={{ fontSize: '14px', fontWeight: 700, color: 'var(--clr-nav-text)', lineHeight: 1 }}>
                 Controle de Qualidade

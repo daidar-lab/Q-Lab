@@ -39,6 +39,7 @@ function tabelaRanking(
       <td><span class="rank-num">${i + 1}</span></td>
       <td>${r.nome}</td>
       <td>${r.amostras.toLocaleString('pt-BR')}</td>
+      <td>${r.ensaios.toLocaleString('pt-BR')}</td>
       <td class="badge-nc">${r.nc.toLocaleString('pt-BR')}</td>
       <td>${barraNaoConformidade(r.ensaios, r.nc)}</td>
     </tr>
@@ -53,6 +54,7 @@ function tabelaRanking(
             <th>#</th>
             <th>Nome</th>
             <th>Amostras</th>
+            <th>Ensaios</th>
             <th>NC</th>
             <th>% NC</th>
           </tr>

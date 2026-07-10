@@ -126,7 +126,7 @@ export function buildFaixaHTML(data: {
           <tr>
             <th>#</th>
             <th>Faixa (LIE–LSE)</th>
-            <th>Amostras</th>
+            <th>Ensaios</th>
             <th>Produtos</th>
             <th>% do Total</th>
           </tr>
@@ -144,7 +144,7 @@ export function buildFaixaHTML(data: {
           <tr>
             <th>#</th>
             <th>Produto</th>
-            <th>Amostras</th>
+            <th>Ensaios</th>
             <th>% Conforme</th>
           </tr>
         </thead>

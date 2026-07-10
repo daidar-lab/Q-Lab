@@ -54,6 +54,7 @@ app.use('/api/filiais', filiaisRoutes);
 app.use('/api/perfil', perfilRoutes);
 app.use('/api/v1/export', exportRoutes);
 
+app.disable('x-powered-by');
 // ─── Health check ─────────────────────────────────────────────────────────────
 
 app.get('/health', (_req, res) => {

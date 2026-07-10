@@ -51,7 +51,10 @@ export default function Login() {
             <div style={s.card}>
                 {/* Logo mark */}
                 <div style={s.logoMark}>
-                    <span style={s.logoText}>Q/Lab</span>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+                        <img src="/favicon.svg" alt="Q-Lab Logo" style={{ width: '96px', height: '96px' }} />
+                        <span style={s.logoText}>Q/Lab</span>
+                    </div>
                     <span style={s.logoSub}>Controle de Qualidade</span>
                 </div>
 
@@ -172,10 +175,7 @@ const s: Record<string, CSSProperties> = {
         fontSize: '30px',
         fontWeight: 800,
         letterSpacing: '-0.04em',
-        background: 'linear-gradient(135deg, var(--clr-primary) 0%, #7C3AED 100%)',
-        WebkitBackgroundClip: 'text',
-        WebkitTextFillColor: 'transparent',
-        backgroundClip: 'text',
+        color: 'var(--clr-primary)',
         lineHeight: 1.1,
     },
     logoSub: {

@@ -510,40 +510,40 @@ export const FaixaModal: React.FC<FaixaModalProps> = ({
                                                 wrapperStyle={{ fontSize: 12, paddingTop: 8 }}
                                             />
 
-                                             {/* Linhas de especificação LIE / LSE — apenas no modo com faixa */}
-                                             {!modoSemFaixa && activeFaixas.map((limits, idx) => {
-                                                 const color = LIMIT_COLORS[idx % LIMIT_COLORS.length];
-                                                 return (
-                                                     <React.Fragment key={`${limits.lie}_${limits.lse}`}>
-                                                         <ReferenceLine
-                                                             y={Number(limits.lie)}
-                                                             stroke={color}
-                                                             strokeDasharray="5 3"
-                                                             strokeWidth={1.5}
-                                                             label={{
-                                                                 value: `LIE: ${Number(limits.lie)}`,
-                                                                 position: 'insideBottomLeft',
-                                                                 fill: color,
-                                                                 fontSize: 10,
-                                                                 fontWeight: 600,
-                                                             }}
-                                                         />
-                                                         <ReferenceLine
-                                                             y={Number(limits.lse)}
-                                                             stroke={color}
-                                                             strokeDasharray="5 3"
-                                                             strokeWidth={1.5}
-                                                             label={{
-                                                                 value: `LSE: ${Number(limits.lse)}`,
-                                                                 position: 'insideTopLeft',
-                                                                 fill: color,
-                                                                 fontSize: 10,
-                                                                 fontWeight: 600,
-                                                             }}
-                                                         />
-                                                     </React.Fragment>
-                                                 );
-                                             })}
+                                            {/* Linhas de especificação LIE / LSE — apenas no modo com faixa */}
+                                            {!modoSemFaixa && activeFaixas.map((limits, idx) => {
+                                                const color = LIMIT_COLORS[idx % LIMIT_COLORS.length];
+                                                return (
+                                                    <React.Fragment key={`${limits.lie}_${limits.lse}`}>
+                                                        <ReferenceLine
+                                                            y={Number(limits.lie)}
+                                                            stroke={color}
+                                                            strokeDasharray="5 3"
+                                                            strokeWidth={1.5}
+                                                            label={{
+                                                                value: `LIE: ${Number(limits.lie)}`,
+                                                                position: 'insideBottomLeft',
+                                                                fill: color,
+                                                                fontSize: 10,
+                                                                fontWeight: 600,
+                                                            }}
+                                                        />
+                                                        <ReferenceLine
+                                                            y={Number(limits.lse)}
+                                                            stroke={color}
+                                                            strokeDasharray="5 3"
+                                                            strokeWidth={1.5}
+                                                            label={{
+                                                                value: `LSE: ${Number(limits.lse)}`,
+                                                                position: 'insideTopLeft',
+                                                                fill: color,
+                                                                fontSize: 10,
+                                                                fontWeight: 600,
+                                                            }}
+                                                        />
+                                                    </React.Fragment>
+                                                );
+                                            })}
 
                                             {/* Linha de referência de conformidade — apenas no modo sem faixa */}
                                             {modoSemFaixa && (

@@ -160,6 +160,7 @@
 
 /* ── Mobile: tabela vira card-list (CSS-only, sem mudancas no .tsx) ── */
 @media (max-width: 640px) {
+
   /* Wrapper sem overflow-x para nao ter scroll horizontal */
   .tableWrapper {
     overflow-x: visible;

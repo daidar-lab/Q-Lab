@@ -15,10 +15,16 @@ const IA_GATEWAY_API_KEY4 = process.env.IA_GATEWAY_API_KEY4!;
 const IA_GATEWAY_URL5 = process.env.IA_GATEWAY_URL5!;
 const IA_GATEWAY_API_KEY5 = process.env.IA_GATEWAY_API_KEY5!;
 
+export interface AcaoIA {
+  tipo: 'processo' | 'ensaio';
+  id: string | number;
+  label: string;
+}
+
 export interface RespostaIA {
   texto: string;
-  destaques?: { valor: string; tipo: 'positivo' | 'critico' | 'neutro' }[];
-  acoes?: string[];
+  destaques?: string[];
+  acoes?: AcaoIA[];
 }
 
 //slug: /q-lab-dashboard

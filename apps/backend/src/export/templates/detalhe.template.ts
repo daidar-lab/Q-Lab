@@ -101,7 +101,7 @@ export function buildDetalheHTML(data: {
       <div class="section-title">Resumo do Período</div>
       <div class="kpi-grid">
         <div class="kpi-card">
-          <div class="kpi-label">Total de Amostras</div>
+          <div class="kpi-label">Total de Ensaios</div>
           <div class="kpi-value gold">${Number(resumo?.total ?? 0).toLocaleString('pt-BR')}</div>
         </div>
         <div class="kpi-card">
@@ -147,7 +147,7 @@ export function buildDetalheHTML(data: {
           <tr>
             <th>#</th>
             <th>Ensaio</th>
-            <th>Amostras</th>
+            <th>Ensaios</th>
             <th>% NC</th>
             <th>LIE</th>
             <th>LSE</th>
