@@ -9,7 +9,7 @@ export function cacheMiddleware() {
         const cacheKey = `api-cache:${req.originalUrl || req.url}`;
 
         // ─── LÓGICA DE TEMPO INTELIGENTE ───
-        let ttl = 300; // Padrão: 5 minutos para dados recentes
+        let ttl = 3600; // Padrão: 5 minutos para dados recentes
 
         // Se a requisição tiver um filtro de dataFim (padrão dos seus dashboards)
         if (req.query.dataFim) {
@@ -23,7 +23,7 @@ export function cacheMiddleware() {
             // Se o período filtrado já acabou (ex: mês passado), o dado NUNCA mais vai mudar
             // Então podemos cachear com segurança por 24 horas (86400) ou até mais!
             if (dataFimFiltro < hoje) {
-                ttl = 86400; // 24 horas
+                ttl = 432000; // 24 horas
             }
         }
 
