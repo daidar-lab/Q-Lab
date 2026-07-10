@@ -13,6 +13,8 @@ export function buildFaixaHTML(data: {
   lse: number | null;
   dataInicio: string;
   dataFim: string;
+  operacao?: string;
+  bem?: string;
 }): string {
   const formatDataBR = (d: string) => {
     if (!d) return '';
@@ -101,7 +103,7 @@ export function buildFaixaHTML(data: {
 
   ${buildCover({
     titulo: data.ensaioNome,
-    subtitulo: `${data.processoNome} · Análise de Faixa · ${faixaLabel}`,
+    subtitulo: `${data.processoNome}${data.operacao ? ' · ' + data.operacao : ''}${data.bem ? ' · ' + data.bem : ''} · Análise de Faixa · ${faixaLabel}`,
     filialNome: data.filialNome,
     dataInicio: data.dataInicio,
     dataFim: data.dataFim,

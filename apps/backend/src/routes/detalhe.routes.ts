@@ -11,6 +11,8 @@ router.use(authMiddleware);
 
 router.get('/ensaio/:codEnsaio/centros-custo',                              cache, DetalheController.getCentrosCustoPorEnsaio);
 router.get('/produto/:codProduto/ensaio/:codEnsaio/centros-custo',          cache, DetalheController.getCentrosCustoPorProdutoEEnsaio);
+router.get('/ensaio/:codEnsaio/centro-custo/:codCentroCusto/operacoes',     cache, DetalheController.getOperacoesPorCentroCustoEEnsaio);
+router.get('/ensaio/:codEnsaio/centro-custo/:codCentroCusto/operacao/:operacao/bens', cache, DetalheController.getBensPorOperacao);
 router.get('/informativos/ensaios',                                         cache, DetalheController.getListaEnsaiosInformativosController);
 router.get('/informativos/centros-custo',                                   cache, DetalheController.getCentrosCustoPorInformativoController);
 router.get('/informativos/produtos',                                        cache, DetalheController.getProdutosPorInformativoECentroController);

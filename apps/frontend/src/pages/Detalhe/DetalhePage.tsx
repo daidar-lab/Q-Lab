@@ -7,6 +7,8 @@ import SerieConformidade from '../../components/detalhe/SerieConformidade';
 import FaixaEspecificacao from '../../components/detalhe/FaixaEspecificacao';
 import FaixaModal from '../../components/FaixasExplosao/FaixaModal';
 import SelecionarCentroCustoModal from '../../components/FaixasExplosao/SelecionarCentroCustoModal';
+import SelecionarOperacaoModal from '../../components/FaixasExplosao/SelecionarOperacaoModal';
+import SelecionarBemModal from '../../components/FaixasExplosao/SelecionarBemModal';
 import ResumoIADetalhe from '../../components/detalhe/ResumoIADetalhe';
 import styles from './DetalhePage.module.css';
 import { useExportPDF } from '../../hooks/useExport';
@@ -30,8 +32,12 @@ export default function DetalhePage() {
 
     // Modal states
     const [modalCentroCustoAberto, setModalCentroCustoAberto] = useState(false);
+    const [modalOperacaoAberto, setModalOperacaoAberto] = useState(false);
+    const [modalBemAberto, setModalBemAberto] = useState(false);
     const [modalFaixaAberto, setModalFaixaAberto] = useState(false);
     const [centroCustoResolvido, setCentroCustoResolvido] = useState<{ id: number; nome: string } | null>(null);
+    const [operacaoResolvida, setOperacaoResolvida] = useState<string | null>(null);
+    const [bemResolvido, setBemResolvido] = useState<string | null>(null);
     const [carregandoCentroCusto, setCarregandoCentroCusto] = useState(false);
 
     const isBrassagem =
@@ -79,10 +85,14 @@ export default function DetalhePage() {
 
     useEffect(() => {
         setModalCentroCustoAberto(false);
+        setModalOperacaoAberto(false);
+        setModalBemAberto(false);
         setModalFaixaAberto(false);
         setFaixaSelecionadaObjeto(null);
         setFaixaAtiva(null);
         setCentroCustoResolvido(null);
+        setOperacaoResolvida(null);
+        setBemResolvido(null);
         setCarregandoCentroCusto(false);
         setPrefixoLcq(null);
     }, [tipo, id, origem, natureza, dataInicio, dataFim]);
@@ -90,6 +100,9 @@ export default function DetalhePage() {
     async function handleClickFaixa(faixa: any) {
         setFaixaSelecionadaObjeto(faixa);
         setFaixaAtiva(null);
+        setCentroCustoResolvido(null);
+        setOperacaoResolvida(null);
+        setBemResolvido(null);
 
         if (tipoNormalizado === 'ensaio' || tipoNormalizado === 'ensaios') {
             setModalCentroCustoAberto(true);
@@ -128,7 +141,41 @@ export default function DetalhePage() {
 
     function handleSelecionarCentroCusto(codCentroCusto: number, nome: string) {
         setCentroCustoResolvido({ id: codCentroCusto, nome });
+        setOperacaoResolvida(null);
+        setBemResolvido(null);
         setModalCentroCustoAberto(false);
+        
+        const nomeNorm = nome.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toUpperCase();
+        if (
+            nomeNorm === 'FERMENTACAO' ||
+            nomeNorm === 'UTILIDADES' ||
+            nomeNorm === 'FILTRACAO' ||
+            nomeNorm === 'ETA' ||
+            nomeNorm === 'ETDI' ||
+            nomeNorm.startsWith('BRASSAGEM')
+        ) {
+            setModalOperacaoAberto(true);
+        } else {
+            setModalFaixaAberto(true);
+        }
+    }
+
+    function handleSelecionarOperacao(operacao: string) {
+        setOperacaoResolvida(operacao);
+        setModalOperacaoAberto(false);
+
+        const nomeNorm = centroCustoResolvido?.nome?.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toUpperCase() || '';
+        if (nomeNorm.startsWith('BRASSAGEM')) {
+            // Brassagem doesn't need 'Bem'
+            setModalFaixaAberto(true);
+        } else {
+            setModalBemAberto(true);
+        }
+    }
+
+    function handleSelecionarBem(bem: string) {
+        setBemResolvido(bem);
+        setModalBemAberto(false);
         setModalFaixaAberto(true);
     }
 
@@ -276,6 +323,37 @@ export default function DetalhePage() {
                 />
             )}
 
+            {/* Modal de Operação */}
+            {faixaSelecionadaObjeto && centroCustoResolvido && (
+                <SelecionarOperacaoModal
+                    isOpen={modalOperacaoAberto}
+                    onClose={() => setModalOperacaoAberto(false)}
+                    onSelecionar={handleSelecionarOperacao}
+                    codEnsaio={String(faixaSelecionadaObjeto.cod_ensaio)}
+                    ensaioNome={faixaSelecionadaObjeto.ensaio}
+                    codCentroCusto={String(centroCustoResolvido.id)}
+                    centroCustoNome={centroCustoResolvido.nome}
+                    dataInicio={dataInicio}
+                    dataFim={dataFim}
+                />
+            )}
+
+            {/* Modal de Bem */}
+            {faixaSelecionadaObjeto && centroCustoResolvido && operacaoResolvida && (
+                <SelecionarBemModal
+                    isOpen={modalBemAberto}
+                    onClose={() => setModalBemAberto(false)}
+                    onSelecionar={handleSelecionarBem}
+                    codEnsaio={String(faixaSelecionadaObjeto.cod_ensaio)}
+                    ensaioNome={faixaSelecionadaObjeto.ensaio}
+                    codCentroCusto={String(centroCustoResolvido.id)}
+                    centroCustoNome={centroCustoResolvido.nome}
+                    operacao={operacaoResolvida}
+                    dataInicio={dataInicio}
+                    dataFim={dataFim}
+                />
+            )}
+
             {/* FaixaModal — abre direto em Processo, após seleção de CC em Ensaio/Produto */}
             {modalFaixaAberto && faixaSelecionadaObjeto && (
                 <FaixaModal
@@ -297,7 +375,8 @@ export default function DetalhePage() {
                     ensaioNome={faixaSelecionadaObjeto.ensaio}
                     dataInicio={dataInicio}
                     dataFim={dataFim}
-                    operacao={faixaSelecionadaObjeto.operacao}
+                    operacao={operacaoResolvida || faixaSelecionadaObjeto.operacao}
+                    bem={bemResolvido || undefined}
                 />
             )}
 

@@ -18,6 +18,8 @@ interface FaixaCardProps {
     codEnsaio: string;
     dataInicio: string;
     dataFim: string;
+    operacao?: string;
+    bem?: string;
     selectedSkus: string[];
     onToggleSku: (codProduto: string) => void;
 }
@@ -30,6 +32,8 @@ export const FaixaCard: React.FC<FaixaCardProps> = ({
     codEnsaio,
     dataInicio,
     dataFim,
+    operacao,
+    bem,
     selectedSkus,
     onToggleSku,
 }) => {
@@ -69,6 +73,8 @@ export const FaixaCard: React.FC<FaixaCardProps> = ({
                         lse={lse}
                         dataInicio={dataInicio}
                         dataFim={dataFim}
+                        operacao={operacao}
+                        bem={bem}
                         selectedSkus={selectedSkus}
                         onToggleSku={onToggleSku}
                     />

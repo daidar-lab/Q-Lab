@@ -201,7 +201,7 @@ export async function getFaixasEspecificacao(
   let filterOperacaoSql = '';
   let filterOperacaoParams: any[] = [];
   let filterDwOperacaoSql = '';
-  
+
   if (isBrassagem) {
     const tuples = chaves.map(() => '(?,?)').join(',');
     filterOperacaoSql = `\n        AND (cod_ensaio, operacao) IN (${tuples})`;
@@ -305,7 +305,7 @@ export async function getDetalheCompleto(params: DetalheParams) {
   return { serie, resumo, topEnsaios, faixas };
 }
 
-// Top 4 centros de custo com mais NC para um ensaio fixo
+//centros de custo
 export async function getCentrosCustoPorEnsaio(params: {
   codEnsaio: number;
   dataInicio: string;
@@ -326,7 +326,6 @@ export async function getCentrosCustoPorEnsaio(params: {
       AND data_resultado BETWEEN ? AND ?
     GROUP BY cod_centro_de_custo, centro_de_custo
     ORDER BY n_nao_conforme DESC
-    LIMIT 4
   `, [params.codEnsaio, params.dataInicio, params.dataFim]);
 }
 
@@ -354,6 +353,62 @@ export async function getCentrosCustoPorProdutoEEnsaio(params: {
     GROUP BY cod_centro_de_custo, centro_de_custo
     ORDER BY n_amostras DESC
   `, [params.codProduto, params.codEnsaio, params.dataInicio, params.dataFim]);
+}
+
+// =========================================================================
+// FILTROS INTERMEDIÁRIOS (OPERAÇÃO E BEM)
+// =========================================================================
+
+export async function getOperacoesPorCentroCustoEEnsaio(params: {
+  codEnsaio: number;
+  codCentroCusto: number;
+  dataInicio: string;
+  dataFim: string;
+}) {
+  return blabQuery(`
+    SELECT
+      operacao,
+      COUNT(*)                          AS n_amostras,
+      SUM(conformidade != 'CONFORME')   AS n_nao_conforme,
+      ROUND(SUM(conformidade != 'CONFORME') * 1.0 / COUNT(*) * 100, 1) AS pct_nao_conforme
+    FROM DW_FAT_RESULTADO
+    WHERE D_E_L_E_T IS NULL
+      AND conformidade != 'NÃO AVALIADO'
+      AND cod_ensaio = ?
+      AND cod_centro_de_custo = ?
+      AND operacao IS NOT NULL
+      AND operacao != ''
+      AND data_resultado BETWEEN ? AND ?
+    GROUP BY operacao
+    ORDER BY n_amostras DESC
+  `, [params.codEnsaio, params.codCentroCusto, params.dataInicio, params.dataFim]);
+}
+
+export async function getBensPorOperacao(params: {
+  codEnsaio: number;
+  codCentroCusto: number;
+  operacao: string;
+  dataInicio: string;
+  dataFim: string;
+}) {
+  return blabQuery(`
+    SELECT
+      bem,
+      COUNT(*)                          AS n_amostras,
+      SUM(conformidade != 'CONFORME')   AS n_nao_conforme,
+      ROUND(SUM(conformidade != 'CONFORME') * 1.0 / COUNT(*) * 100, 1) AS pct_nao_conforme
+    FROM DW_FAT_RESULTADO
+    WHERE D_E_L_E_T IS NULL
+      AND conformidade != 'NÃO AVALIADO'
+      AND cod_ensaio = ?
+      AND cod_centro_de_custo = ?
+      AND operacao = ?
+      AND bem IS NOT NULL
+      AND bem != ''
+      AND data_resultado BETWEEN ? AND ?
+    GROUP BY bem
+    ORDER BY n_amostras DESC
+  `, [params.codEnsaio, params.codCentroCusto, params.operacao, params.dataInicio, params.dataFim]);
 }
 
 // =========================================================================
@@ -471,4 +526,4 @@ export async function getAmostrasPorInformativoECentroEProduto(
       AND data_resultado BETWEEN ? AND ?
     ORDER BY data_resultado DESC, hora_resultado DESC
   `, queryParams);
-}
+}

@@ -28,6 +28,7 @@ interface FaixaModalProps {
     dataInicio: string;
     dataFim: string;
     operacao?: string;
+    bem?: string;
 }
 
 interface SamplePoint {
@@ -201,6 +202,7 @@ export const FaixaModal: React.FC<FaixaModalProps> = ({
     dataInicio,
     dataFim,
     operacao,
+    bem,
 }) => {
     const { filialId, filialLabel } = useContexto();
     const [selectedSkus, setSelectedSkus] = useState<string[]>([]);
@@ -430,7 +432,8 @@ export const FaixaModal: React.FC<FaixaModalProps> = ({
                                 dataFim,
                                 filialNome: filialLabel || 'Filial Q/Lab',
                                 processoNome: typeof id === 'string' && isNaN(Number(id)) ? id : 'Centro de Custo ' + id,
-                                operacao
+                                operacao,
+                                bem
                             })}
                             disabled={exportando}
                             style={{
@@ -457,6 +460,7 @@ export const FaixaModal: React.FC<FaixaModalProps> = ({
                             dataInicio={dataInicio}
                             dataFim={dataFim}
                             operacao={operacao}
+                            bem={bem}
                             selectedSkus={selectedSkus}
                             onSelectedSkusChange={setSelectedSkus}
                             onActiveFaixasChange={setActiveFaixas}

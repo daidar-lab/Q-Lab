@@ -97,18 +97,18 @@ export async function exportDetalhe(req: Request, res: Response) {
 }
 
 export async function exportFaixa(req: Request, res: Response) {
-  const { id, codEnsaio, ensaioNome, lie, lse, codProdutos, filialId, dataInicio, dataFim, filialNome, processoNome, operacao } = req.body;
+  const { id, codEnsaio, ensaioNome, lie, lse, codProdutos, filialId, dataInicio, dataFim, filialNome, processoNome, operacao, bem } = req.body;
   const filialIdNum = Number(filialId);
   const temFaixa = lie !== null && lie !== undefined && lse !== null && lse !== undefined;
 
   const [explosao, produtos, historico] = await Promise.all([
-    getExplosaoFaixas(id, codEnsaio, dataInicio, dataFim, filialIdNum, operacao),
+    getExplosaoFaixas(id, codEnsaio, dataInicio, dataFim, filialIdNum, operacao, bem),
     temFaixa
-      ? getProdutosPorFaixa(id, codEnsaio, lie as number, lse as number, dataInicio, dataFim, filialIdNum, operacao)
-      : getProdutosSemFaixa(id, codEnsaio, dataInicio, dataFim, filialIdNum, operacao),
+      ? getProdutosPorFaixa(id, codEnsaio, lie as number, lse as number, dataInicio, dataFim, filialIdNum, operacao, bem)
+      : getProdutosSemFaixa(id, codEnsaio, dataInicio, dataFim, filialIdNum, operacao, bem),
     temFaixa
-      ? getHistoricoProdutosFaixa(id, codEnsaio, lie as number, lse as number, dataInicio, dataFim, codProdutos ?? [], filialIdNum, operacao)
-      : getHistoricoProdutosSemFaixa(id, codEnsaio, dataInicio, dataFim, codProdutos ?? [], filialIdNum, operacao),
+      ? getHistoricoProdutosFaixa(id, codEnsaio, lie as number, lse as number, dataInicio, dataFim, codProdutos ?? [], filialIdNum, operacao, bem)
+      : getHistoricoProdutosSemFaixa(id, codEnsaio, dataInicio, dataFim, codProdutos ?? [], filialIdNum, operacao, bem),
   ]);
 
   const contextoIA = {
@@ -132,7 +132,7 @@ export async function exportFaixa(req: Request, res: Response) {
     return r;
   })();
 
-  const html = buildFaixaHTML({ explosao, produtos, historico, resumoIA, filialNome, processoNome, ensaioNome, lie, lse, dataInicio, dataFim });
+  const html = buildFaixaHTML({ explosao, produtos, historico, resumoIA, filialNome, processoNome, ensaioNome, lie, lse, dataInicio, dataFim, operacao, bem });
   const buffer = await renderizarPDF(html);
 
   res.setHeader('Content-Type', 'application/pdf');

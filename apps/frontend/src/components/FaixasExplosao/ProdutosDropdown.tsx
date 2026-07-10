@@ -17,6 +17,8 @@ interface ProdutosDropdownProps {
   lse: number;
   dataInicio: string;
   dataFim: string;
+  operacao?: string;
+  bem?: string;
   selectedSkus: string[];
   onToggleSku: (codProduto: string) => void;
   /** Se true, usa o endpoint sem-faixa (processo ou produto sem LIE/LSE) */
@@ -30,6 +32,8 @@ export const ProdutosDropdown: React.FC<ProdutosDropdownProps> = ({
   lse,
   dataInicio,
   dataFim,
+  operacao,
+  bem,
   selectedSkus,
   onToggleSku,
   semFaixa = false,
@@ -50,8 +54,8 @@ export const ProdutosDropdown: React.FC<ProdutosDropdownProps> = ({
           : '/api/analitica/detalhe/faixas/produtos';
 
         const params: Record<string, any> = semFaixa
-          ? { id, codEnsaio, dataInicio, dataFim, filialId }
-          : { id, codEnsaio, lie, lse, dataInicio, dataFim, filialId };
+          ? { id, codEnsaio, dataInicio, dataFim, filialId, ...(operacao ? { operacao } : {}), ...(bem ? { bem } : {}) }
+          : { id, codEnsaio, lie, lse, dataInicio, dataFim, filialId, ...(operacao ? { operacao } : {}), ...(bem ? { bem } : {}) };
 
         const data = await request<ProdutoFaixa[]>(endpoint, { params });
         setProdutos(data || []);
@@ -64,7 +68,7 @@ export const ProdutosDropdown: React.FC<ProdutosDropdownProps> = ({
     };
 
     fetchProdutos();
-  }, [id, codEnsaio, lie, lse, dataInicio, dataFim, semFaixa, filialId]);
+  }, [id, codEnsaio, lie, lse, dataInicio, dataFim, semFaixa, filialId, operacao, bem]);
 
 
   const getComplianceBadge = (pct: number | string | undefined | null) => {

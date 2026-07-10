@@ -37,6 +37,18 @@ export const detalheApi = {
         });
         return res.data;
     },
+    getOperacoesPorCentroCustoEEnsaio: async (codEnsaio: string, codCentroCusto: string, dataInicio: string, dataFim: string) => {
+        const res = await request<{ ok: boolean; data: any }>(`/api/detalhe/ensaio/${codEnsaio}/centro-custo/${codCentroCusto}/operacoes`, {
+            params: { dataInicio, dataFim },
+        });
+        return res.data;
+    },
+    getBensPorOperacao: async (codEnsaio: string, codCentroCusto: string, operacao: string, dataInicio: string, dataFim: string) => {
+        const res = await request<{ ok: boolean; data: any }>(`/api/detalhe/ensaio/${codEnsaio}/centro-custo/${codCentroCusto}/operacao/${operacao}/bens`, {
+            params: { dataInicio, dataFim },
+        });
+        return res.data;
+    },
 
     getHistoricoProdutosFaixa: async (
         id: string | number,
@@ -47,10 +59,11 @@ export const detalheApi = {
         dataFim: string,
         produtos: string[],
         filialId: number,
-        operacao?: string
+        operacao?: string,
+        bem?: string
     ) => {
         return request<any[]>('/api/analitica/detalhe/faixas/produtos/historico', {
-            params: { id, codEnsaio, lie, lse, dataInicio, dataFim, produtos: produtos.join(','), filialId, ...(operacao ? { operacao } : {}) },
+            params: { id, codEnsaio, lie, lse, dataInicio, dataFim, produtos: produtos.join(','), filialId, ...(operacao ? { operacao } : {}), ...(bem ? { bem } : {}) },
         });
     },
 
@@ -62,10 +75,11 @@ export const detalheApi = {
         dataFim: string,
         produtos: string[],
         filialId: number,
-        operacao?: string
+        operacao?: string,
+        bem?: string
     ) => {
         return request<any[]>('/api/analitica/detalhe/faixas/sem-faixa/historico', {
-            params: { id, codEnsaio, dataInicio, dataFim, produtos: produtos.join(','), filialId, ...(operacao ? { operacao } : {}) },
+            params: { id, codEnsaio, dataInicio, dataFim, produtos: produtos.join(','), filialId, ...(operacao ? { operacao } : {}), ...(bem ? { bem } : {}) },
         });
     },
 
@@ -75,10 +89,12 @@ export const detalheApi = {
         codEnsaio: string,
         dataInicio: string,
         dataFim: string,
-        filialId: number
+        filialId: number,
+        operacao?: string,
+        bem?: string
     ) => {
         return request<any[]>('/api/analitica/detalhe/faixas/sem-faixa/produtos', {
-            params: { id, codEnsaio, dataInicio, dataFim, filialId },
+            params: { id, codEnsaio, dataInicio, dataFim, filialId, ...(operacao ? { operacao } : {}), ...(bem ? { bem } : {}) },
         });
     },
 
