@@ -2,6 +2,7 @@ import { useState, useEffect, type FormEvent } from 'react';
 import { listar, criar, atualizar, desativar } from '../../services/usuarios.api';
 import { atualizarMeta as atualizarMetaApi } from '../../services/perfil.api';
 import { useContexto } from '../../contexts/ContextoProvider';
+import { useAuth } from '../../contexts/AuthProvider';
 import { UserFiliaisModal } from './UserFiliaisModal';
 import type { Usuario, Role } from '@qlab/types';
 import type { CSSProperties } from 'react';
@@ -10,6 +11,7 @@ type UsuarioSemSenha = Omit<Usuario, 'senha'>;
 
 export default function ConfigPage() {
     const { meta: metaContexto, setMeta: setMetaContexto } = useContexto();
+    const { refreshSession } = useAuth();
     
     const [usuarios, setUsuarios] = useState<UsuarioSemSenha[]>([]);
     const [loading, setLoading] = useState(true);
@@ -50,6 +52,7 @@ export default function ConfigPage() {
         try {
             await atualizarMetaApi(val);
             setMetaContexto(val);
+            await refreshSession();
             setMsgMeta('Meta de conformidade salva com sucesso!');
             setTimeout(() => setMsgMeta(''), 3000);
         } catch (e: any) {
