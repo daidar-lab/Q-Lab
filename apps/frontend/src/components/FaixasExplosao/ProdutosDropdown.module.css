@@ -158,12 +158,15 @@
   }
 }
 
-/* ── Mobile: tabela vira card-list (CSS-only, sem mudancas no .tsx) ── */
 @media (max-width: 640px) {
 
   /* Wrapper sem overflow-x para nao ter scroll horizontal */
   .tableWrapper {
     overflow-x: visible;
+    /* Remove borda/fundo do wrapper — cada card tem o proprio */
+    border: none;
+    background: transparent;
+    border-radius: 0;
   }
 
   /* Table e filhos se comportam como block/flex */
@@ -179,49 +182,65 @@
     display: none;
   }
 
-  /* Cada linha vira um card */
+  /*
+   * Cada linha vira um card com DUAS LINHAS:
+   *   Linha 1: [ checkbox ][ nome do produto (ocupa tudo) ]
+   *   Linha 2: [ badge alinhado a direita                 ]
+   *
+   * Isso garante que o badge nunca seja cortado, independente
+   * do tamanho do nome.
+   */
   .tr {
     display: flex;
+    flex-wrap: wrap;          /* permite quebra de linha */
     align-items: center;
-    gap: 10px;
+    gap: 4px 10px;
     padding: 10px 12px;
     border: 1px solid var(--clr-border, #E7E5E4);
     border-radius: 8px;
     margin-bottom: 6px;
-    border-top: 1px solid var(--clr-border, #E7E5E4);
     background: var(--clr-surface, #fff);
+    overflow: visible;        /* nunca clipar o badge */
   }
 
   .tr:hover {
     background-color: var(--clr-surface-2, #F4F1EA);
   }
 
-  /* Celula do checkbox — tamanho fixo */
+  /* ── Linha 1: checkbox (flex fixo) ── */
   .td.tdSelect {
     flex: 0 0 auto;
     padding: 0;
+    align-self: flex-start;
+    padding-top: 2px;
   }
 
-  /* Celula do nome — cresce */
+  /* ── Linha 1: nome (preenche resto da linha 1) ── */
   .td.productName {
-    flex: 1;
+    flex: 1 1 0;              /* cresce, mas nao quebra para segunda linha */
     min-width: 0;
     padding: 0;
     font-size: 13px;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
+    font-weight: 500;
+    color: #1C1917;
+    line-height: 1.35;
+    /* Permite ate 2 linhas de texto sem esconder o badge */
+    white-space: normal;
+    word-break: break-word;
   }
 
-  /* Coluna de amostras — esconde em mobile (ocupa espaco desnecessario) */
+  /* ── Linha 2: amostras — escondida em mobile ── */
   .td.samples {
     display: none;
   }
 
-  /* Badge de conformidade — ocupa apenas o necessario */
+  /* ── Linha 2: badge (ocupa linha propria, alinhado a direita) ── */
   .td.compliance {
-    flex: 0 0 auto;
+    flex: 1 1 100%;           /* ocupa linha inteira abaixo do nome */
     padding: 0;
+    display: flex;
+    justify-content: flex-end; /* badge vai para a direita */
+    white-space: nowrap;
   }
 
   /* Checkbox maior para toque */
@@ -230,9 +249,12 @@
     height: 22px;
   }
 
-  /* Badge menor em mobile */
+  /* Badge ajustado para mobile */
   .badge {
     font-size: 11px;
-    padding: 2px 6px;
+    padding: 3px 8px;
+    white-space: nowrap;
+    display: inline-flex;
+    align-items: center;
   }
 }

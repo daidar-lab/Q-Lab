@@ -154,11 +154,11 @@
   /* Gráfico vem PRIMEIRO (sticky/fixo no topo) */
   .rightCol {
     flex: 0 0 auto;
-    height: 260px;
+    height: auto;          /* não fixar altura — o gráfico define */
     min-height: 0;
     padding: 12px;
     gap: 8px;
-    overflow: hidden;
+    overflow: visible;     /* deixa o scroll horizontal interno funcionar */
     border-bottom: 1px solid var(--clr-border, #e7e5e4);
     border-right: none;
     background-color: var(--clr-background, #fafaf9);
@@ -237,9 +237,7 @@
 
 @media (max-width: 640px) {
   .chartWrapper {
-    height: 160px;
-    flex: 1;
-    min-height: 0;
+    display: none; /* nunca usado no mobile — o mobile usa chartWrapperMobile */
   }
 }
 
@@ -347,4 +345,45 @@
 .opcaoCentroCusto span {
   font-size: 12px;
   color: var(--clr-text-2, #78716c);
+}
+
+/* ── Virtual Landscape (mobile only) ─────────────────────────────── */
+.chartWrapperMobile {
+  display: none; /* escondido no desktop */
+}
+
+.chartScrollOuter {
+  width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  border-radius: var(--r-md, 6px);
+}
+
+.chartScrollInner {
+  width: 700px;        /* largura fixa — gráfico "deitado" */
+  height: 290px;       /* altura fixa incluindo legenda */
+}
+
+@media (max-width: 640px) {
+  .chartWrapperMobile {
+    display: block;
+    width: 100%;
+  }
+
+  /* Dica visual de scroll — fade na borda direita */
+  .chartScrollOuter {
+    position: relative;
+  }
+
+  .chartScrollOuter::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    right: 0;
+    width: 32px;
+    height: 100%;
+    background: linear-gradient(to right, transparent, var(--clr-surface, #fff));
+    pointer-events: none;
+    border-radius: 0 var(--r-md, 6px) var(--r-md, 6px) 0;
+  }
 }
