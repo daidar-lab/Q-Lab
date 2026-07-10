@@ -12,6 +12,7 @@ interface FaixasContainerProps {
     dataInicio: string;
     dataFim: string;
     operacao?: string;
+    bem?: string;
     selectedSkus: string[];
     onSelectedSkusChange: (skus: string[]) => void;
     onActiveFaixasChange?: (limits: { lie: number; lse: number }[]) => void;
@@ -25,6 +26,7 @@ export const FaixasContainer: React.FC<FaixasContainerProps> = ({
     dataInicio,
     dataFim,
     operacao,
+    bem,
     selectedSkus,
     onSelectedSkusChange,
     onActiveFaixasChange,
@@ -54,6 +56,7 @@ export const FaixasContainer: React.FC<FaixasContainerProps> = ({
                         dataFim,
                         filialId,
                         ...(operacao ? { operacao } : {}),
+                        ...(bem ? { bem } : {}),
                     },
                 });
 
@@ -80,7 +83,7 @@ export const FaixasContainer: React.FC<FaixasContainerProps> = ({
         if (id && codEnsaio) {
             fetchFaixas();
         }
-    }, [id, codEnsaio, dataInicio, dataFim, operacao]);
+    }, [id, codEnsaio, dataInicio, dataFim, operacao, bem]);
 
     // Reset parent active limits and local expanded key when codEnsaio changes
     useEffect(() => {
@@ -149,6 +152,8 @@ export const FaixasContainer: React.FC<FaixasContainerProps> = ({
                     selectedSkus={selectedSkus}
                     onToggleSku={handleToggleSku}
                     semFaixa={true}
+                    operacao={operacao}
+                    bem={bem}
                 />
             </div>
         );
@@ -185,6 +190,8 @@ export const FaixasContainer: React.FC<FaixasContainerProps> = ({
                             codEnsaio={codEnsaio}
                             dataInicio={dataInicio}
                             dataFim={dataFim}
+                            operacao={operacao}
+                            bem={bem}
                             selectedSkus={selectedSkus}
                             onToggleSku={handleToggleSku}
                         />

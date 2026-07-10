@@ -74,6 +74,44 @@ export async function getCentrosCustoPorProdutoEEnsaio(req: Request, res: Respon
   }
 }
 
+export async function getOperacoesPorCentroCustoEEnsaio(req: Request, res: Response, next: NextFunction) {
+  try {
+    const { codCentroCusto, codEnsaio } = req.params;
+    const { dataInicio, dataFim } = req.query;
+
+    const data = await DetalheService.getOperacoesPorCentroCustoEEnsaio({
+      codCentroCusto: Number(codCentroCusto),
+      codEnsaio: Number(codEnsaio),
+      dataInicio: String(dataInicio),
+      dataFim: String(dataFim),
+    });
+
+    res.json({ ok: true, data });
+  } catch (err) {
+    next(err);
+  }
+}
+
+export async function getBensPorOperacao(req: Request, res: Response, next: NextFunction) {
+  try {
+    const { codCentroCusto, codEnsaio, operacao } = req.params;
+    const { dataInicio, dataFim } = req.query;
+
+    const data = await DetalheService.getBensPorOperacao({
+      codCentroCusto: Number(codCentroCusto),
+      codEnsaio: Number(codEnsaio),
+      operacao: String(operacao),
+      dataInicio: String(dataInicio),
+      dataFim: String(dataFim),
+    });
+
+    res.json({ ok: true, data });
+  } catch (err) {
+    next(err);
+  }
+}
+
+
 export async function getResumoDetalheIAController(req: Request, res: Response, next: NextFunction) {
   try {
     const { tipo, id } = req.params;
