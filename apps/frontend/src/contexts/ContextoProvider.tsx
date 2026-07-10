@@ -48,11 +48,20 @@ export function ContextoProvider({ children }: { children: ReactNode }) {
     });
     const [meta, setMeta] = useState<number>(metaAuth);
 
-    const [ctx, setCtx] = useState<Partial<ContextoAnalise>>({
-        filialId: filialId ?? undefined,
-        dataInicio: defPeriodo.dataInicio,
-        dataFim: defPeriodo.dataFim,
+    const [ctx, setCtx] = useState<Partial<ContextoAnalise>>(() => {
+        const cachedInicio = localStorage.getItem('qlab:dataInicio');
+        const cachedFim = localStorage.getItem('qlab:dataFim');
+        return {
+            filialId: filialId ?? undefined,
+            dataInicio: cachedInicio || defPeriodo.dataInicio,
+            dataFim: cachedFim || defPeriodo.dataFim,
+        };
     });
+
+    useEffect(() => {
+        if (ctx.dataInicio) localStorage.setItem('qlab:dataInicio', ctx.dataInicio);
+        if (ctx.dataFim) localStorage.setItem('qlab:dataFim', ctx.dataFim);
+    }, [ctx.dataInicio, ctx.dataFim]);
     const [modoAnalyse, setModoAnalyse] = useState<'individual' | 'ranges' | 'granularidade'>('individual');
     const [periodo2, setPeriodo2] = useState<{ inicio: string; fim: string }>({ inicio: '', fim: '' });
     const [granularidade, setGranularidade] = useState<'dia' | 'semana' | 'mes' | 'trimestre' | 'ano'>('dia');
@@ -126,6 +135,8 @@ export function ContextoProvider({ children }: { children: ReactNode }) {
 
     function reset() {
         const defPeriodo = periodoDefault();
+        localStorage.removeItem('qlab:dataInicio');
+        localStorage.removeItem('qlab:dataFim');
         setCtx({
             filialId: filialId ?? undefined,
             dataInicio: defPeriodo.dataInicio,
