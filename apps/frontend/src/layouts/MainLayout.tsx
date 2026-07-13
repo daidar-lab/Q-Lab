@@ -136,7 +136,7 @@ export default function MainLayout() {
             <img src="/favicon.svg" alt="Q-Lab Logo" style={{ width: '32px', height: '32px', flexShrink: 0 }} />
             <div style={{ display: 'flex', flexDirection: 'column', gap: '1px' }}>
               <span style={{ fontSize: '14px', fontWeight: 700, color: 'var(--clr-nav-text)', lineHeight: 1 }}>
-                Controle de Qualidade
+                Q/Lab
               </span>
               <span style={{ fontSize: '10px', fontWeight: 500, color: 'var(--clr-nav-text-2)', letterSpacing: '0.08em', textTransform: 'uppercase' }}>
                 Laboratório · Cervejaria

@@ -78,9 +78,10 @@ export default function DashboardPage() {
   const { ctx, filialId, filialLabel, meta } = useContexto();
   const periodo = { filialId, dataInicio: ctx.dataInicio ?? '', dataFim: ctx.dataFim ?? '' };
   const { kpis, processos, produtos, ensaios, carregando, erro } = useDashboard(periodo);
-  const dadosPorTipo: Record<string, typeof processos> = { processos, produtos, ensaios };
+  const dadosPorTipo: Record<string, typeof ensaios> = { processos, ensaios };
   const [expandedCategories, setExpandedCategories] = useState<Record<string, boolean>>({});
   const [expandedMacros, setExpandedMacros] = useState<Record<string, boolean>>({});
+  const [expandedTiposProduto, setExpandedTiposProduto] = useState<Record<string, boolean>>({});
   const [informativosOpen, setInformativosOpen] = useState(false);
 
   const { exportar, exportando } = useExportPDF('dashboard');
@@ -269,7 +270,12 @@ export default function DashboardPage() {
       <div className="db-cat-grid" style={{ display: 'flex', gap: '16px', flexWrap: 'wrap' }}>
         {CATEGORIAS_META.map(cat => {
           const isProcessos = cat.tipo === 'processos';
-          const totalItens = isProcessos ? macroGruposAglutinados : (dadosPorTipo[cat.tipo] ?? []);
+          const isProdutos  = cat.tipo === 'produtos';
+          const totalItens = isProcessos
+            ? macroGruposAglutinados
+            : isProdutos
+              ? produtos
+              : (dadosPorTipo[cat.tipo] ?? []);
           const ncTotal = totalItens.reduce((s, i) => s + Number(i.nc), 0);
           const isCategoryExpanded = !!expandedCategories[cat.tipo];
           const visibleItens = isCategoryExpanded ? totalItens : totalItens.slice(0, 3);
@@ -315,11 +321,11 @@ export default function DashboardPage() {
                           <span>{macro.nome}</span>
                         </div>
                         <div style={{ fontSize: '12px', color: 'var(--clr-text-3)', marginTop: '2px', paddingLeft: '14px' }}>
-                          {macro.amostras} amostras
+                          {macro.amostras.toLocaleString('pt-BR')} amostras
                         </div>
                       </div>
-                      <span style={{ minWidth: '28px', textAlign: 'center', fontSize: '13px', fontWeight: 700, color: '#fff', background: macro.nc > 10 ? 'var(--clr-danger)' : macro.nc > 0 ? 'var(--clr-warning)' : 'var(--clr-text-3)', padding: '2px 8px', borderRadius: 'var(--r-full)' }}>
-                        {macro.nc}
+                      <span style={{ minWidth: '28px', textAlign: 'center', fontSize: '13px', fontWeight: 700, color: '#fff', background: macro.nc > 10 ? 'var(--clr-danger)' : macro.nc > 0 ? 'var(--clr-warning)' : 'var(--clr-text-3)', padding: '2px 8px', borderRadius: 'var(--r-full)', flexShrink: 0 }}>
+                        {macro.nc.toLocaleString('pt-BR')}
                       </span>
                     </div>
 
@@ -338,11 +344,11 @@ export default function DashboardPage() {
                             onMouseEnter={e => (e.currentTarget.style.background = 'var(--clr-border)')}
                             onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
                           >
-                            <span style={{ fontSize: '13px', fontWeight: 500, color: 'var(--clr-text-2)' }}>{sub.nome}</span>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                              <span style={{ fontSize: '11px', color: 'var(--clr-text-3)' }}>{sub.amostras} amostras</span>
-                              <span style={{ minWidth: '20px', textAlign: 'center', fontSize: '11px', fontWeight: 700, color: '#fff', background: sub.nc > 10 ? 'var(--clr-danger)' : sub.nc > 0 ? 'var(--clr-warning)' : 'var(--clr-text-3)', padding: '1px 6px', borderRadius: 'var(--r-full)' }}>
-                                {sub.nc}
+                            <span style={{ fontSize: '13px', fontWeight: 500, color: 'var(--clr-text-2)', flex: 1, paddingRight: '12px', lineHeight: 1.3 }}>{sub.nome}</span>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexShrink: 0, whiteSpace: 'nowrap' }}>
+                              <span style={{ fontSize: '11px', color: 'var(--clr-text-3)' }}>{sub.amostras.toLocaleString('pt-BR')} amostras</span>
+                              <span style={{ minWidth: '20px', textAlign: 'center', fontSize: '11px', fontWeight: 700, color: '#fff', background: sub.nc > 10 ? 'var(--clr-danger)' : sub.nc > 0 ? 'var(--clr-warning)' : 'var(--clr-text-3)', padding: '1px 6px', borderRadius: 'var(--r-full)', flexShrink: 0 }}>
+                                {sub.nc.toLocaleString('pt-BR')}
                               </span>
                             </div>
                           </div>
@@ -353,8 +359,86 @@ export default function DashboardPage() {
                 );
               })}
 
-              {/* Renderização de Outras Categorias (Produtos e Ensaios planos) */}
-              {!isProcessos && visibleItens.map((item, i) => (
+              {/* Renderização de Produtos (Estrutura de Árvore: Tipo → Produto) */}
+              {isProdutos && (visibleItens as typeof produtos).map((tipoItem, i) => {
+                const isTipoExpanded = !!expandedTiposProduto[tipoItem.tipo];
+                return (
+                  <div
+                    key={tipoItem.tipo}
+                    style={{ borderBottom: i < visibleItens.length - 1 ? '1px solid var(--clr-border)' : 'none' }}
+                  >
+                    {/* Cabeçalho do tipo — clicável para expandir */}
+                    <div
+                      onClick={() =>
+                        setExpandedTiposProduto(prev => ({ ...prev, [tipoItem.tipo]: !prev[tipoItem.tipo] }))
+                      }
+                      style={{
+                        padding: '14px 20px',
+                        display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                        cursor: 'pointer', transition: 'background var(--t-fast)',
+                      }}
+                      onMouseEnter={e => (e.currentTarget.style.background = 'var(--clr-surface-2)')}
+                      onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
+                    >
+                      <div>
+                        <div style={{ fontSize: '14px', fontWeight: 700, color: 'var(--clr-text)', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                          <span>{isTipoExpanded ? '▼' : '▶'}</span>
+                          <span style={{ textTransform: 'capitalize' }}>{tipoItem.tipo.toLowerCase()}</span>
+                        </div>
+                        <div style={{ fontSize: '12px', color: 'var(--clr-text-3)', marginTop: '2px', paddingLeft: '14px' }}>
+                          {tipoItem.amostras.toLocaleString('pt-BR')} amostras
+                        </div>
+                      </div>
+                      <span style={{
+                        minWidth: '28px', textAlign: 'center', fontSize: '13px', fontWeight: 700,
+                        color: '#fff',
+                        background: tipoItem.nc > 10 ? 'var(--clr-danger)' : tipoItem.nc > 0 ? 'var(--clr-warning)' : 'var(--clr-text-3)',
+                        padding: '2px 8px', borderRadius: 'var(--r-full)', flexShrink: 0
+                      }}>
+                        {tipoItem.nc.toLocaleString('pt-BR')}
+                      </span>
+                    </div>
+
+                    {/* Filhos: produtos do tipo */}
+                    {isTipoExpanded && (
+                      <div style={{ background: 'var(--clr-surface-2)', paddingLeft: '16px', borderTop: '1px dashed var(--clr-border)' }}>
+                        {tipoItem.produtos.map((prod, idx) => (
+                          <div
+                            key={prod.id}
+                            onClick={() => navigate(`/detalhe/produtos/${prod.id}`)}
+                            style={{
+                              padding: '10px 20px',
+                              borderBottom: idx < tipoItem.produtos.length - 1 ? '1px solid var(--clr-border)' : 'none',
+                              display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                              cursor: 'pointer',
+                            }}
+                            onMouseEnter={e => (e.currentTarget.style.background = 'var(--clr-border)')}
+                            onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
+                          >
+                            <span style={{ fontSize: '13px', fontWeight: 500, color: 'var(--clr-text-2)', textTransform: 'capitalize', flex: 1, paddingRight: '12px', lineHeight: 1.3 }}>
+                              {prod.nome.toLowerCase()}
+                            </span>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexShrink: 0, whiteSpace: 'nowrap' }}>
+                              <span style={{ fontSize: '11px', color: 'var(--clr-text-3)' }}>{prod.amostras.toLocaleString('pt-BR')} amostras</span>
+                              <span style={{
+                                minWidth: '20px', textAlign: 'center', fontSize: '11px', fontWeight: 700,
+                                color: '#fff',
+                                background: prod.nc > 10 ? 'var(--clr-danger)' : prod.nc > 0 ? 'var(--clr-warning)' : 'var(--clr-text-3)',
+                                padding: '1px 6px', borderRadius: 'var(--r-full)', flexShrink: 0
+                              }}>
+                                {prod.nc.toLocaleString('pt-BR')}
+                              </span>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+
+              {/* Renderização de Outras Categorias (Ensaios planos) */}
+              {!isProcessos && !isProdutos && (visibleItens as typeof ensaios).map((item, i) => (
                 <div
                   key={String(item.id)}
                   onClick={() => navigate(`/detalhe/${cat.tipo}/${item.id}`)}

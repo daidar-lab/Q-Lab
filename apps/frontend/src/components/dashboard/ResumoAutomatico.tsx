@@ -31,8 +31,13 @@ export default function ResumoAutomatico({ dataInicio, dataFim, filialId, kpis, 
     setErro(false);
     setResumo(null);
 
+    // Achata a árvore de produtos para uma lista simples para enviar para a IA
+    const produtosPlanos = Array.isArray(produtos) 
+      ? produtos.flatMap((p: any) => p.produtos || p)
+      : produtos;
+
     resumoDashboardApi
-      .getResumo(dataInicio, dataFim, filialId, kpis, processos, ensaios, produtos, metaConformidade)
+      .getResumo(dataInicio, dataFim, filialId, kpis, processos, ensaios, produtosPlanos, metaConformidade)
       .then(res => setResumo(res.data))
       .catch(() => setErro(true))
       .finally(() => setCarregando(false));

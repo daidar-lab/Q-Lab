@@ -13,12 +13,17 @@ export async function exportDashboard(req: Request, res: Response) {
   const { filialId, dataInicio, dataFim, filialNome } = req.body;
   const periodo = { filialId: Number(filialId), dataInicio, dataFim };
 
-  const [processos, produtos, ensaios, kpis] = await Promise.all([
+  const [processos, produtosRaw, ensaios, kpis] = await Promise.all([
     getRankingProcessos(periodo),
     getRankingProdutos(periodo),
     getRankingEnsaios(periodo),
     getKpisDashboard(periodo),
   ]);
+
+  // Flatten the products tree for the PDF and AI context, sorted by nc descending
+  const produtos = produtosRaw
+    .flatMap(tipo => tipo.produtos)
+    .sort((a, b) => b.nc - a.nc);
 
   const contextoIA = {
     periodo: { inicio: dataInicio, fim: dataFim },
