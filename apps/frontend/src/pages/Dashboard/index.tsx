@@ -391,7 +391,7 @@ export default function DashboardPage() {
                       <div>
                         <div style={{ fontSize: '14px', fontWeight: 700, color: 'var(--clr-text)', display: 'flex', alignItems: 'center', gap: '6px' }}>
                           <span>{isTipoExpanded ? '▼' : '▶'}</span>
-                          <span style={{ textTransform: 'capitalize' }}>{tipoItem.tipo.toLowerCase()}</span>
+                          <span style={{ textTransform: 'capitalize' }}>{(tipoItem.tipo || '').toLowerCase()}</span>
                         </div>
                         <div style={{ fontSize: '12px', color: 'var(--clr-text-3)', marginTop: '2px', paddingLeft: '14px' }}>
                           {tipoItem.amostras.toLocaleString('pt-BR')} amostras
@@ -430,7 +430,7 @@ export default function DashboardPage() {
                             onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
                           >
                             <span style={{ fontSize: '13px', fontWeight: 500, color: 'var(--clr-text-2)', textTransform: 'capitalize', flex: 1, paddingRight: '12px', lineHeight: 1.3 }}>
-                              {prod.nome.toLowerCase()}
+                              {(prod.nome || '').toLowerCase()}
                             </span>
                             <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexShrink: 0, whiteSpace: 'nowrap' }}>
                               <span style={{ fontSize: '11px', color: 'var(--clr-text-3)' }}>{prod.amostras.toLocaleString('pt-BR')} amostras</span>
