@@ -3,8 +3,10 @@ import { useNavigate } from 'react-router-dom';
 import { useContexto } from '../../contexts/ContextoProvider';
 import { useDashboard } from '../../hooks/useDashboard';
 import { useExportPDF } from '../../hooks/useExport';
+import { useCatalogo } from '../../hooks/useCatalogo';
 import ResumoAutomatico from '../../components/dashboard/ResumoAutomatico';
 import InformativosDrawer from '../../components/dashboard/InformativosDrawer';
+import { SearchBar } from '../../components/busca/SearchBar';
 
 const CATEGORIAS_META = [
   { tipo: 'processos', label: 'Macro Processos', icon: '≡' },
@@ -83,6 +85,7 @@ export default function DashboardPage() {
   const [expandedMacros, setExpandedMacros] = useState<Record<string, boolean>>({});
   const [expandedTiposProduto, setExpandedTiposProduto] = useState<Record<string, boolean>>({});
   const [informativosOpen, setInformativosOpen] = useState(false);
+  const { catalogo } = useCatalogo(filialId);
 
   const { exportar, exportando } = useExportPDF('dashboard');
 
@@ -220,6 +223,11 @@ export default function DashboardPage() {
         </button>
       </div>
 
+      {/* Buscador geral — acesso rápido a processos, produtos e ensaios */}
+      <div style={{ marginBottom: '24px' }}>
+        <SearchBar catalogo={catalogo} loading={carregando} />
+      </div>
+
       {/* KPIs reais */}
       <div className="db-kpi-grid" style={{ display: 'flex', gap: '16px', marginBottom: '28px', flexWrap: 'wrap' }}>
         {kpis && [
@@ -270,7 +278,7 @@ export default function DashboardPage() {
       <div className="db-cat-grid" style={{ display: 'flex', gap: '16px', flexWrap: 'wrap' }}>
         {CATEGORIAS_META.map(cat => {
           const isProcessos = cat.tipo === 'processos';
-          const isProdutos  = cat.tipo === 'produtos';
+          const isProdutos = cat.tipo === 'produtos';
           const totalItens = isProcessos
             ? macroGruposAglutinados
             : isProdutos
@@ -401,9 +409,9 @@ export default function DashboardPage() {
 
                     {/* Filhos: produtos do tipo */}
                     {isTipoExpanded && (
-                      <div style={{ 
-                        background: 'var(--clr-surface-2)', 
-                        paddingLeft: '16px', 
+                      <div style={{
+                        background: 'var(--clr-surface-2)',
+                        paddingLeft: '16px',
                         borderTop: '1px dashed var(--clr-border)',
                         maxHeight: '220px',
                         overflowY: 'auto'
