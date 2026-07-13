@@ -41,14 +41,55 @@ export interface BuscaParams {
   processos?: string[];
   produtos?: number[];
   ensaios?: number[];
+  signal?: AbortSignal;
 }
 
-export async function fetchBuscaResultados(p: BuscaParams): Promise<SearchResultRow[]> {
+export interface AgregacoesBuscaResponse {
+  kpis: {
+    totalResultados: number;
+    naoConformes: number;
+    taxaConformidade: number;
+    ensaiosIds: number[];
+    produtosIds: number[];
+  };
+  graficoConformidade: {
+    periodo: string;
+    conforme: number;
+    naoConforme: number;
+  }[];
+  pontosEspecificacao: SearchResultRow[];
+}
+
+export async function fetchBuscaAgregacoes(p: BuscaParams): Promise<AgregacoesBuscaResponse> {
   const params: Record<string, any> = {
     filialId:   p.filialId,
     dataInicio: p.dataInicio,
     dataFim:    p.dataFim,
-    // Serializa arrays como chave repetida (api.ts já trata Array.isArray)
+    'processos[]': p.processos ?? [],
+    'produtos[]':  p.produtos  ?? [],
+    'ensaios[]':   p.ensaios   ?? [],
+  };
+
+  const res = await request<{ ok: boolean; data: AgregacoesBuscaResponse }>(
+    '/api/busca/agregacoes',
+    { params, signal: p.signal },
+    35_000,
+  );
+  return res.data;
+}
+
+export interface PaginacaoParams extends BuscaParams {
+  limit?: number;
+  offset?: number;
+}
+
+export async function fetchBuscaResultados(p: PaginacaoParams): Promise<SearchResultRow[]> {
+  const params: Record<string, any> = {
+    filialId:   p.filialId,
+    dataInicio: p.dataInicio,
+    dataFim:    p.dataFim,
+    limit:      p.limit,
+    offset:     p.offset,
     'processos[]': p.processos ?? [],
     'produtos[]':  p.produtos  ?? [],
     'ensaios[]':   p.ensaios   ?? [],
@@ -56,8 +97,8 @@ export async function fetchBuscaResultados(p: BuscaParams): Promise<SearchResult
 
   const res = await request<{ ok: boolean; data: SearchResultRow[] }>(
     '/api/busca/resultados',
-    { params },
-    35_000, // 35s — margem sobre os 30s do backend
+    { params, signal: p.signal },
+    35_000,
   );
   return res.data;
 }

@@ -10,6 +10,7 @@ import type { Catalogo } from '../services/busca.api';
 export interface Etiqueta {
   tipo: 'processo' | 'produto' | 'ensaio' | 'periodo' | 'desconhecido';
   label: string;   // texto exibido na tag
+  rawText?: string; // texto exato digitado para remoção da query
   valor: string | number;
 }
 
@@ -128,6 +129,41 @@ export const PROCESSO_ALIASES: Record<string, string> = {
   'químicos':               'fisico-quimicos',
 };
 
+// Map de exibição para os slugs (bonitinhos)
+export const LABELS_CATEGORIA: Record<string, string> = {
+  'fermento': 'Fermento',
+  'microbiologia-estabilidade-micro': 'Estabilidade Biológica Micro',
+  'microbiologia-estabilidade-envase': 'Estabilidade Biológica Envase',
+  'microbiologia-agua-enxague': 'Água de Enxague',
+  'microbiologia-swab': 'SWAB',
+  'microbiologia-analise-microbiologia': 'Análise Microbiológica',
+  'envase-produto-acabado': 'Produto Acabado',
+  'envase-chopp': 'Chopp',
+  'envase-arrolhamento': 'Arrolhamento',
+  'envase-provas-horarias': 'Provas Horárias',
+  'envase-assoprador': 'Assoprador',
+  'envase-lubrificante': 'Lubrificante de Esteira',
+  'envase-recravacao': 'Recravação',
+  'envase-pasteurizador': 'Pasteurizador',
+  'envase-interunidades': 'Produto Interunidades',
+  'fermentacao': 'Fermentação',
+  'filtracao': 'Filtração',
+  'brassagem': 'Brassagem',
+  'maturacao': 'Maturação',
+  'desalcoolizacao': 'Desalcoolização',
+  'captacao': 'Captação',
+  'tratamento-efluentes': 'Tratamento de Efluentes',
+  'residuos': 'Resíduos',
+  'ar-co2': 'Ar Comprimido e CO2',
+  'co2-beneficiado': 'CO2 Beneficiado',
+  'cip-processo': 'CIP — Processo',
+  'cip-envasamento-novo': 'CIP — Envasamento Novo',
+  'cip-envasamento-antigo': 'CIP — Envasamento Antigo',
+  'fisico-embalagem': 'Físico — Embalagem',
+  'fisico-materia-prima': 'Físico — Matéria-Prima',
+  'fisico-quimicos': 'Físico — Químicos',
+};
+
 // ─── PERIODO_PATTERNS ─────────────────────────────────────────────────────────
 
 const PERIODO_PATTERNS: {
@@ -190,7 +226,12 @@ export function parseSearchQuery(input: string, catalogo: Catalogo): SearchToken
     const m = restante.match(re);
     if (m) {
       tokens.periodo = resolver(m);
-      tokens.etiquetas.push({ tipo: 'periodo', label: m[0], valor: m[0] });
+      tokens.etiquetas.push({ 
+        tipo: 'periodo', 
+        label: m[0], 
+        rawText: m[0], 
+        valor: `${tokens.periodo.dataInicio}:${tokens.periodo.dataFim}` 
+      });
       restante = restante.replace(m[0], ' ');
       break;
     }
@@ -210,7 +251,8 @@ export function parseSearchQuery(input: string, catalogo: Catalogo): SearchToken
     if (slugProcesso) {
       if (!tokens.processos.includes(slugProcesso)) {
         tokens.processos.push(slugProcesso);
-        tokens.etiquetas.push({ tipo: 'processo', label: parte, valor: slugProcesso });
+        const labelBonito = LABELS_CATEGORIA[slugProcesso] || parte;
+        tokens.etiquetas.push({ tipo: 'processo', label: labelBonito, rawText: parte, valor: slugProcesso });
       }
       continue;
     }
@@ -222,7 +264,7 @@ export function parseSearchQuery(input: string, catalogo: Catalogo): SearchToken
     if (produto) {
       if (!tokens.produtos.includes(produto.id)) {
         tokens.produtos.push(produto.id);
-        tokens.etiquetas.push({ tipo: 'produto', label: produto.nome, valor: produto.id });
+        tokens.etiquetas.push({ tipo: 'produto', label: produto.nome, rawText: parte, valor: produto.id });
       }
       continue;
     }
@@ -234,14 +276,14 @@ export function parseSearchQuery(input: string, catalogo: Catalogo): SearchToken
     if (ensaio) {
       if (!tokens.ensaios.includes(ensaio.id)) {
         tokens.ensaios.push(ensaio.id);
-        tokens.etiquetas.push({ tipo: 'ensaio', label: ensaio.nome, valor: ensaio.id });
+        tokens.etiquetas.push({ tipo: 'ensaio', label: ensaio.nome, rawText: parte, valor: ensaio.id });
       }
       continue;
     }
 
     // 2d. Não reconhecido
     tokens.rawTerms.push(parte);
-    tokens.etiquetas.push({ tipo: 'desconhecido', label: parte, valor: parte });
+    tokens.etiquetas.push({ tipo: 'desconhecido', label: parte, rawText: parte, valor: parte });
   }
 
   return tokens;
@@ -263,8 +305,9 @@ export function gerarSugestoes(input: string, catalogo: Catalogo): Sugestao[] {
   for (const [alias, slug] of Object.entries(PROCESSO_ALIASES)) {
     if (norm(alias).includes(chave) && !slugsVistos.has(slug)) {
       slugsVistos.add(slug);
-      // Usa o alias como label (forma mais natural para o usuário)
-      resultado.push({ tipo: 'processo', label: alias, valor: slug });
+      // Usa a label bonita para sugerir
+      const labelBonita = LABELS_CATEGORIA[slug] || alias;
+      resultado.push({ tipo: 'processo', label: labelBonita, valor: slug });
     }
   }
 

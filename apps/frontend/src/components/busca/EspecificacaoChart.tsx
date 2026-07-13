@@ -14,11 +14,11 @@ interface EspecificacaoChartProps {
 
 export function EspecificacaoChart({ rows, nomeEnsaio }: EspecificacaoChartProps) {
   const pontos = rows
-    .map((r, i) => {
+    .map((r) => {
       const lieVal = r.limite_inferior !== null ? parseFloat(String(r.limite_inferior).replace(',', '.')) : null;
       const lseVal = r.limite_superior !== null ? parseFloat(String(r.limite_superior).replace(',', '.')) : null;
       return {
-        x: i,
+        x: new Date(r.data_resultado).getTime(),
         y: parseFloat(String(r.valor).replace(',', '.')),
         data: r.data_resultado,
         conforme: r.conformidade === 'CONFORME',
@@ -26,7 +26,7 @@ export function EspecificacaoChart({ rows, nomeEnsaio }: EspecificacaoChartProps
         lse: isNaN(Number(lseVal)) ? null : lseVal,
       };
     })
-    .filter(p => !isNaN(p.y));
+    .filter(p => !isNaN(p.y) && !isNaN(p.x));
 
   if (pontos.length === 0) return null;
 
@@ -71,7 +71,7 @@ export function EspecificacaoChart({ rows, nomeEnsaio }: EspecificacaoChartProps
         <ScatterChart margin={{ top: 8, right: 8, bottom: 8, left: 0 }}>
           <CartesianGrid strokeDasharray="3 3" stroke="var(--clr-border)" vertical={false} />
           
-          {/* Eixo X agora usa index, mas formata exibindo a data correta */}
+          {/* Eixo X agora usa timestamp para interpolar corretamente */}
           <XAxis 
             dataKey="x" 
             type="number"
@@ -81,12 +81,11 @@ export function EspecificacaoChart({ rows, nomeEnsaio }: EspecificacaoChartProps
             axisLine={false}
             minTickGap={45}
             tickFormatter={(val) => {
-              const p = pontos.find(pt => pt.x === val);
-              if (!p || !p.data) return '';
-              const datePart = p.data.split('T')[0].split(' ')[0];
-              const partes = datePart.split('-');
-              if (partes.length === 3) return `${partes[2]}/${partes[1]}`;
-              return datePart;
+              const d = new Date(val);
+              if (isNaN(d.getTime())) return '';
+              const m = String(d.getMonth() + 1).padStart(2, '0');
+              const day = String(d.getDate()).padStart(2, '0');
+              return `${day}/${m}`;
             }}
           />
           

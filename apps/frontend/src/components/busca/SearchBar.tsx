@@ -29,6 +29,7 @@ export function SearchBar({ catalogo, loading, initialValue = '', onSubmit, plac
   const wrapperRef = useRef<HTMLDivElement>(null);
   const [aberto, setAberto] = useState(false);
   const [focado, setFocado] = useState(false);
+  const [showHelp, setShowHelp] = useState(false);
 
   const { inputValue, setInputValue, sugestoes, submitBusca, limparSugestoes } = useSearch(catalogo);
 
@@ -119,19 +120,7 @@ export function SearchBar({ catalogo, loading, initialValue = '', onSubmit, plac
           }}
         />
 
-        {/* Hint de atalho */}
-        {!focado && !inputValue && (
-          <span style={{
-            fontSize: '11px',
-            color: 'var(--clr-text-3)',
-            background: 'var(--clr-surface-2)',
-            border: '1px solid var(--clr-border)',
-            borderRadius: '4px',
-            padding: '2px 6px',
-            flexShrink: 0,
-            fontFamily: 'monospace',
-          }}>⌘K</span>
-        )}
+
 
         {/* Botão limpar */}
         {inputValue && (
@@ -140,12 +129,67 @@ export function SearchBar({ catalogo, loading, initialValue = '', onSubmit, plac
             aria-label="Limpar busca"
             style={{
               background: 'none', border: 'none', cursor: 'pointer',
-              color: 'var(--clr-text-3)', fontSize: '16px', padding: '2px',
+              color: 'var(--clr-text-3)', fontSize: '18px', padding: '2px',
               flexShrink: 0, lineHeight: 1,
             }}
           >×</button>
         )}
+
+        {/* Botão de Ajuda */}
+        <button
+          type="button"
+          onClick={(e) => {
+            e.stopPropagation();
+            setShowHelp(prev => !prev);
+          }}
+          aria-label="Ajuda sobre a busca"
+          style={{
+            background: 'none', border: 'none', cursor: 'pointer',
+            color: 'var(--clr-text-3)', padding: '2px',
+            flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center',
+            marginLeft: '4px'
+          }}
+        >
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <circle cx="12" cy="12" r="10"></circle>
+            <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"></path>
+            <line x1="12" y1="17" x2="12.01" y2="17"></line>
+          </svg>
+        </button>
       </div>
+
+      {/* Popover de Ajuda */}
+      {showHelp && (
+        <div style={{
+          position: 'absolute',
+          top: '100%',
+          right: 0,
+          marginTop: '8px',
+          width: '320px',
+          background: 'var(--clr-surface)',
+          border: '1px solid var(--clr-border)',
+          borderRadius: 'var(--r-md)',
+          boxShadow: 'var(--shadow-lg)',
+          zIndex: 60,
+          padding: '16px',
+          fontSize: '13px',
+          color: 'var(--clr-text)',
+          textAlign: 'left'
+        }}>
+          <h4 style={{ margin: '0 0 12px 0', fontSize: '14px', color: 'var(--clr-text)' }}>Como pesquisar?</h4>
+          <p style={{ margin: '0 0 8px 0', color: 'var(--clr-text-2)' }}>Você pode digitar livremente combinando filtros separados por vírgula:</p>
+          <ul style={{ margin: '0 0 12px 0', paddingLeft: '20px', color: 'var(--clr-text-2)', lineHeight: 1.5 }}>
+            <li><strong>Produtos:</strong> "Imperio Pilsen"</li>
+            <li><strong>Processos:</strong> "Brassagem", "Filtração"</li>
+            <li><strong>Ensaios:</strong> "pH", "Extrato", "Cor"</li>
+            <li><strong>Datas:</strong> "22/01/2026", "últimos 7 dias", "09/08/2025 - 10/09/2025"</li>
+          </ul>
+          <div style={{ background: 'var(--clr-surface-2)', padding: '10px', borderRadius: '4px', border: '1px solid var(--clr-border)' }}>
+            <span style={{ fontSize: '11px', color: 'var(--clr-text-3)', display: 'block', marginBottom: '4px', fontWeight: 600, textTransform: 'uppercase' }}>Exemplo completo:</span>
+            <code style={{ color: 'var(--clr-text)', fontSize: '12px' }}>brassagem, ph, MOSTO IMPERIO HELLES, ultimos 6 meses</code>
+          </div>
+        </div>
+      )}
 
       {/* ── Dropdown de sugestões ──────────────────────────────────────────── */}
       {mostrarDropdown && (

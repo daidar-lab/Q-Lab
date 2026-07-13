@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import type { SearchResultRow } from '../../services/busca.api';
 
 interface TabelaResultadosProps {
@@ -71,8 +71,11 @@ export function TabelaResultados({ rows }: TabelaResultadosProps) {
 
   // 3. Paginação
   const totalPaginas = Math.ceil(sortedRows.length / PAGE_SIZE) || 1;
-  // Ajusta a página se os filtros reduzirem o número total de páginas
-  if (pagina > totalPaginas) setPagina(totalPaginas);
+  
+  // Reseta para a página 1 sempre que os filtros mudarem a quantidade de resultados
+  useEffect(() => {
+    setPagina(1);
+  }, [filteredRows.length]);
   
   const inicio = (pagina - 1) * PAGE_SIZE;
   const fatia  = sortedRows.slice(inicio, inicio + PAGE_SIZE);
@@ -180,7 +183,7 @@ export function TabelaResultados({ rows }: TabelaResultadosProps) {
           />
           <span style={{ fontSize: '12px', color: 'var(--clr-text-3)', whiteSpace: 'nowrap' }}>
             {sortedRows.length.toLocaleString('pt-BR')} resultados
-            {rows.length === 500 && ' (limitado)'}
+            {rows.length >= 5000 && ' (limitado)'}
           </span>
         </div>
       </div>

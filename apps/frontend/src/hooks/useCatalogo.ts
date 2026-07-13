@@ -14,7 +14,6 @@ export function useCatalogo(filialId: number | null) {
 
   useEffect(() => {
     if (filialId === null) {
-      setCatalogo(null);
       return;
     }
 

@@ -106,12 +106,14 @@ interface CacheEntry<T> {
 const _resultCache = new Map<string, CacheEntry<unknown>>();
 const TTL_RESULTADO = 5 * 60 * 1000; // 5 minutos
 
-export function buildCacheKey(tokens: SearchTokens, filialId: number): string {
+export function buildCacheKey(tokens: SearchTokens, filialId: number, affix = ''): string {
+  // Os arrays são normalizados com .sort() para garantir que a ordem dos tokens 
+  // não gere chaves de cache distintas para consultas semanticamente idênticas.
   const processos = [...tokens.processos].sort().join(',');
   const produtos = [...tokens.produtos].sort().join(',');
   const ensaios = [...tokens.ensaios].sort().join(',');
   const periodo = `${tokens.periodo.dataInicio}:${tokens.periodo.dataFim}`;
-  return `f${filialId}|proc:${processos}|prod:${produtos}|ens:${ensaios}|p:${periodo}`;
+  return `f${filialId}|proc:${processos}|prod:${produtos}|ens:${ensaios}|p:${periodo}${affix ? '|' + affix : ''}`;
 }
 
 async function cachedQuery<T>(
@@ -128,59 +130,71 @@ async function cachedQuery<T>(
 }
 
 // Limpeza periódica do cache — evita crescimento ilimitado
-setInterval(() => {
+const cleanupInterval = setInterval(() => {
   const agora = Date.now();
   for (const [key, entry] of _resultCache.entries()) {
     if (entry.expiresAt < agora) _resultCache.delete(key);
   }
 }, 10 * 60 * 1000); // a cada 10 minutos
 
-// ─── Peça 6 — executarBusca ──────────────────────────────────────────────────
+// O unref previne que o intervalo bloqueie o shutdown do processo (hot-reload/graceful exit)
+cleanupInterval.unref();
+
+// ─── Helpers de Query ────────────────────────────────────────────────────────
+
+async function buildSearchConditions(tokens: SearchTokens, filialId: number) {
+  const labs = await resolveFilialLaboratorios(filialId);
+  const labFilter = labs.length > 0
+    ? `AND R.cod_laboratorio IN (${labs.map(() => '?').join(',')})`
+    : '';
+
+  const clausulas: string[] = [];
+  const params: unknown[] = [
+    tokens.periodo.dataInicio,
+    tokens.periodo.dataFim,
+    ...labs,
+  ];
+
+  // PROCESSOS
+  if (tokens.processos.length > 0) {
+    const filtrosProcesso = tokens.processos.map(slug => resolverFiltroPorId(slug));
+    const orProcessos = filtrosProcesso.map(f => `(${f.sql})`).join(' OR ');
+    clausulas.push(`(${orProcessos})`);
+    filtrosProcesso.forEach(f => params.push(...f.params));
+  }
+
+  // PRODUTO
+  if (tokens.produtos.length > 0) {
+    clausulas.push(`R.cod_produto IN (${tokens.produtos.map(() => '?').join(',')})`);
+    params.push(...tokens.produtos);
+  }
+
+  // ENSAIO
+  if (tokens.ensaios.length > 0) {
+    clausulas.push(`R.cod_ensaio IN (${tokens.ensaios.map(() => '?').join(',')})`);
+    params.push(...tokens.ensaios);
+  }
+
+  const whereExtra = clausulas.length > 0
+    ? `AND (${clausulas.join(' AND ')})`
+    : '';
+
+  return { labFilter, whereExtra, params };
+}
+
+// ─── Peça 6 — executarBusca (Linhas Paginadas) ───────────────────────────────
 
 export async function executarBusca(
   tokens: SearchTokens,
   filialId: number,
+  limit = 500,
+  offset = 0
 ): Promise<SearchResultRow[]> {
-  const key = buildCacheKey(tokens, filialId);
+  const key = buildCacheKey(tokens, filialId, `L${limit}O${offset}`);
 
   return cachedQuery(key, async () => {
-    const labs = await resolveFilialLaboratorios(filialId);
-    const labFilter = labs.length > 0
-      ? `AND R.cod_laboratorio IN (${labs.map(() => '?').join(',')})`
-      : '';
+    const { labFilter, whereExtra, params } = await buildSearchConditions(tokens, filialId);
 
-    const clausulas: string[] = [];
-    // Ordem obrigatória de params: [dataInicio, dataFim, ...labs, ...paramsProcesso, ...produtos, ...ensaios]
-    const params: unknown[] = [
-      tokens.periodo.dataInicio,
-      tokens.periodo.dataFim,
-      ...labs,
-    ];
-
-    // PROCESSOS — OR entre si (uma amostra pertence a UM processo por vez)
-    // O bloco inteiro entra como AND com o restante
-    if (tokens.processos.length > 0) {
-      const filtrosProcesso = tokens.processos.map(slug => resolverFiltroPorId(slug));
-      const orProcessos = filtrosProcesso.map(f => `(${f.sql})`).join(' OR ');
-      clausulas.push(`(${orProcessos})`);
-      filtrosProcesso.forEach(f => params.push(...f.params));
-    }
-
-    // PRODUTO — AND direto (afunilamento progressivo)
-    if (tokens.produtos.length > 0) {
-      clausulas.push(`R.cod_produto IN (${tokens.produtos.map(() => '?').join(',')})`);
-      params.push(...tokens.produtos);
-    }
-
-    // ENSAIO — AND direto (afunilamento progressivo)
-    if (tokens.ensaios.length > 0) {
-      clausulas.push(`R.cod_ensaio IN (${tokens.ensaios.map(() => '?').join(',')})`);
-      params.push(...tokens.ensaios);
-    }
-
-    const whereExtra = clausulas.length > 0
-      ? `AND (${clausulas.join(' AND ')})`
-      : '';
 
     return blabQuery<SearchResultRow>(`
       SELECT
@@ -204,7 +218,126 @@ export async function executarBusca(
         ${labFilter}
         ${whereExtra}
       ORDER BY R.data_resultado DESC
-      LIMIT 30000
-    `, params, 30_000); // timeout explícito de 30s
+      LIMIT ? OFFSET ?
+    `, [...params, limit, offset], 30_000); // timeout explícito de 30s
+  });
+}
+
+// ─── Peça 7 — executarAgregacoesBusca (KPIs e Gráficos) ──────────────────────
+
+export interface AgregacoesBusca {
+  kpis: {
+    totalResultados: number;
+    naoConformes: number;
+    taxaConformidade: number;
+    ensaiosIds: number[];
+    produtosIds: number[];
+  };
+  graficoConformidade: {
+    periodo: string;
+    conforme: number;
+    naoConforme: number;
+  }[];
+  pontosEspecificacao: SearchResultRow[];
+}
+
+export async function executarAgregacoesBusca(
+  tokens: SearchTokens,
+  filialId: number
+): Promise<AgregacoesBusca> {
+  const key = buildCacheKey(tokens, filialId, 'aggs');
+
+  return cachedQuery(key, async () => {
+    const { labFilter, whereExtra, params } = await buildSearchConditions(tokens, filialId);
+
+    // 1. KPIs
+    const sqlKpis = `
+      SELECT
+        COUNT(*) AS totalResultados,
+        SUM(IF(R.conformidade = 'NÃO CONFORME', 1, 0)) AS naoConformes,
+        GROUP_CONCAT(DISTINCT R.cod_ensaio) AS ensaiosIds,
+        GROUP_CONCAT(DISTINCT R.cod_produto) AS produtosIds
+      FROM DW_FAT_RESULTADO R
+      WHERE R.D_E_L_E_T IS NULL
+        AND R.conformidade != 'NÃO AVALIADO'
+        AND R.valor IS NOT NULL AND R.valor != ''
+        AND R.data_resultado BETWEEN ? AND ?
+        ${labFilter}
+        ${whereExtra}
+    `;
+
+    // 2. Gráfico de Conformidade (agrupado por mês)
+    const sqlGraficoConf = `
+      SELECT
+        DATE_FORMAT(R.data_resultado, '%Y-%m') AS periodo,
+        SUM(IF(R.conformidade = 'CONFORME', 1, 0)) AS conforme,
+        SUM(IF(R.conformidade = 'NÃO CONFORME', 1, 0)) AS naoConforme
+      FROM DW_FAT_RESULTADO R
+      WHERE R.D_E_L_E_T IS NULL
+        AND R.conformidade != 'NÃO AVALIADO'
+        AND R.valor IS NOT NULL AND R.valor != ''
+        AND R.data_resultado BETWEEN ? AND ?
+        ${labFilter}
+        ${whereExtra}
+      GROUP BY periodo
+      ORDER BY periodo ASC
+    `;
+
+    // 3. Pontos para os gráficos de especificação (LIMIT 2000 recentes para não explodir o frontend)
+    const sqlSpecs = `
+      SELECT
+        R.cod_amostra,
+        R.cod_ensaio,
+        R.ensaio,
+        R.cod_produto,
+        R.produto,
+        R.lote_de_controle_de_qualidade,
+        R.data_resultado,
+        R.valor,
+        R.conformidade,
+        R.lie AS limite_inferior,
+        R.lse AS limite_superior,
+        R.operacao
+      FROM DW_FAT_RESULTADO R
+      WHERE R.D_E_L_E_T IS NULL
+        AND R.conformidade != 'NÃO AVALIADO'
+        AND R.valor IS NOT NULL AND R.valor != ''
+        AND R.data_resultado BETWEEN ? AND ?
+        ${labFilter}
+        ${whereExtra}
+      ORDER BY R.data_resultado DESC
+      LIMIT 2000
+    `;
+
+    const [kpisRaw, graficoConformidade, pontosEspecificacao] = await Promise.all([
+      blabQuery<any>(sqlKpis, params, 60_000),
+      blabQuery<any>(sqlGraficoConf, params, 60_000),
+      blabQuery<SearchResultRow>(sqlSpecs, params, 60_000),
+    ]);
+
+    const kpiData = kpisRaw[0] || { totalResultados: 0, naoConformes: 0, ensaiosIds: '', produtosIds: '' };
+    const total = Number(kpiData.totalResultados);
+    const nc = Number(kpiData.naoConformes);
+    
+    let taxa = 0;
+    if (total > 0) {
+      taxa = Math.round(((total - nc) / total) * 1000) / 10;
+    }
+
+    return {
+      kpis: {
+        totalResultados: total,
+        naoConformes: nc,
+        taxaConformidade: taxa,
+        ensaiosIds: kpiData.ensaiosIds ? String(kpiData.ensaiosIds).split(',').map(Number) : [],
+        produtosIds: kpiData.produtosIds ? String(kpiData.produtosIds).split(',').map(Number) : [],
+      },
+      graficoConformidade: graficoConformidade.map(g => ({
+        periodo: g.periodo,
+        conforme: Number(g.conforme),
+        naoConforme: Number(g.naoConforme)
+      })),
+      pontosEspecificacao
+    };
   });
 }

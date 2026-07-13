@@ -39,8 +39,9 @@ export function EtiquetaRemovivel({ etiqueta, qAtual }: EtiquetaRemovivelProps) 
   const navigate = useNavigate();
 
   function remover() {
+    const textoRemover = etiqueta.rawText ?? etiqueta.label;
     const novoQ = qAtual
-      .replace(etiqueta.label, '')
+      .replace(textoRemover, '')
       .replace(/[,·]\s*[,·]/g, ',')
       .replace(/^[\s,·]+|[\s,·]+$/g, '')
       .trim();
