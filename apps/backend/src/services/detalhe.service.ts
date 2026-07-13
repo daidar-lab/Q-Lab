@@ -314,7 +314,7 @@ export async function getCentrosCustoPorEnsaio(params: {
   return blabQuery(`
     SELECT
       cod_centro_de_custo,
-      centro_de_custo,
+      MAX(centro_de_custo)              AS centro_de_custo,
       COUNT(*)                          AS n_amostras,
       SUM(conformidade != 'CONFORME')   AS n_nao_conforme,
       ROUND(SUM(conformidade != 'CONFORME') * 1.0 / COUNT(*) * 100, 1) AS pct_nao_conforme
@@ -324,7 +324,7 @@ export async function getCentrosCustoPorEnsaio(params: {
       AND cod_ensaio = ?
       AND cod_centro_de_custo IS NOT NULL
       AND data_resultado BETWEEN ? AND ?
-    GROUP BY cod_centro_de_custo, centro_de_custo
+    GROUP BY cod_centro_de_custo
     ORDER BY n_nao_conforme DESC
   `, [params.codEnsaio, params.dataInicio, params.dataFim]);
 }
@@ -339,7 +339,7 @@ export async function getCentrosCustoPorProdutoEEnsaio(params: {
   return blabQuery(`
     SELECT
       cod_centro_de_custo,
-      centro_de_custo,
+      MAX(centro_de_custo)              AS centro_de_custo,
       COUNT(*)                          AS n_amostras,
       SUM(conformidade != 'CONFORME')   AS n_nao_conforme,
       ROUND(SUM(conformidade != 'CONFORME') * 1.0 / COUNT(*) * 100, 1) AS pct_nao_conforme
@@ -350,7 +350,7 @@ export async function getCentrosCustoPorProdutoEEnsaio(params: {
       AND cod_ensaio = ?
       AND cod_centro_de_custo IS NOT NULL
       AND data_resultado BETWEEN ? AND ?
-    GROUP BY cod_centro_de_custo, centro_de_custo
+    GROUP BY cod_centro_de_custo
     ORDER BY n_amostras DESC
   `, [params.codProduto, params.codEnsaio, params.dataInicio, params.dataFim]);
 }

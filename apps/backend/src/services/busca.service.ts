@@ -49,7 +49,7 @@ export interface SearchResultRow {
 // ─── Peça 1 — getCatalogo ─────────────────────────────────────────────────────
 
 const _catalogoCache = new Map<number, Catalogo>();
-const TTL_CATALOGO = 4 * 60 * 60 * 1000; // 4 horas
+const TTL_CATALOGO = 24 * 60 * 60 * 1000; // 24 horas
 
 export async function getCatalogo(filialId: number): Promise<Catalogo> {
   const cached = _catalogoCache.get(filialId);
@@ -318,7 +318,7 @@ export async function executarAgregacoesBusca(
     const kpiData = kpisRaw[0] || { totalResultados: 0, naoConformes: 0, ensaiosIds: '', produtosIds: '' };
     const total = Number(kpiData.totalResultados);
     const nc = Number(kpiData.naoConformes);
-    
+
     let taxa = 0;
     if (total > 0) {
       taxa = Math.round(((total - nc) / total) * 1000) / 10;
