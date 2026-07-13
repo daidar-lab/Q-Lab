@@ -27,15 +27,15 @@ export function TabelaResultados({ rows }: TabelaResultadosProps) {
       if (filtroStatus === 'NC' && !isNC) return false;
 
       // Produto
-      if (filtroProduto && !row.produto.toLowerCase().includes(filtroProduto.toLowerCase())) return false;
+      if (filtroProduto && !(row.produto || '').toLowerCase().includes(filtroProduto.toLowerCase())) return false;
       
       // Ensaio
-      if (filtroEnsaio && !row.ensaio.toLowerCase().includes(filtroEnsaio.toLowerCase())) return false;
+      if (filtroEnsaio && !(row.ensaio || '').toLowerCase().includes(filtroEnsaio.toLowerCase())) return false;
 
       // Busca Geral
       if (buscaGeral) {
         const term = buscaGeral.toLowerCase();
-        const rowText = `${row.produto} ${row.ensaio} ${row.lote_de_controle_de_qualidade} ${row.valor} ${row.operacao || ''}`.toLowerCase();
+        const rowText = `${row.produto || ''} ${row.ensaio || ''} ${row.lote_de_controle_de_qualidade || ''} ${row.valor || ''} ${row.operacao || ''}`.toLowerCase();
         if (!rowText.includes(term)) return false;
       }
 
@@ -253,7 +253,7 @@ export function TabelaResultados({ rows }: TabelaResultadosProps) {
                   </td>
                   <td style={{ ...tdStyle, color: 'var(--clr-text-2)', maxWidth: '280px' }}>
                     <div style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                      {row.produto.toLowerCase().replace(/\b\w/g, c => c.toUpperCase())}
+                      {(row.produto || '').toLowerCase().replace(/\b\w/g, c => c.toUpperCase())}
                     </div>
                     {row.operacao && (
                       <div style={{ fontSize: '11px', color: 'var(--clr-text-3)', marginTop: '2px', fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
