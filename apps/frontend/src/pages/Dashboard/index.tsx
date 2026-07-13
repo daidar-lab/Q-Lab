@@ -401,7 +401,13 @@ export default function DashboardPage() {
 
                     {/* Filhos: produtos do tipo */}
                     {isTipoExpanded && (
-                      <div style={{ background: 'var(--clr-surface-2)', paddingLeft: '16px', borderTop: '1px dashed var(--clr-border)' }}>
+                      <div style={{ 
+                        background: 'var(--clr-surface-2)', 
+                        paddingLeft: '16px', 
+                        borderTop: '1px dashed var(--clr-border)',
+                        maxHeight: '220px',
+                        overflowY: 'auto'
+                      }}>
                         {tipoItem.produtos.map((prod, idx) => (
                           <div
                             key={prod.id}

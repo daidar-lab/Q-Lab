@@ -17,10 +17,11 @@ export async function handleGetFaixas(
     next: NextFunction
 ): Promise<void> {
     try {
-        const { id, codEnsaio, dataInicio, dataFim, filialId: filialIdStr, operacao: operacaoStr, bem: bemStr } = req.query;
+        const { id, codEnsaio, dataInicio, dataFim, filialId: filialIdStr, operacao: operacaoStr, bem: bemStr, codProduto: codProdutoStr } = req.query;
         const filialId = parseInt(filialIdStr as string);
         const operacao = operacaoStr ? String(operacaoStr) : undefined;
         const bem = bemStr ? String(bemStr) : undefined;
+        const codProduto = codProdutoStr ? String(codProdutoStr) : undefined;
 
         if (!id || typeof id !== 'string') {
             res.status(400).json({ erro: 'O parâmetro "id" (código do centro de custo) é obrigatório.' });
@@ -47,7 +48,7 @@ export async function handleGetFaixas(
             return;
         }
 
-        const result = await getExplosaoFaixas(id, codEnsaio, dataInicio, dataFim, filialId, operacao, bem);
+        const result = await getExplosaoFaixas(id, codEnsaio as string, dataInicio as string, dataFim as string, filialId, operacao, bem, codProduto);
         res.json(result);
     } catch (err) {
         next(err);
