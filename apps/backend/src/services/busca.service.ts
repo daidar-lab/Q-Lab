@@ -104,10 +104,11 @@ interface CacheEntry<T> {
 }
 
 const _resultCache = new Map<string, CacheEntry<unknown>>();
+const _inFlight    = new Map<string, Promise<unknown>>();
 const TTL_RESULTADO = 5 * 60 * 1000; // 5 minutos
 
 export function buildCacheKey(tokens: SearchTokens, filialId: number, affix = ''): string {
-  // Os arrays são normalizados com .sort() para garantir que a ordem dos tokens 
+  // Os arrays são normalizados com .sort() para garantir que a ordem dos tokens
   // não gere chaves de cache distintas para consultas semanticamente idênticas.
   const processos = [...tokens.processos].sort().join(',');
   const produtos = [...tokens.produtos].sort().join(',');
@@ -116,6 +117,9 @@ export function buildCacheKey(tokens: SearchTokens, filialId: number, affix = ''
   return `f${filialId}|proc:${processos}|prod:${produtos}|ens:${ensaios}|p:${periodo}${affix ? '|' + affix : ''}`;
 }
 
+// Proteção contra thundering herd: se múltiplos requests chegarem com o mesmo
+// cache expirado ao mesmo tempo, apenas o primeiro dispara a query — os demais
+// aguardam a mesma Promise em voo. Mesmo padrão usado no catalogo-store.ts do frontend.
 async function cachedQuery<T>(
   key: string,
   queryFn: () => Promise<T>,
@@ -124,9 +128,22 @@ async function cachedQuery<T>(
   const cached = _resultCache.get(key) as CacheEntry<T> | undefined;
   if (cached && cached.expiresAt > Date.now()) return cached.data;
 
-  const data = await queryFn();
-  _resultCache.set(key, { data, expiresAt: Date.now() + ttl });
-  return data;
+  // Já tem uma query em voo — devolve a mesma Promise
+  const inFlight = _inFlight.get(key) as Promise<T> | undefined;
+  if (inFlight) return inFlight;
+
+  // Primeira chamada — dispara e registra
+  const promise = queryFn().then(data => {
+    _resultCache.set(key, { data, expiresAt: Date.now() + ttl });
+    _inFlight.delete(key);
+    return data;
+  }).catch(err => {
+    _inFlight.delete(key); // permite retry em caso de falha
+    throw err;
+  });
+
+  _inFlight.set(key, promise);
+  return promise;
 }
 
 // Limpeza periódica do cache — evita crescimento ilimitado
@@ -250,28 +267,14 @@ export async function executarAgregacoesBusca(
   return cachedQuery(key, async () => {
     const { labFilter, whereExtra, params } = await buildSearchConditions(tokens, filialId);
 
-    // 1. KPIs
-    const sqlKpis = `
+    // Query 1 — Gráfico por período (gera KPIs e gráfico em um único scan).
+    // GROUP_CONCAT eliminado: ensaiosIds/produtosIds são extraídos dos pontosEspecificacao em JS.
+    const sqlGrafico = `
       SELECT
-        COUNT(*) AS totalResultados,
-        SUM(IF(R.conformidade = 'NÃO CONFORME', 1, 0)) AS naoConformes,
-        GROUP_CONCAT(DISTINCT R.cod_ensaio) AS ensaiosIds,
-        GROUP_CONCAT(DISTINCT R.cod_produto) AS produtosIds
-      FROM DW_FAT_RESULTADO R
-      WHERE R.D_E_L_E_T IS NULL
-        AND R.conformidade != 'NÃO AVALIADO'
-        AND R.valor IS NOT NULL AND R.valor != ''
-        AND R.data_resultado BETWEEN ? AND ?
-        ${labFilter}
-        ${whereExtra}
-    `;
-
-    // 2. Gráfico de Conformidade (agrupado por mês)
-    const sqlGraficoConf = `
-      SELECT
-        DATE_FORMAT(R.data_resultado, '%Y-%m') AS periodo,
-        SUM(IF(R.conformidade = 'CONFORME', 1, 0)) AS conforme,
-        SUM(IF(R.conformidade = 'NÃO CONFORME', 1, 0)) AS naoConforme
+        DATE_FORMAT(R.data_resultado, '%Y-%m')           AS periodo,
+        COUNT(*)                                          AS totalPeriodo,
+        SUM(IF(R.conformidade = 'CONFORME', 1, 0))       AS conforme,
+        SUM(IF(R.conformidade = 'NÃO CONFORME', 1, 0))   AS naoConforme
       FROM DW_FAT_RESULTADO R
       WHERE R.D_E_L_E_T IS NULL
         AND R.conformidade != 'NÃO AVALIADO'
@@ -283,7 +286,7 @@ export async function executarAgregacoesBusca(
       ORDER BY periodo ASC
     `;
 
-    // 3. Pontos para os gráficos de especificação (LIMIT 2000 recentes para não explodir o frontend)
+    // Query 2 — Pontos para gráficos de especificação (LIMIT 2000 para não explodir o frontend)
     const sqlSpecs = `
       SELECT
         R.cod_amostra,
@@ -309,35 +312,28 @@ export async function executarAgregacoesBusca(
       LIMIT 2000
     `;
 
-    const [kpisRaw, graficoConformidade, pontosEspecificacao] = await Promise.all([
-      blabQuery<any>(sqlKpis, params, 60_000),
-      blabQuery<any>(sqlGraficoConf, params, 60_000),
+    const [graficoPorPeriodo, pontosEspecificacao] = await Promise.all([
+      blabQuery<any>(sqlGrafico, params, 60_000),
       blabQuery<SearchResultRow>(sqlSpecs, params, 60_000),
     ]);
 
-    const kpiData = kpisRaw[0] || { totalResultados: 0, naoConformes: 0, ensaiosIds: '', produtosIds: '' };
-    const total = Number(kpiData.totalResultados);
-    const nc = Number(kpiData.naoConformes);
+    // KPIs calculados em JS — zero custo extra no banco
+    const total = graficoPorPeriodo.reduce((s: number, r: any) => s + Number(r.totalPeriodo), 0);
+    const nc    = graficoPorPeriodo.reduce((s: number, r: any) => s + Number(r.naoConforme), 0);
+    const taxa  = total > 0 ? Math.round(((total - nc) / total) * 1000) / 10 : 0;
 
-    let taxa = 0;
-    if (total > 0) {
-      taxa = Math.round(((total - nc) / total) * 1000) / 10;
-    }
+    // ensaiosIds/produtosIds derivados dos pontosEspecificacao — sem GROUP_CONCAT e sem risco de truncamento
+    const ensaiosIds  = [...new Set(pontosEspecificacao.map(r => r.cod_ensaio))];
+    const produtosIds = [...new Set(pontosEspecificacao.map(r => r.cod_produto))];
 
     return {
-      kpis: {
-        totalResultados: total,
-        naoConformes: nc,
-        taxaConformidade: taxa,
-        ensaiosIds: kpiData.ensaiosIds ? String(kpiData.ensaiosIds).split(',').map(Number) : [],
-        produtosIds: kpiData.produtosIds ? String(kpiData.produtosIds).split(',').map(Number) : [],
-      },
-      graficoConformidade: graficoConformidade.map(g => ({
-        periodo: g.periodo,
-        conforme: Number(g.conforme),
-        naoConforme: Number(g.naoConforme)
+      kpis: { totalResultados: total, naoConformes: nc, taxaConformidade: taxa, ensaiosIds, produtosIds },
+      graficoConformidade: graficoPorPeriodo.map((g: any) => ({
+        periodo:     g.periodo,
+        conforme:    Number(g.conforme),
+        naoConforme: Number(g.naoConforme),
       })),
-      pontosEspecificacao
+      pontosEspecificacao,
     };
   });
 }

@@ -86,10 +86,16 @@ export function SearchBar({ catalogo, loading, initialValue = '', onSubmit, plac
         boxShadow: focado ? '0 0 0 3px var(--clr-primary-ring)' : '0 1px 3px rgba(0,0,0,0.06)',
         transition: 'border-color 0.15s, box-shadow 0.15s',
       }}>
-        {/* Ícone lupa */}
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--clr-text-3)" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
-          <circle cx="11" cy="11" r="8" /><line x1="21" y1="21" x2="16.65" y2="16.65" />
-        </svg>
+        {/* Ícone lupa ou Loading */}
+        {loading && !catalogo ? (
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--clr-primary)" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0, animation: 'qlab-spin 1s linear infinite' }}>
+            <path d="M21 12a9 9 0 1 1-6.219-8.56" />
+          </svg>
+        ) : (
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--clr-text-3)" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
+            <circle cx="11" cy="11" r="8" /><line x1="21" y1="21" x2="16.65" y2="16.65" />
+          </svg>
+        )}
 
         <input
           ref={inputRef}
@@ -103,7 +109,7 @@ export function SearchBar({ catalogo, loading, initialValue = '', onSubmit, plac
             // Delay para permitir clique nas sugestões antes de fechar
             setTimeout(() => { setFocado(false); setAberto(false); }, 150);
           }}
-          placeholder={placeholder ?? 'Buscar — Ex: Pilsen · pH · últimos 6 meses'}
+          placeholder={loading && !catalogo ? 'Carregando catálogo para busca...' : (placeholder ?? 'Buscar — Ex: Pilsen · pH · últimos 6 meses')}
           aria-label="Campo de busca"
           aria-autocomplete="list"
           aria-expanded={mostrarDropdown}

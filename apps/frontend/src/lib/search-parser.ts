@@ -22,10 +22,10 @@ export interface Sugestao {
 
 export interface SearchTokens {
   processos: string[];
-  produtos:  number[];
-  ensaios:   number[];
-  periodo:   { dataInicio: string; dataFim: string };
-  rawTerms:  string[];
+  produtos: number[];
+  ensaios: number[];
+  periodo: { dataInicio: string; dataFim: string };
+  rawTerms: string[];
   etiquetas: Etiqueta[];
 }
 
@@ -34,20 +34,28 @@ export interface SearchTokens {
 function fmt(d: Date): string { return d.toISOString().slice(0, 10); }
 
 export function periodoDefault(): { dataInicio: string; dataFim: string } {
-  const fim   = new Date();
+  const fim = new Date();
   const inicio = new Date();
   inicio.setDate(inicio.getDate() - 30);
   return { dataInicio: fmt(inicio), dataFim: fmt(fim) };
 }
 
-function diasAtras(n: number)   { const f = new Date(); const i = new Date(); i.setDate(i.getDate() - n); return { dataInicio: fmt(i), dataFim: fmt(f) }; }
+function diasAtras(n: number) { const f = new Date(); const i = new Date(); i.setDate(i.getDate() - n); return { dataInicio: fmt(i), dataFim: fmt(f) }; }
 function semanaAtras(n: number) { return diasAtras(n * 7); }
-function mesesAtras(n: number)  { const f = new Date(); const i = new Date(); i.setMonth(i.getMonth() - n); return { dataInicio: fmt(i), dataFim: fmt(f) }; }
+function mesesAtras(n: number) { const f = new Date(); const i = new Date(); i.setMonth(i.getMonth() - n); return { dataInicio: fmt(i), dataFim: fmt(f) }; }
+function anosAtras(n: number) { const f = new Date(); const i = new Date(); i.setFullYear(i.getFullYear() - n); return { dataInicio: fmt(i), dataFim: fmt(f) }; }
+
+function anoPassado(): { dataInicio: string; dataFim: string } {
+  const hoje = new Date();
+  const inicio = new Date(hoje.getFullYear() - 1, 0, 1);
+  const fim = new Date(hoje.getFullYear() - 1, 11, 31);
+  return { dataInicio: fmt(inicio), dataFim: fmt(fim) };
+}
 
 function mesPassado(): { dataInicio: string; dataFim: string } {
   const hoje = new Date();
   const inicio = new Date(hoje.getFullYear(), hoje.getMonth() - 1, 1);
-  const fim    = new Date(hoje.getFullYear(), hoje.getMonth(), 0);
+  const fim = new Date(hoje.getFullYear(), hoje.getMonth(), 0);
   return { dataInicio: fmt(inicio), dataFim: fmt(fim) };
 }
 
@@ -60,7 +68,7 @@ function mesNomeado(nomeMes: string, anoStr?: string): { dataInicio: string; dat
   const mes = meses[nomeMes.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '')] ?? 0;
   const ano = anoStr ? parseInt(anoStr) : new Date().getFullYear();
   const inicio = new Date(ano, mes, 1);
-  const fim    = new Date(ano, mes + 1, 0);
+  const fim = new Date(ano, mes + 1, 0);
   return { dataInicio: fmt(inicio), dataFim: fmt(fim) };
 }
 
@@ -70,63 +78,63 @@ function mesNomeado(nomeMes: string, anoStr?: string): { dataInicio: string; dat
 
 export const PROCESSO_ALIASES: Record<string, string> = {
   // Bigramas primeiro
-  'cip processo':           'cip-processo',
-  'cip envasamento':        'cip-envasamento-novo',
-  'produto acabado':        'envase-produto-acabado',
-  'provas horarias':        'envase-provas-horarias',
-  'provas horárias':        'envase-provas-horarias',
-  'agua enxague':           'microbiologia-agua-enxague',
-  'água enxague':           'microbiologia-agua-enxague',
-  'ar comprimido':          'ar-co2',
-  'materia prima':          'fisico-materia-prima',
-  'matéria prima':          'fisico-materia-prima',
-  'fisico embalagem':       'fisico-embalagem',
-  'físico embalagem':       'fisico-embalagem',
+  'cip processo': 'cip-processo',
+  'cip envasamento': 'cip-envasamento-novo',
+  'produto acabado': 'envase-produto-acabado',
+  'provas horarias': 'envase-provas-horarias',
+  'provas horárias': 'envase-provas-horarias',
+  'agua enxague': 'microbiologia-agua-enxague',
+  'água enxague': 'microbiologia-agua-enxague',
+  'ar comprimido': 'ar-co2',
+  'materia prima': 'fisico-materia-prima',
+  'matéria prima': 'fisico-materia-prima',
+  'fisico embalagem': 'fisico-embalagem',
+  'físico embalagem': 'fisico-embalagem',
 
   // Processo produtivo
-  'fermentacao':            'fermentacao',
-  'fermentação':            'fermentacao',
-  'filtracao':              'filtracao',
-  'filtração':              'filtracao',
-  'brassagem':              'brassagem',
-  'mosturacao':             'brassagem',
-  'mosturação':             'brassagem',
-  'maturacao':              'maturacao',
-  'maturação':              'maturacao',
-  'desalcoolizacao':        'desalcoolizacao',
-  'desalcoolização':        'desalcoolizacao',
-  'captacao':               'captacao',
-  'captação':               'captacao',
-  'efluentes':              'tratamento-efluentes',
-  'ete':                    'tratamento-efluentes',
-  'residuos':               'residuos',
-  'resíduos':               'residuos',
-  'co2':                    'co2-beneficiado',
-  'fermento':               'fermento',
+  'fermentacao': 'fermentacao',
+  'fermentação': 'fermentacao',
+  'filtracao': 'filtracao',
+  'filtração': 'filtracao',
+  'brassagem': 'brassagem',
+  'mosturacao': 'brassagem',
+  'mosturação': 'brassagem',
+  'maturacao': 'maturacao',
+  'maturação': 'maturacao',
+  'desalcoolizacao': 'desalcoolizacao',
+  'desalcoolização': 'desalcoolizacao',
+  'captacao': 'captacao',
+  'captação': 'captacao',
+  'efluentes': 'tratamento-efluentes',
+  'ete': 'tratamento-efluentes',
+  'residuos': 'residuos',
+  'resíduos': 'residuos',
+  'co2': 'co2-beneficiado',
+  'fermento': 'fermento',
 
   // Envase
-  'envase':                 'envase-produto-acabado',
-  'chopp':                  'envase-chopp',
-  'arrolhamento':           'envase-arrolhamento',
-  'assoprador':             'envase-assoprador',
-  'lubrificante':           'envase-lubrificante',
-  'recravacao':             'envase-recravacao',
-  'recravação':             'envase-recravacao',
-  'pasteurizador':          'envase-pasteurizador',
-  'interunidades':          'envase-interunidades',
+  'envase': 'envase-produto-acabado',
+  'chopp': 'envase-chopp',
+  'arrolhamento': 'envase-arrolhamento',
+  'assoprador': 'envase-assoprador',
+  'lubrificante': 'envase-lubrificante',
+  'recravacao': 'envase-recravacao',
+  'recravação': 'envase-recravacao',
+  'pasteurizador': 'envase-pasteurizador',
+  'interunidades': 'envase-interunidades',
 
   // CIP
-  'cip':                    'cip-processo',
+  'cip': 'cip-processo',
 
   // Microbiologia
-  'micro':                  'microbiologia-analise-microbiologia',
-  'microbiologia':          'microbiologia-analise-microbiologia',
-  'swab':                   'microbiologia-swab',
-  'estabilidade':           'microbiologia-estabilidade-micro',
+  'micro': 'microbiologia-analise-microbiologia',
+  'microbiologia': 'microbiologia-analise-microbiologia',
+  'swab': 'microbiologia-swab',
+  'estabilidade': 'microbiologia-estabilidade-micro',
 
   // Físico
-  'quimicos':               'fisico-quimicos',
-  'químicos':               'fisico-quimicos',
+  'quimicos': 'fisico-quimicos',
+  'químicos': 'fisico-quimicos',
 };
 
 // Map de exibição para os slugs (bonitinhos)
@@ -170,38 +178,59 @@ const PERIODO_PATTERNS: {
   re: RegExp;
   resolver: (m: RegExpMatchArray) => { dataInicio: string; dataFim: string };
 }[] = [
-  {
-    re: /(?:ú|u)ltim[oa]s?\s+(\d+)\s+dias?/i,
-    resolver: m => diasAtras(Number(m[1])),
-  },
-  {
-    re: /(?:ú|u)ltim[oa]\s+semana|semana\s+passada/i,
-    resolver: () => semanaAtras(1),
-  },
-  {
-    re: /(?:ú|u)ltim[oa]s?\s+(\d+)\s+semanas?/i,
-    resolver: m => semanaAtras(Number(m[1])),
-  },
-  {
-    re: /m(?:ê|e)s\s+passado/i,
-    resolver: () => mesPassado(),
-  },
-  {
-    re: /(?:ú|u)ltim[oa]s?\s+(\d+)\s+m(?:ê|e)ses?/i,
-    resolver: m => mesesAtras(Number(m[1])),
-  },
-  {
-    re: /(janeiro|fevereiro|mar[cç]o|abril|maio|junho|julho|agosto|setembro|outubro|novembro|dezembro)(?:\s+(?:de\s+)?(\d{4}))?/i,
-    resolver: m => mesNomeado(m[1], m[2]),
-  },
-  {
-    re: /(\d{2})\/(\d{2})\/(\d{4})\s*[-a]\s*(\d{2})\/(\d{2})\/(\d{4})/,
-    resolver: m => ({
-      dataInicio: `${m[3]}-${m[2]}-${m[1]}`,
-      dataFim:    `${m[6]}-${m[5]}-${m[4]}`,
-    }),
-  },
-];
+    {
+      re: /(?:ú|u)ltim[oa]s?\s+(\d+)\s+dias?/i,
+      resolver: m => diasAtras(Number(m[1])),
+    },
+
+    {
+      re: /(?:ú|u)ltim[oa]\s+semana|semana\s+passada/i,
+      resolver: () => semanaAtras(1),
+    },
+    {
+      re: /(?:ú|u)ltim[oa]s?\s+(\d+)\s+semanas?/i,
+      resolver: m => semanaAtras(Number(m[1])),
+    },
+    {
+      re: /m(?:ê|e)s\s+passado/i,
+      resolver: () => mesPassado(),
+    },
+    {
+      re: /(?:ú|u)ltim[oa]\s+m(?:ê|e)s/i,
+      resolver: () => mesesAtras(1),
+    },
+    {
+      re: /(?:ú|u)ltim[oa]s?\s+(\d+)\s+m(?:ê|e)ses?/i,
+      resolver: m => mesesAtras(Number(m[1])),
+    },
+    {
+      re: /ano\s+passado/i,
+      resolver: () => anoPassado(),
+    },
+    {
+      re: /(?:ú|u)ltimo\s+ano/i,
+      resolver: () => anosAtras(1),
+    },
+    {
+      re: /(?:ú|u)ltimos?\s+(\d+)\s+anos?/i,
+      resolver: m => anosAtras(Number(m[1])),
+    },
+    {
+      re: /(?:ú|u)ltim[oa]s?\s+(\d+)\s+m(?:ê|e)ses?/i,
+      resolver: m => mesesAtras(Number(m[1])),
+    },
+    {
+      re: /(janeiro|fevereiro|mar[cç]o|abril|maio|junho|julho|agosto|setembro|outubro|novembro|dezembro)(?:\s+(?:de\s+)?(\d{4}))?/i,
+      resolver: m => mesNomeado(m[1], m[2]),
+    },
+    {
+      re: /(\d{2})\/(\d{2})\/(\d{4})\s*[-a]\s*(\d{2})\/(\d{2})\/(\d{4})/,
+      resolver: m => ({
+        dataInicio: `${m[3]}-${m[2]}-${m[1]}`,
+        dataFim: `${m[6]}-${m[5]}-${m[4]}`,
+      }),
+    },
+  ];
 
 // ─── Normalização ─────────────────────────────────────────────────────────────
 
@@ -214,8 +243,8 @@ function norm(s: string): string {
 export function parseSearchQuery(input: string, catalogo: Catalogo): SearchTokens {
   const tokens: SearchTokens = {
     processos: [], produtos: [], ensaios: [],
-    periodo:   periodoDefault(),
-    rawTerms:  [], etiquetas: [],
+    periodo: periodoDefault(),
+    rawTerms: [], etiquetas: [],
   };
 
   if (!input.trim()) return tokens;
@@ -226,11 +255,11 @@ export function parseSearchQuery(input: string, catalogo: Catalogo): SearchToken
     const m = restante.match(re);
     if (m) {
       tokens.periodo = resolver(m);
-      tokens.etiquetas.push({ 
-        tipo: 'periodo', 
-        label: m[0], 
-        rawText: m[0], 
-        valor: `${tokens.periodo.dataInicio}:${tokens.periodo.dataFim}` 
+      tokens.etiquetas.push({
+        tipo: 'periodo',
+        label: m[0],
+        rawText: m[0],
+        valor: `${tokens.periodo.dataInicio}:${tokens.periodo.dataFim}`
       });
       restante = restante.replace(m[0], ' ');
       break;
@@ -257,26 +286,42 @@ export function parseSearchQuery(input: string, catalogo: Catalogo): SearchToken
       continue;
     }
 
-    // 2b. Tenta produto (fuzzy — includes)
-    const produto = catalogo.produtos.find(p =>
-      norm(p.nome).includes(chave)
-    );
-    if (produto) {
-      if (!tokens.produtos.includes(produto.id)) {
-        tokens.produtos.push(produto.id);
-        tokens.etiquetas.push({ tipo: 'produto', label: produto.nome, rawText: parte, valor: produto.id });
+    // 2b. Exato produto
+    const produtoExato = catalogo.produtos.find(p => norm(p.nome) === chave);
+    if (produtoExato) {
+      if (!tokens.produtos.includes(produtoExato.id)) {
+        tokens.produtos.push(produtoExato.id);
+        tokens.etiquetas.push({ tipo: 'produto', label: produtoExato.nome, rawText: parte, valor: produtoExato.id });
       }
       continue;
     }
 
-    // 2c. Tenta ensaio (fuzzy — includes)
-    const ensaio = catalogo.ensaios.find(e =>
-      norm(e.nome).includes(chave)
-    );
-    if (ensaio) {
-      if (!tokens.ensaios.includes(ensaio.id)) {
-        tokens.ensaios.push(ensaio.id);
-        tokens.etiquetas.push({ tipo: 'ensaio', label: ensaio.nome, rawText: parte, valor: ensaio.id });
+    // 2c. Exato ensaio (antes do fuzzy de produto para evitar "COR" → "COROA")
+    const ensaioExato = catalogo.ensaios.find(e => norm(e.nome) === chave);
+    if (ensaioExato) {
+      if (!tokens.ensaios.includes(ensaioExato.id)) {
+        tokens.ensaios.push(ensaioExato.id);
+        tokens.etiquetas.push({ tipo: 'ensaio', label: ensaioExato.nome, rawText: parte, valor: ensaioExato.id });
+      }
+      continue;
+    }
+
+    // 2d. Fuzzy ensaio (startsWith tem prioridade sobre includes de produto)
+    const ensaioFuzzy = catalogo.ensaios.find(e => norm(e.nome).includes(chave));
+    if (ensaioFuzzy) {
+      if (!tokens.ensaios.includes(ensaioFuzzy.id)) {
+        tokens.ensaios.push(ensaioFuzzy.id);
+        tokens.etiquetas.push({ tipo: 'ensaio', label: ensaioFuzzy.nome, rawText: parte, valor: ensaioFuzzy.id });
+      }
+      continue;
+    }
+
+    // 2e. Fuzzy produto (último recurso)
+    const produtoFuzzy = catalogo.produtos.find(p => norm(p.nome).includes(chave));
+    if (produtoFuzzy) {
+      if (!tokens.produtos.includes(produtoFuzzy.id)) {
+        tokens.produtos.push(produtoFuzzy.id);
+        tokens.etiquetas.push({ tipo: 'produto', label: produtoFuzzy.nome, rawText: parte, valor: produtoFuzzy.id });
       }
       continue;
     }
