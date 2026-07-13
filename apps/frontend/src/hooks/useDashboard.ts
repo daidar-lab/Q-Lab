@@ -1,7 +1,7 @@
 // apps/frontend/src/hooks/useDashboard.ts
 import { useState, useEffect } from 'react';
 import * as api from '../services/dashboard.api';
-import type { RankingItem } from '../services/dashboard.api';
+import type { RankingItem, TipoProdutoRankingItem } from '../services/dashboard.api';
 
 interface FiltroPeriodo {
   filialId: number | null;
@@ -12,7 +12,7 @@ interface FiltroPeriodo {
 export function useDashboard(periodo: FiltroPeriodo) {
   const [kpis, setKpis] = useState<any>(null);
   const [processos, setProcessos] = useState<RankingItem[]>([]);
-  const [produtos, setProdutos] = useState<RankingItem[]>([]);
+  const [produtos, setProdutos] = useState<TipoProdutoRankingItem[]>([]);
   const [ensaios, setEnsaios] = useState<RankingItem[]>([]);
   const [carregando, setCarregando] = useState(false);
   const [erro, setErro] = useState<string | null>(null);

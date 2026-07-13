@@ -1324,38 +1324,88 @@ export async function getRankingProcessos(
 }
 
 
+export interface ProdutoRankingItem {
+  id: number;
+  nome: string;
+  amostras: number;
+  ensaios: number;
+  nc: number;
+}
+
+export interface TipoProdutoRankingItem {
+  tipo: string;
+  amostras: number;
+  ensaios: number;
+  nc: number;
+  produtos: ProdutoRankingItem[];
+}
+
 // 3. Ranking por produto
-export async function getRankingProdutos(periodo: FiltroPeriodo, limit = 20) {
+export async function getRankingProdutos(
+  periodo: FiltroPeriodo,
+): Promise<TipoProdutoRankingItem[]> {
   const labs = await resolveFilialLaboratorios(periodo.filialId);
   const labFilter = labs.length > 0
-    ? `AND cod_laboratorio IN (${labs.map(() => '?').join(', ')})`
+    ? `AND dw.cod_laboratorio IN (${labs.map(() => '?').join(', ')})`
     : '';
 
   const rows = await blabQuery<any>(`
     SELECT
-      cod_produto                                                          AS id,
-      produto                                                              AS nome,
-      COUNT(DISTINCT cod_amostra)                                          AS amostras,
+      dp.tipo                                                              AS tipo,
+      dw.cod_produto                                                       AS id,
+      dw.produto                                                           AS nome,
+      COUNT(DISTINCT dw.cod_amostra)                                       AS amostras,
       COUNT(1)                                                             AS ensaios,
-      SUM(CASE WHEN conformidade = 'NÃO CONFORME' THEN 1 ELSE 0 END)       AS nc
-    FROM DW_FAT_RESULTADO
-    WHERE D_E_L_E_T IS NULL
-      AND conformidade != 'NÃO AVALIADO'
-      AND cod_produto IS NOT NULL
-      AND data_resultado BETWEEN ? AND ?
+      SUM(CASE WHEN dw.conformidade = 'NÃO CONFORME' THEN 1 ELSE 0 END)   AS nc
+    FROM DW_FAT_RESULTADO dw
+    INNER JOIN DIM_PRODUTO dp
+      ON dp.cod_produto = dw.cod_produto
+      AND dp.D_E_L_E_T IS NULL
+    WHERE dw.D_E_L_E_T IS NULL
+      AND dw.conformidade != 'NÃO AVALIADO'
+      AND dw.cod_produto IS NOT NULL
+      AND dw.data_resultado BETWEEN ? AND ?
       ${labFilter}
-    GROUP BY cod_produto, produto
-    ORDER BY nc DESC
-    LIMIT ?
-  `, [periodo.dataInicio, periodo.dataFim, ...labs, limit]);
+    GROUP BY dp.tipo, dw.cod_produto, dw.produto
+    ORDER BY dp.tipo ASC, nc DESC
+  `, [periodo.dataInicio, periodo.dataFim, ...labs]);
 
-  return rows.map(r => ({
-    id: Number(r.id),
-    nome: r.nome,
-    amostras: Number(r.amostras),
-    ensaios: Number(r.ensaios),
-    nc: Number(r.nc),
-  }));
+  const tiposMap = new Map<string, TipoProdutoRankingItem>();
+
+  for (const r of rows) {
+    const tipo = r.tipo as string;
+
+    if (!tiposMap.has(tipo)) {
+      tiposMap.set(tipo, {
+        tipo,
+        amostras: 0,
+        ensaios: 0,
+        nc: 0,
+        produtos: [],
+      });
+    }
+
+    const entry = tiposMap.get(tipo)!;
+
+    const produto: ProdutoRankingItem = {
+      id: Number(r.id),
+      nome: r.nome,
+      amostras: Number(r.amostras),
+      ensaios: Number(r.ensaios),
+      nc: Number(r.nc),
+    };
+
+    entry.produtos.push(produto);
+    entry.amostras += produto.amostras;
+    entry.ensaios  += produto.ensaios;
+    entry.nc       += produto.nc;
+  }
+
+  // Ordenar tipos por nc desc; produtos já vêm ordenados por nc desc da query
+  const result = Array.from(tiposMap.values())
+    .sort((a, b) => b.nc - a.nc);
+
+  return result;
 }
 
 // 4. Ranking por ensaio

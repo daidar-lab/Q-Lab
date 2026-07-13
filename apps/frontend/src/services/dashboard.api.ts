@@ -28,6 +28,22 @@ export interface RankingItem {
     nc: number;
 }
 
+export interface ProdutoRankingItem {
+  id: number;
+  nome: string;
+  amostras: number;
+  ensaios: number;
+  nc: number;
+}
+
+export interface TipoProdutoRankingItem {
+  tipo: string;
+  amostras: number;
+  ensaios: number;
+  nc: number;
+  produtos: ProdutoRankingItem[];
+}
+
 export const getKpisDashboard = (f: FiltroPeriodo) =>
     request<KpisDashboard>('/api/analitica/dashboard/kpis', { params: f });
 
@@ -35,7 +51,7 @@ export const getRankingProcessos = (f: FiltroPeriodo) =>
     request<RankingItem[]>('/api/analitica/dashboard/ranking/processos', { params: f });
 
 export const getRankingProdutos = (f: FiltroPeriodo) =>
-    request<RankingItem[]>('/api/analitica/dashboard/ranking/produtos', { params: f });
+    request<TipoProdutoRankingItem[]>('/api/analitica/dashboard/ranking/produtos', { params: f });
 
 export const getRankingEnsaios = (f: FiltroPeriodo) =>
     request<RankingItem[]>('/api/analitica/dashboard/ranking/ensaios', { params: f });

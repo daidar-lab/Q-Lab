@@ -21,6 +21,7 @@ interface ProdutosDropdownProps {
   bem?: string;
   selectedSkus: string[];
   onToggleSku: (codProduto: string) => void;
+  codProduto?: string;
   /** Se true, usa o endpoint sem-faixa (processo ou produto sem LIE/LSE) */
   semFaixa?: boolean;
 }
@@ -36,6 +37,7 @@ export const ProdutosDropdown: React.FC<ProdutosDropdownProps> = ({
   bem,
   selectedSkus,
   onToggleSku,
+  codProduto,
   semFaixa = false,
 }) => {
   const { filialId } = useContexto();
@@ -58,7 +60,8 @@ export const ProdutosDropdown: React.FC<ProdutosDropdownProps> = ({
           : { id, codEnsaio, lie, lse, dataInicio, dataFim, filialId, ...(operacao ? { operacao } : {}), ...(bem ? { bem } : {}) };
 
         const data = await request<ProdutoFaixa[]>(endpoint, { params });
-        setProdutos(data || []);
+        const filteredData = codProduto ? (data || []).filter(p => String(p.cod_produto) === String(codProduto)) : (data || []);
+        setProdutos(filteredData);
       } catch (err: any) {
         console.error('Erro ao buscar produtos da faixa:', err);
         setError(err.message || 'Erro ao carregar produtos.');
@@ -68,7 +71,7 @@ export const ProdutosDropdown: React.FC<ProdutosDropdownProps> = ({
     };
 
     fetchProdutos();
-  }, [id, codEnsaio, lie, lse, dataInicio, dataFim, semFaixa, filialId, operacao, bem]);
+  }, [id, codEnsaio, lie, lse, dataInicio, dataFim, semFaixa, filialId, operacao, bem, codProduto]);
 
 
   const getComplianceBadge = (pct: number | string | undefined | null) => {

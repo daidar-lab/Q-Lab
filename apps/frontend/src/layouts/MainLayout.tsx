@@ -1,12 +1,18 @@
 import { Outlet, Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthProvider';
+import { useContexto } from '../contexts/ContextoProvider';
+import { useCatalogo } from '../hooks/useCatalogo';
+import { LABELS_CATEGORIA } from '../lib/search-parser';
 import { PeriodSelector } from '../components/ui/PeriodSelector';
 import { FilialSelector } from '../components/ui/FilialSelector';
 import type { CSSProperties } from 'react';
 
-// Breadcrumb simples baseado na URL
+// Breadcrumb inteligente baseado na URL + Catálogo + Labels bonitos
 function useBreadcrumb() {
   const location = useLocation();
+  const { filialId } = useContexto();
+  const { catalogo } = useCatalogo(filialId);
+  
   const parts = location.pathname.split('/').filter(Boolean);
   if (parts.length === 0) return null;
 
@@ -16,7 +22,30 @@ function useBreadcrumb() {
   };
 
   return parts
-    .map(p => labels[p] ?? decodeURIComponent(p))
+    .map(p => {
+      // 1. É um caminho mapeado fixo?
+      if (labels[p] !== undefined) return labels[p];
+      
+      const decoded = decodeURIComponent(p);
+      
+      // 2. É um slug de processo conhecido?
+      if (LABELS_CATEGORIA[decoded]) return LABELS_CATEGORIA[decoded];
+      
+      // 3. Tenta descobrir via catálogo se for ID numérico
+      if (catalogo) {
+        if (parts.includes('produtos')) {
+          const prod = catalogo.produtos.find(x => x.id === Number(decoded));
+          if (prod) return prod.nome;
+        }
+        if (parts.includes('ensaios')) {
+          const ens = catalogo.ensaios.find(x => x.id === Number(decoded));
+          if (ens) return ens.nome;
+        }
+      }
+
+      // 4. Fallback: mostra como veio
+      return decoded;
+    })
     .filter(Boolean);
 }
 
@@ -136,7 +165,7 @@ export default function MainLayout() {
             <img src="/favicon.svg" alt="Q-Lab Logo" style={{ width: '32px', height: '32px', flexShrink: 0 }} />
             <div style={{ display: 'flex', flexDirection: 'column', gap: '1px' }}>
               <span style={{ fontSize: '14px', fontWeight: 700, color: 'var(--clr-nav-text)', lineHeight: 1 }}>
-                Controle de Qualidade
+                Q/Lab
               </span>
               <span style={{ fontSize: '10px', fontWeight: 500, color: 'var(--clr-nav-text-2)', letterSpacing: '0.08em', textTransform: 'uppercase' }}>
                 Laboratório · Cervejaria

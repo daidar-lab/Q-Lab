@@ -10,6 +10,7 @@ interface RequestOptions {
     method?: HttpMethod;
     body?: unknown;
     params?: Record<string, any>;
+    signal?: AbortSignal;
 }
 
 function buildUrl(path: string, params?: RequestOptions['params']): string {
@@ -72,11 +73,16 @@ export async function request<T>(
         const controller = new AbortController();
         const id = setTimeout(() => controller.abort(), timeoutMs);
         try {
+            // AbortSignal.any is supported in modern browsers
+            const combinedSignal = options.signal && typeof AbortSignal.any === 'function'
+                ? AbortSignal.any([options.signal, controller.signal])
+                : (options.signal || controller.signal);
+
             const res = await fetch(buildUrl(path, params), {
                 method,
                 headers,
                 body: body != null ? JSON.stringify(body) : undefined,
-                signal: controller.signal,
+                signal: combinedSignal,
             });
             clearTimeout(id);
 

@@ -66,9 +66,9 @@ export default function SelecionarCentroCustoModal({
           {!carregando && opcoes.length === 0 && (
             <p className={styles.noDataText}>Nenhum processo encontrado para este ensaio no período.</p>
           )}
-          {!carregando && opcoes.map((opcao) => (
+          {!carregando && opcoes.map((opcao, index) => (
             <button
-              key={opcao.cod_centro_de_custo}
+              key={`${opcao.cod_centro_de_custo}-${index}`}
               className={styles.opcaoCentroCusto}
               onClick={() => onSelecionar(opcao.cod_centro_de_custo, opcao.centro_de_custo)}
             >

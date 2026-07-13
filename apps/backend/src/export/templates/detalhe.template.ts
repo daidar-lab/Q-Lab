@@ -49,7 +49,10 @@ export function buildDetalheHTML(data: {
   const rowsFaixas = faixas.map((f, i) => `
     <tr>
       <td><span class="rank-num">${i + 1}</span></td>
-      <td>${f.ensaio ?? '—'}</td>
+      <td>
+        <div>${f.ensaio ?? '—'}</div>
+        ${f.operacao ? `<div style="font-size: 0.85em; color: #666; margin-top: 2px; text-transform: uppercase;">${f.operacao}</div>` : ''}
+      </td>
       <td>${f.n != null ? Number(f.n).toLocaleString('pt-BR') : '—'}</td>
       <td class="badge-nc">${f.pct_nao_conforme != null ? Number(f.pct_nao_conforme).toFixed(1) : '—'}%</td>
       <td>${f.lie ?? '—'}</td>

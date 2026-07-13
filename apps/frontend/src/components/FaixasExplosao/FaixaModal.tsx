@@ -29,6 +29,7 @@ interface FaixaModalProps {
     dataFim: string;
     operacao?: string;
     bem?: string;
+    codProduto?: string;
 }
 
 interface SamplePoint {
@@ -203,9 +204,10 @@ export const FaixaModal: React.FC<FaixaModalProps> = ({
     dataFim,
     operacao,
     bem,
+    codProduto,
 }) => {
     const { filialId, filialLabel } = useContexto();
-    const [selectedSkus, setSelectedSkus] = useState<string[]>([]);
+    const [selectedSkus, setSelectedSkus] = useState<string[]>(codProduto ? [codProduto] : []);
     const [activeFaixas, setActiveFaixas] = useState<{ lie: number; lse: number }[]>([]);
     const [samples, setSamples] = useState<SamplePoint[]>([]);
     const [loadingChart, setLoadingChart] = useState<boolean>(false);
@@ -324,9 +326,9 @@ export const FaixaModal: React.FC<FaixaModalProps> = ({
     // Reset ao abrir modal ou trocar ensaio
     useEffect(() => {
         if (isOpen) {
-            setSelectedSkus([]);
+            setSelectedSkus(codProduto ? [codProduto] : []);
             setActiveFaixas([]);
-            setCommittedSkus([]);
+            setCommittedSkus(codProduto ? [codProduto] : []);
             setCommittedFaixas([]);
             setSamples([]);
             setModoSemFaixa(false);
@@ -461,6 +463,7 @@ export const FaixaModal: React.FC<FaixaModalProps> = ({
                             dataFim={dataFim}
                             operacao={operacao}
                             bem={bem}
+                            codProduto={codProduto}
                             selectedSkus={selectedSkus}
                             onSelectedSkusChange={setSelectedSkus}
                             onActiveFaixasChange={setActiveFaixas}

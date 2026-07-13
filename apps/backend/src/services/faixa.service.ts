@@ -78,7 +78,8 @@ export async function getExplosaoFaixas(
     dataFim: string,
     filialId: number,
     operacao?: string,
-    bem?: string
+    bem?: string,
+    codProduto?: string
 ): Promise<FaixaExplosaoRow[]> {
     const { sql: filtroCtx, params: paramsCtx } = resolverFiltroContexto(id);
     const labs = await resolveFilialLaboratorios(filialId);
@@ -89,6 +90,8 @@ export async function getExplosaoFaixas(
     const operacaoParam = operacao ? [operacao] : [];
     const bemFilter = bem ? 'AND dw.bem = ?' : '';
     const bemParam = bem ? [bem] : [];
+    const codProdutoFilter = codProduto ? 'AND dw.cod_produto = ?' : '';
+    const codProdutoParam = codProduto ? [codProduto] : [];
 
     return blabQuery(`
     SELECT
@@ -106,6 +109,7 @@ export async function getExplosaoFaixas(
       AND dw.cod_ensaio = ?
       ${operacaoFilter}
       ${bemFilter}
+      ${codProdutoFilter}
       AND dw.conformidade != 'NÃO AVALIADO'
       AND dw.lie IS NOT NULL
       AND dw.lse IS NOT NULL
@@ -115,7 +119,7 @@ export async function getExplosaoFaixas(
       CAST(REPLACE(dw.lse, ',', '.') AS DECIMAL(10,4))
     ORDER BY n_amostras DESC
     LIMIT 10
-  `, [...paramsCtx, ...labs, codEnsaio, ...operacaoParam, ...bemParam, dataInicio, dataFim]) as Promise<FaixaExplosaoRow[]>;
+  `, [...paramsCtx, ...labs, codEnsaio, ...operacaoParam, ...bemParam, ...codProdutoParam, dataInicio, dataFim]) as Promise<FaixaExplosaoRow[]>;
 }
 
 /**

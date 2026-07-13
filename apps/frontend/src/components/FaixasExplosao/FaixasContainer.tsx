@@ -13,6 +13,7 @@ interface FaixasContainerProps {
     dataFim: string;
     operacao?: string;
     bem?: string;
+    codProduto?: string;
     selectedSkus: string[];
     onSelectedSkusChange: (skus: string[]) => void;
     onActiveFaixasChange?: (limits: { lie: number; lse: number }[]) => void;
@@ -27,6 +28,7 @@ export const FaixasContainer: React.FC<FaixasContainerProps> = ({
     dataFim,
     operacao,
     bem,
+    codProduto,
     selectedSkus,
     onSelectedSkusChange,
     onActiveFaixasChange,
@@ -57,6 +59,7 @@ export const FaixasContainer: React.FC<FaixasContainerProps> = ({
                         filialId,
                         ...(operacao ? { operacao } : {}),
                         ...(bem ? { bem } : {}),
+                        ...(codProduto ? { codProduto } : {}),
                     },
                 });
 
@@ -154,6 +157,7 @@ export const FaixasContainer: React.FC<FaixasContainerProps> = ({
                     semFaixa={true}
                     operacao={operacao}
                     bem={bem}
+                    codProduto={codProduto}
                 />
             </div>
         );
@@ -192,6 +196,7 @@ export const FaixasContainer: React.FC<FaixasContainerProps> = ({
                             dataFim={dataFim}
                             operacao={operacao}
                             bem={bem}
+                            codProduto={codProduto}
                             selectedSkus={selectedSkus}
                             onToggleSku={handleToggleSku}
                         />

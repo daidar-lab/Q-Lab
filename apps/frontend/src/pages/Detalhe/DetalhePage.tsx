@@ -377,6 +377,7 @@ export default function DetalhePage() {
                     dataFim={dataFim}
                     operacao={operacaoResolvida || faixaSelecionadaObjeto.operacao}
                     bem={bemResolvido || undefined}
+                    codProduto={(tipoNormalizado === 'produto' || tipoNormalizado === 'produtos') ? String(id) : undefined}
                 />
             )}
 
