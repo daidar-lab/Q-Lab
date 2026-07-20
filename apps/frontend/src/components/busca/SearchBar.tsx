@@ -19,10 +19,12 @@ interface SearchBarProps {
 }
 
 const TIPO_CONFIG: Record<Sugestao['tipo'], { badge: string; cor: string; bg: string }> = {
-  processo: { badge: 'PROCESSO', cor: '#92400E', bg: '#FEF3C7' },
-  produto: { badge: 'PRODUTO', cor: '#7C2D12', bg: '#FFEDD5' },
-  ensaio: { badge: 'ENSAIO', cor: '#1E3A5F', bg: '#DBEAFE' },
+  processo:     { badge: 'PROCESSO',    cor: '#92400E', bg: '#FEF3C7' },
+  produto:      { badge: 'PRODUTO',     cor: '#7C2D12', bg: '#FFEDD5' },
+  ensaio:       { badge: 'ENSAIO',      cor: '#1E3A5F', bg: '#DBEAFE' },
+  'tipo-produto': { badge: 'TIPO',      cor: '#4C1D95', bg: '#EDE9FE' },
 };
+
 
 export function SearchBar({ catalogo, loading, initialValue = '', onSubmit, placeholder }: SearchBarProps) {
   const inputRef = useRef<HTMLInputElement>(null);
@@ -236,7 +238,7 @@ export function SearchBar({ catalogo, loading, initialValue = '', onSubmit, plac
             </div>
           )}
 
-          {(['processo', 'produto', 'ensaio'] as const).map(tipo => {
+          {(['processo', 'tipo-produto', 'produto', 'ensaio'] as const).map(tipo => {
             const grupo = sugestoes.filter(s => s.tipo === tipo);
             if (grupo.length === 0) return null;
             const cfg = TIPO_CONFIG[tipo];

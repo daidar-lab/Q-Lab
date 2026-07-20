@@ -238,8 +238,12 @@ export async function getDetalheAmostra(codAmostra: string, codEnsaioAtual?: str
       dw.equipamento,
       dw.numero_de_controle,
       dw.lote_de_controle_de_qualidade,
-      CASE WHEN dw.cod_ensaio = ? THEN 1 ELSE 0 END AS destaque
+      CASE WHEN dw.cod_ensaio = ? THEN 1 ELSE 0 END AS destaque,
+      CASE WHEN rar.cod_amostra_reanalise IS NOT NULL THEN 1 ELSE 0 END AS is_reanalise
     FROM DW_FAT_RESULTADO dw
+    LEFT JOIN FAT_AMOSTRAxAMOSTRA_REANALISE rar
+      ON rar.cod_amostra_reanalise = dw.cod_amostra
+      AND rar.D_E_L_E_T IS NULL
     WHERE dw.D_E_L_E_T IS NULL
       AND dw.cod_amostra = ?
     ORDER BY destaque DESC, dw.ensaio ASC

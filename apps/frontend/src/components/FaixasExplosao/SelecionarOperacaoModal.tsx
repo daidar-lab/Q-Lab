@@ -19,6 +19,7 @@ interface SelecionarOperacaoModalProps {
   centroCustoNome: string;
   dataInicio: string;
   dataFim: string;
+  filialId: number;
 }
 
 export default function SelecionarOperacaoModal({
@@ -31,6 +32,7 @@ export default function SelecionarOperacaoModal({
   centroCustoNome,
   dataInicio,
   dataFim,
+  filialId,
 }: SelecionarOperacaoModalProps) {
   const [opcoes, setOpcoes] = useState<OperacaoOption[]>([]);
   const [carregando, setCarregando] = useState(false);
@@ -39,10 +41,10 @@ export default function SelecionarOperacaoModal({
     if (!isOpen) return;
     setCarregando(true);
     
-    detalheApi.getOperacoesPorCentroCustoEEnsaio(codEnsaio, codCentroCusto, dataInicio, dataFim)
+    detalheApi.getOperacoesPorCentroCustoEEnsaio(codEnsaio, codCentroCusto, dataInicio, dataFim, filialId)
       .then(setOpcoes)
       .finally(() => setCarregando(false));
-  }, [isOpen, codEnsaio, codCentroCusto, dataInicio, dataFim]);
+  }, [isOpen, codEnsaio, codCentroCusto, dataInicio, dataFim, filialId]);
 
   if (!isOpen) return null;
 

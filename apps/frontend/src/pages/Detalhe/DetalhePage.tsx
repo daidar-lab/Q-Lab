@@ -109,7 +109,7 @@ export default function DetalhePage() {
         } else if (tipoNormalizado === 'produto' || tipoNormalizado === 'produtos') {
             setCarregandoCentroCusto(true);
             try {
-                const centros = await detalheApi.getCentrosCustoPorProdutoEEnsaio(String(id), String(faixa.cod_ensaio), dataInicio, dataFim);
+                const centros = await detalheApi.getCentrosCustoPorProdutoEEnsaio(String(id), String(faixa.cod_ensaio), dataInicio, dataFim, filialId);
                 if (centros && centros.length === 1) {
                     setCentroCustoResolvido({ id: centros[0].cod_centro_de_custo, nome: centros[0].centro_de_custo });
                     setModalFaixaAberto(true);
@@ -320,6 +320,7 @@ export default function DetalhePage() {
                     dataInicio={dataInicio}
                     dataFim={dataFim}
                     codProduto={(tipo?.toLowerCase() === 'produto' || tipo?.toLowerCase() === 'produtos') ? String(id) : undefined}
+                    filialId={filialId}
                 />
             )}
 
@@ -335,6 +336,7 @@ export default function DetalhePage() {
                     centroCustoNome={centroCustoResolvido.nome}
                     dataInicio={dataInicio}
                     dataFim={dataFim}
+                    filialId={filialId}
                 />
             )}
 
@@ -351,6 +353,7 @@ export default function DetalhePage() {
                     operacao={operacaoResolvida}
                     dataInicio={dataInicio}
                     dataFim={dataFim}
+                    filialId={filialId}
                 />
             )}
 
@@ -378,6 +381,7 @@ export default function DetalhePage() {
                     operacao={operacaoResolvida || faixaSelecionadaObjeto.operacao}
                     bem={bemResolvido || undefined}
                     codProduto={(tipoNormalizado === 'produto' || tipoNormalizado === 'produtos') ? String(id) : undefined}
+                    processoNome={centroCustoResolvido?.nome || dados.resumo?.nome}
                 />
             )}
 

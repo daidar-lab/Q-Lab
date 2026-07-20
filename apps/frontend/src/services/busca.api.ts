@@ -8,9 +8,15 @@ export interface CatalogoItem {
   nome: string;
 }
 
+export interface TipoCatalogoItem {
+  tipo: string;
+  produtos: CatalogoItem[];
+}
+
 export interface Catalogo {
   produtos: CatalogoItem[];
   ensaios: CatalogoItem[];
+  tipos: TipoCatalogoItem[];
   carregadoEm: number;
 }
 

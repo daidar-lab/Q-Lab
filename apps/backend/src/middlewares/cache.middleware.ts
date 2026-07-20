@@ -42,8 +42,10 @@ export function cacheMiddleware() {
 
             res.json = function (body: any): Response {
                 res.json = originalJson;
-                redisClient.set(cacheKey, JSON.stringify(body), { EX: ttl })
-                    .catch(err => console.error('⚠️ Erro ao salvar cache:', err));
+                if (res.statusCode >= 200 && res.statusCode < 300) {
+                    redisClient.set(cacheKey, JSON.stringify(body), { EX: ttl })
+                        .catch(err => console.error('⚠️ Erro ao salvar cache:', err));
+                }
                 return res.json(body);
             };
 

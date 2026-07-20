@@ -46,4 +46,5 @@ export function invalidarCatalogo(filialId: number): void {
   _loading.delete(filialId);
 }
 
-export type { Catalogo, CatalogoItem } from '../services/busca.api';
+export type { Catalogo, CatalogoItem, TipoCatalogoItem } from '../services/busca.api';
+

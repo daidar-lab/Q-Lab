@@ -11,6 +11,7 @@ const ICONE: Record<Etiqueta['tipo'], string> = {
   produto:     '📦',
   ensaio:      '🔬',
   periodo:     '📅',
+  'tipo-produto': '🏷️',
   desconhecido: '❓',
 };
 
@@ -19,6 +20,7 @@ const COR_BG: Record<Etiqueta['tipo'], string> = {
   produto:     '#FFEDD5',
   ensaio:      '#DBEAFE',
   periodo:     '#F3F4F6',
+  'tipo-produto': '#F3E8FF',
   desconhecido: '#FEE2E2',
 };
 
@@ -27,6 +29,7 @@ const COR_TEXTO: Record<Etiqueta['tipo'], string> = {
   produto:     '#7C2D12',
   ensaio:      '#1E3A5F',
   periodo:     '#374151',
+  'tipo-produto': '#6B21A8',
   desconhecido: '#991B1B',
 };
 

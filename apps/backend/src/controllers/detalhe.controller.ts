@@ -42,12 +42,13 @@ export async function getDetalhe(req: Request, res: Response, next: NextFunction
 export async function getCentrosCustoPorEnsaio(req: Request, res: Response, next: NextFunction) {
   try {
     const { codEnsaio } = req.params;
-    const { dataInicio, dataFim } = req.query;
+    const { dataInicio, dataFim, filialId } = req.query;
 
     const data = await DetalheService.getCentrosCustoPorEnsaio({
       codEnsaio: Number(codEnsaio),
       dataInicio: String(dataInicio),
       dataFim: String(dataFim),
+      filialId: parseInt(String(filialId)),
     });
 
     res.json({ ok: true, data });
@@ -59,13 +60,14 @@ export async function getCentrosCustoPorEnsaio(req: Request, res: Response, next
 export async function getCentrosCustoPorProdutoEEnsaio(req: Request, res: Response, next: NextFunction) {
   try {
     const { codProduto, codEnsaio } = req.params;
-    const { dataInicio, dataFim } = req.query;
+    const { dataInicio, dataFim, filialId } = req.query;
 
     const data = await DetalheService.getCentrosCustoPorProdutoEEnsaio({
       codProduto: String(codProduto),
       codEnsaio: Number(codEnsaio),
       dataInicio: String(dataInicio),
       dataFim: String(dataFim),
+      filialId: parseInt(String(filialId)),
     });
 
     res.json({ ok: true, data });
@@ -77,13 +79,14 @@ export async function getCentrosCustoPorProdutoEEnsaio(req: Request, res: Respon
 export async function getOperacoesPorCentroCustoEEnsaio(req: Request, res: Response, next: NextFunction) {
   try {
     const { codCentroCusto, codEnsaio } = req.params;
-    const { dataInicio, dataFim } = req.query;
+    const { dataInicio, dataFim, filialId } = req.query;
 
     const data = await DetalheService.getOperacoesPorCentroCustoEEnsaio({
       codCentroCusto: Number(codCentroCusto),
       codEnsaio: Number(codEnsaio),
       dataInicio: String(dataInicio),
       dataFim: String(dataFim),
+      filialId: parseInt(String(filialId)),
     });
 
     res.json({ ok: true, data });
@@ -94,8 +97,8 @@ export async function getOperacoesPorCentroCustoEEnsaio(req: Request, res: Respo
 
 export async function getBensPorOperacao(req: Request, res: Response, next: NextFunction) {
   try {
-    const { codCentroCusto, codEnsaio, operacao } = req.params;
-    const { dataInicio, dataFim } = req.query;
+    const { codCentroCusto, codEnsaio } = req.params;
+    const { dataInicio, dataFim, filialId, operacao } = req.query;
 
     const data = await DetalheService.getBensPorOperacao({
       codCentroCusto: Number(codCentroCusto),
@@ -103,6 +106,7 @@ export async function getBensPorOperacao(req: Request, res: Response, next: Next
       operacao: String(operacao),
       dataInicio: String(dataInicio),
       dataFim: String(dataFim),
+      filialId: parseInt(String(filialId)),
     });
 
     res.json({ ok: true, data });

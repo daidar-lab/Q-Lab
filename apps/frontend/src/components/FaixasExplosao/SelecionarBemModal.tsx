@@ -20,6 +20,7 @@ interface SelecionarBemModalProps {
   operacao: string;
   dataInicio: string;
   dataFim: string;
+  filialId: number;
 }
 
 export default function SelecionarBemModal({
@@ -33,6 +34,7 @@ export default function SelecionarBemModal({
   operacao,
   dataInicio,
   dataFim,
+  filialId,
 }: SelecionarBemModalProps) {
   const [opcoes, setOpcoes] = useState<BemOption[]>([]);
   const [carregando, setCarregando] = useState(false);
@@ -41,10 +43,10 @@ export default function SelecionarBemModal({
     if (!isOpen) return;
     setCarregando(true);
     
-    detalheApi.getBensPorOperacao(codEnsaio, codCentroCusto, operacao, dataInicio, dataFim)
+    detalheApi.getBensPorOperacao(codEnsaio, codCentroCusto, operacao, dataInicio, dataFim, filialId)
       .then(setOpcoes)
       .finally(() => setCarregando(false));
-  }, [isOpen, codEnsaio, codCentroCusto, operacao, dataInicio, dataFim]);
+  }, [isOpen, codEnsaio, codCentroCusto, operacao, dataInicio, dataFim, filialId]);
 
   if (!isOpen) return null;
 

@@ -18,9 +18,15 @@ export interface CatalogoItem {
   nome: string;
 }
 
+export interface TipoCatalogoItem {
+  tipo: string;
+  produtos: CatalogoItem[];
+}
+
 export interface Catalogo {
   produtos: CatalogoItem[];
   ensaios: CatalogoItem[];
+  tipos: TipoCatalogoItem[];
   carregadoEm: number;
 }
 
@@ -49,24 +55,32 @@ export interface SearchResultRow {
 // ─── Peça 1 — getCatalogo ─────────────────────────────────────────────────────
 
 const _catalogoCache = new Map<number, Catalogo>();
+const _catalogoInFlight = new Map<number, Promise<Catalogo>>();
 const TTL_CATALOGO = 24 * 60 * 60 * 1000; // 24 horas
 
 export async function getCatalogo(filialId: number): Promise<Catalogo> {
   const cached = _catalogoCache.get(filialId);
-  if (cached && Date.now() - cached.carregadoEm < TTL_CATALOGO) return cached;
+  // Invalida cache legado que não possui o campo tipos (gerado antes dessa versão)
+  if (cached && !cached.tipos) _catalogoCache.delete(filialId);
+  else if (cached && Date.now() - cached.carregadoEm < TTL_CATALOGO) return cached;
+
+  const inFlight = _catalogoInFlight.get(filialId);
+  if (inFlight) return inFlight;
+
+  const promise = (async () => {
 
   const labs = await resolveFilialLaboratorios(filialId);
 
   // Se não há labs, retorna catálogo vazio — não query global
   if (labs.length === 0) {
-    const vazio: Catalogo = { produtos: [], ensaios: [], carregadoEm: Date.now() };
+    const vazio: Catalogo = { produtos: [], ensaios: [], tipos: [], carregadoEm: Date.now() };
     _catalogoCache.set(filialId, vazio);
     return vazio;
   }
 
   const labPlaceholders = labs.map(() => '?').join(',');
 
-  const [produtos, ensaios] = await Promise.all([
+  const [produtos, ensaios, tiposRows] = await Promise.all([
     blabQuery<CatalogoItem>(`
       SELECT DISTINCT cod_produto AS id, produto AS nome
       FROM DW_FAT_RESULTADO
@@ -86,14 +100,46 @@ export async function getCatalogo(filialId: number): Promise<Catalogo> {
         AND cod_laboratorio IN (${labPlaceholders})
       ORDER BY nome
     `, labs),
+
+    // Tipos de produto — JOIN com DIM_PRODUTO para obter dp.tipo
+    blabQuery<{ tipo: string; id: number; nome: string }>(`
+      SELECT DISTINCT
+        dp.tipo   AS tipo,
+        dw.cod_produto AS id,
+        dw.produto     AS nome
+      FROM DW_FAT_RESULTADO dw
+      INNER JOIN DIM_PRODUTO dp
+        ON dp.cod_produto = dw.cod_produto
+        AND dp.D_E_L_E_T IS NULL
+      WHERE dw.D_E_L_E_T IS NULL
+        AND dw.cod_produto IS NOT NULL
+        AND dw.conformidade != 'NÃO AVALIADO'
+        AND dw.cod_laboratorio IN (${labPlaceholders})
+      ORDER BY dp.tipo ASC, dw.produto ASC
+    `, labs),
   ]);
 
-  const catalogo: Catalogo = { produtos, ensaios, carregadoEm: Date.now() };
+  // Agrupa produtos por tipo (mesmo padrão de getRankingProdutos)
+  const tiposMap = new Map<string, TipoCatalogoItem>();
+  for (const r of tiposRows) {
+    const tipo = r.tipo ?? 'Sem Tipo';
+    if (!tiposMap.has(tipo)) {
+      tiposMap.set(tipo, { tipo, produtos: [] });
+    }
+    tiposMap.get(tipo)!.produtos.push({ id: Number(r.id), nome: r.nome });
+  }
+  const tipos = Array.from(tiposMap.values());
+
+  const catalogo: Catalogo = { produtos, ensaios, tipos, carregadoEm: Date.now() };
   _catalogoCache.set(filialId, catalogo);
 
-  // Revalidação silenciosa em background após TTL — não bloqueia request seguinte
-  // (a próxima chamada após TTL retorna o valor stale e agenda nova carga)
   return catalogo;
+  })().finally(() => {
+    _catalogoInFlight.delete(filialId);
+  });
+
+  _catalogoInFlight.set(filialId, promise);
+  return promise;
 }
 
 // ─── Peças 4 e 5 — Cache de resultados ───────────────────────────────────────
