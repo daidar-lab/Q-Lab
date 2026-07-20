@@ -15,6 +15,7 @@ interface AmostraEnsaioRow {
     numero_de_controle: string;
     lote_de_controle_de_qualidade: string | null;
     destaque: number;
+    is_reanalise: number;
 }
 
 interface Props {
@@ -115,9 +116,25 @@ export function AmostraDetalheDrawer({ open, onClose, codAmostra, codEnsaioAtual
                             Detalhes da Amostra
                         </h3>
                         {codAmostra && (
-                            <p style={{ margin: '4px 0 0', color: 'var(--clr-text-2, #71717a)', fontSize: '13px', fontWeight: 500 }}>
-                                ID Amostra: #{codAmostra}
-                            </p>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '4px' }}>
+                                <p style={{ margin: 0, color: 'var(--clr-text-2, #71717a)', fontSize: '13px', fontWeight: 500 }}>
+                                    ID Amostra: #{codAmostra}
+                                </p>
+                                {ensaios.length > 0 && ensaios[0].is_reanalise === 1 && (
+                                    <span style={{
+                                        background: '#fef3c7',
+                                        color: '#d97706',
+                                        fontSize: '10px',
+                                        fontWeight: 700,
+                                        padding: '2px 6px',
+                                        borderRadius: '4px',
+                                        textTransform: 'uppercase',
+                                        letterSpacing: '0.05em'
+                                    }}>
+                                        Reanálise
+                                    </span>
+                                )}
+                            </div>
                         )}
                     </div>
                     <button

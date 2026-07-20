@@ -55,6 +55,7 @@ export interface SearchResultRow {
 // ─── Peça 1 — getCatalogo ─────────────────────────────────────────────────────
 
 const _catalogoCache = new Map<number, Catalogo>();
+const _catalogoInFlight = new Map<number, Promise<Catalogo>>();
 const TTL_CATALOGO = 24 * 60 * 60 * 1000; // 24 horas
 
 export async function getCatalogo(filialId: number): Promise<Catalogo> {
@@ -63,6 +64,10 @@ export async function getCatalogo(filialId: number): Promise<Catalogo> {
   if (cached && !cached.tipos) _catalogoCache.delete(filialId);
   else if (cached && Date.now() - cached.carregadoEm < TTL_CATALOGO) return cached;
 
+  const inFlight = _catalogoInFlight.get(filialId);
+  if (inFlight) return inFlight;
+
+  const promise = (async () => {
 
   const labs = await resolveFilialLaboratorios(filialId);
 
@@ -128,9 +133,13 @@ export async function getCatalogo(filialId: number): Promise<Catalogo> {
   const catalogo: Catalogo = { produtos, ensaios, tipos, carregadoEm: Date.now() };
   _catalogoCache.set(filialId, catalogo);
 
-  // Revalidação silenciosa em background após TTL — não bloqueia request seguinte
-  // (a próxima chamada após TTL retorna o valor stale e agenda nova carga)
   return catalogo;
+  })().finally(() => {
+    _catalogoInFlight.delete(filialId);
+  });
+
+  _catalogoInFlight.set(filialId, promise);
+  return promise;
 }
 
 // ─── Peças 4 e 5 — Cache de resultados ───────────────────────────────────────

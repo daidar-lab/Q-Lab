@@ -447,11 +447,56 @@ export default function BuscaPage() {
         etiquetasVisiveis.length > 0 && (
           <div style={{
             textAlign: 'center',
-            padding: '60px 24px',
+            padding: '80px 24px',
             color: 'var(--clr-text-3)',
-            fontSize: '14px',
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: '16px',
+            minHeight: '300px'
           }}>
-            Nenhum resultado encontrado para os filtros aplicados no período selecionado.
+            {tokens.tipos.length > 0 && tokens.produtos.length === 0 ? (
+              <>
+                <div style={{
+                  background: 'var(--clr-brand-bg)',
+                  color: 'var(--clr-brand)',
+                  width: '64px',
+                  height: '64px',
+                  borderRadius: '50%',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  boxShadow: '0 0 0 8px rgba(139, 92, 246, 0.1)',
+                  marginBottom: '8px',
+                  animation: 'bounce 2s infinite'
+                }}>
+                  <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M12 19V5" />
+                    <path d="m5 12 7-7 7 7" />
+                  </svg>
+                </div>
+                <style>{`
+                  @keyframes bounce {
+                    0%, 20%, 50%, 80%, 100% { transform: translateY(0); }
+                    40% { transform: translateY(-10px); }
+                    60% { transform: translateY(-5px); }
+                  }
+                `}</style>
+                <h3 style={{ margin: 0, fontSize: '18px', color: 'var(--clr-text-1)', fontWeight: 600 }}>
+                  Selecione os produtos
+                </h3>
+                <p style={{ margin: 0, maxWidth: '420px', fontSize: '15px', lineHeight: '1.5' }}>
+                  Você filtrou por um <strong>Tipo</strong>, mas para exibir os dados precisamos saber quais produtos específicos você quer visualizar.
+                  <br /><br />
+                  Clique no botão roxo <strong>"Selecionar produtos"</strong> na etiqueta logo acima para continuar.
+                </p>
+              </>
+            ) : (
+              <div style={{ fontSize: '14px' }}>
+                Nenhum resultado encontrado para os filtros aplicados no período selecionado.
+              </div>
+            )}
           </div>
         )}
 
