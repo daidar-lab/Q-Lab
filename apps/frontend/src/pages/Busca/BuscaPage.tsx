@@ -16,6 +16,8 @@ import { SearchKpis } from '../../components/busca/SearchKpis';
 import { ConformidadeChart } from '../../components/busca/ConformidadeChart';
 import { EspecificacaoChart } from '../../components/busca/EspecificacaoChart';
 import { TabelaResultados } from '../../components/busca/TabelaResultados';
+import { ModalSelecionarProdutos } from '../../components/busca/ModalSelecionarProdutos';
+
 
 function getMonthChunks(startStr: string, endStr: string, months = 3) {
   const chunks: { dataInicio: string; dataFim: string }[] = [];
@@ -30,7 +32,7 @@ function getMonthChunks(startStr: string, endStr: string, months = 3) {
     const chunkEndDate = new Date(current);
     chunkEndDate.setMonth(chunkEndDate.getMonth() + months);
     chunkEndDate.setDate(chunkEndDate.getDate() - 1);
-    
+
     if (chunkEndDate >= end) {
       chunks.push({ dataInicio: chunkStart, dataFim: endStr });
       break;
@@ -52,21 +54,36 @@ export default function BuscaPage() {
   const { catalogo, loading: catalogoLoading } = useCatalogo(filialId);
 
   const [agregacoes, setAgregacoes] = useState<AgregacoesBuscaResponse | null>(null);
-  const [rows, setRows]         = useState<SearchResultRow[]>([]);
+  const [rows, setRows] = useState<SearchResultRow[]>([]);
   const [buscando, setBuscando] = useState(false);
   const [buscandoMais, setBuscandoMais] = useState(false);
   const [progresso, setProgresso] = useState({ total: 0, concluidos: 0 });
   const [fadingOut, setFadingOut] = useState(false);
-  const [erro, setErro]         = useState<string | null>(null);
-  const [offset, setOffset]     = useState(0);
-  const [temMais, setTemMais]   = useState(false);
-  const LIMIT = 5000;
+  const [erro, setErro] = useState<string | null>(null);
+  const [offset, setOffset] = useState(0);
+  const [temMais, setTemMais] = useState(false);
+  const LIMIT = 1000;
 
-  // Parse é síncrono e roda no cliente com o catálogo em memória
+  // ── Estado do filtro por tipo ─────────────────────────────────────────────
+  // Separado do token de texto: o tipo é só o gatilho para abrir o modal.
+  // Os IDs selecionados são mantidos aqui e mergeados nos tokens antes da busca.
+  const [produtosFiltradosPorTipo, setProdutosFiltradosPorTipo] = useState<number[]>([]);
+  const [modalAberto, setModalAberto] = useState(false);
+
+
+  // Parse é síncrono e roda no cliente com o catálogo em memória.
+  // produtosFiltradosPorTipo são mergeados aqui (Opção B) sem tocar na URL.
   const tokens = useMemo(() => {
     if (!catalogo || !q) return null;
-    return parseSearchQuery(q, catalogo);
-  }, [q, catalogo]);
+    const t = parseSearchQuery(q, catalogo);
+    // Merge dos IDs selecionados no modal de tipo — deduplicado
+    if (produtosFiltradosPorTipo.length > 0) {
+      const merged = [...new Set([...t.produtos, ...produtosFiltradosPorTipo])];
+      return { ...t, produtos: merged };
+    }
+    return t;
+  }, [q, catalogo, produtosFiltradosPorTipo]);
+
 
   // Executa busca quando tokens mudam
   useEffect(() => {
@@ -74,8 +91,8 @@ export default function BuscaPage() {
 
     const temFiltros =
       tokens.processos.length > 0 ||
-      tokens.produtos.length  > 0 ||
-      tokens.ensaios.length   > 0;
+      tokens.produtos.length > 0 ||
+      tokens.ensaios.length > 0;
 
     if (!temFiltros) {
       setAgregacoes(null);
@@ -93,7 +110,7 @@ export default function BuscaPage() {
     const controller = new AbortController();
 
     const dataInicio = tokens.periodo.dataInicio ?? ctx.dataInicio ?? '';
-    const dataFim    = tokens.periodo.dataFim    ?? ctx.dataFim    ?? '';
+    const dataFim = tokens.periodo.dataFim ?? ctx.dataFim ?? '';
 
     if (!dataInicio || !dataFim) {
       setBuscando(false);
@@ -119,9 +136,9 @@ export default function BuscaPage() {
             processos: tokens.processos, produtos: tokens.produtos, ensaios: tokens.ensaios,
             signal: controller.signal
           });
-          
+
           if (cancelled) break;
-          
+
           aggAcc = {
             kpis: {
               totalResultados: aggAcc.kpis.totalResultados + res.kpis.totalResultados,
@@ -134,7 +151,7 @@ export default function BuscaPage() {
             // Limita a 2000 pontos totais para evitar lentidão no frontend
             pontosEspecificacao: [...res.pontosEspecificacao, ...aggAcc.pontosEspecificacao].slice(0, 2000)
           };
-          
+
           if (aggAcc.kpis.totalResultados > 0) {
             aggAcc.kpis.taxaConformidade = Math.round(((aggAcc.kpis.totalResultados - aggAcc.kpis.naoConformes) / aggAcc.kpis.totalResultados) * 1000) / 10;
           }
@@ -148,7 +165,7 @@ export default function BuscaPage() {
         }
       }
     };
-    
+
     carregarChunks();
 
     // 2. Busca Rápida da 1ª Página (Imediato)
@@ -156,18 +173,18 @@ export default function BuscaPage() {
       filialId, dataInicio, dataFim,
       processos: tokens.processos, produtos: tokens.produtos, ensaios: tokens.ensaios,
       limit: LIMIT, offset: 0, signal: controller.signal
-    }).then(data => { 
-        if (cancelled) return;
-        setRows(data); 
-        setTemMais(data.length === LIMIT);
-        setBuscando(false); 
-      })
+    }).then(data => {
+      if (cancelled) return;
+      setRows(data);
+      setTemMais(data.length === LIMIT);
+      setBuscando(false);
+    })
       .catch(err => {
         if (cancelled) return;
         setErro(err?.message ?? 'Erro ao buscar resultados.');
         setBuscando(false);
       });
-      
+
     return () => {
       cancelled = true;
       controller.abort();
@@ -181,12 +198,12 @@ export default function BuscaPage() {
       const timerFade = setTimeout(() => {
         setFadingOut(true);
       }, 7000); // Começa a sumir no segundo 7
-      
+
       const timerClear = setTimeout(() => {
         setProgresso({ total: 0, concluidos: 0 });
         setFadingOut(false);
       }, 8000); // Remove do DOM no segundo 8
-      
+
       return () => {
         clearTimeout(timerFade);
         clearTimeout(timerClear);
@@ -200,25 +217,25 @@ export default function BuscaPage() {
     if (!tokens || filialId === null || buscandoMais) return;
     setBuscandoMais(true);
     const proxOffset = offset + LIMIT;
-    
+
     const dataInicio = tokens.periodo.dataInicio ?? ctx.dataInicio ?? '';
-    const dataFim    = tokens.periodo.dataFim    ?? ctx.dataFim    ?? '';
+    const dataFim = tokens.periodo.dataFim ?? ctx.dataFim ?? '';
 
     fetchBuscaResultados({
       filialId, dataInicio, dataFim,
       processos: tokens.processos, produtos: tokens.produtos, ensaios: tokens.ensaios,
       limit: LIMIT, offset: proxOffset
     })
-    .then(novosRows => {
-      setRows(prev => [...prev, ...novosRows]);
-      setOffset(proxOffset);
-      setTemMais(novosRows.length === LIMIT);
-      setBuscandoMais(false);
-    })
-    .catch(err => {
-      console.error(err);
-      setBuscandoMais(false);
-    });
+      .then(novosRows => {
+        setRows(prev => [...prev, ...novosRows]);
+        setOffset(proxOffset);
+        setTemMais(novosRows.length === LIMIT);
+        setBuscandoMais(false);
+      })
+      .catch(err => {
+        console.error(err);
+        setBuscandoMais(false);
+      });
   };
 
   // Ensaios únicos para gráficos de especificação
@@ -231,11 +248,46 @@ export default function BuscaPage() {
     return Array.from(mapa.entries());
   }, [agregacoes, tokens]);
 
+  // Ao trocar a query, limpa a seleção de tipo (a nova busca parte do zero)
+  useEffect(() => {
+    setProdutosFiltradosPorTipo([]);
+  }, [q]);
+
+  // ── Tipos selecionados pelo parser ─────────────────────────────────────────
+  // Pega os produtos do PRIMEIRO tipo reconhecido para popular o modal.
+  // Se o usuário digitou mais de um tipo, o primeiro é usado como referência.
+  const tiposAtivos = tokens?.tipos ?? [];
+  const produtosDoModal = useMemo(() => {
+    if (!catalogo || tiposAtivos.length === 0) return [];
+    // Agrega produtos de todos os tipos ativos
+    return tiposAtivos.flatMap(tipo =>
+      catalogo.tipos?.find(t => t.tipo === tipo)?.produtos ?? []
+    );
+  }, [catalogo, tiposAtivos]);
+
+  const tipoLabel = tiposAtivos.length === 1
+    ? tiposAtivos[0]
+    : tiposAtivos.length > 1 ? `${tiposAtivos.length} tipos` : null;
+
   const temResultados = agregacoes && agregacoes.kpis.totalResultados > 0;
   const etiquetasVisiveis = tokens?.etiquetas.filter(e => e.tipo !== 'desconhecido') ?? [];
 
   return (
     <div style={{ padding: '28px 24px', maxWidth: '1200px', margin: '0 auto' }}>
+
+      {/* ── Modal de seleção de produtos por tipo ───────────────────────────── */}
+      {modalAberto && tiposAtivos.length > 0 && (
+        <ModalSelecionarProdutos
+          tipo={tipoLabel ?? 'Produtos'}
+          produtos={produtosDoModal}
+          selecionadosIniciais={produtosFiltradosPorTipo}
+          onConfirmar={ids => {
+            setProdutosFiltradosPorTipo(ids);
+            setModalAberto(false);
+          }}
+          onFechar={() => setModalAberto(false)}
+        />
+      )}
 
       {/* ── Campo de busca pré-preenchido ──────────────────────────────── */}
       <div style={{ marginBottom: '20px' }}>
@@ -245,6 +297,60 @@ export default function BuscaPage() {
           onSubmit={valor => navigate(`/busca?q=${encodeURIComponent(valor)}`)}
         />
       </div>
+
+      {/* ── Botão contextual de tipo ─────────────────────────────────────────── */}
+      {tiposAtivos.length > 0 && (
+        <div style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: '10px',
+          marginBottom: '12px',
+          padding: '10px 14px',
+          background: '#F5F3FF',
+          border: '1px solid #C4B5FD',
+          borderRadius: 'var(--r-md)',
+          flexWrap: 'wrap',
+        }}>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#4C1D95" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <rect x="3" y="3" width="7" height="7" /><rect x="14" y="3" width="7" height="7" /><rect x="14" y="14" width="7" height="7" /><rect x="3" y="14" width="7" height="7" />
+          </svg>
+          <span style={{ fontSize: '13px', color: '#4C1D95', fontWeight: 600 }}>
+            Tipo: {tipoLabel}
+          </span>
+          {produtosFiltradosPorTipo.length > 0 && (
+            <span style={{ fontSize: '12px', color: '#6D28D9', background: '#EDE9FE', padding: '1px 8px', borderRadius: '10px' }}>
+              {produtosFiltradosPorTipo.length} produto{produtosFiltradosPorTipo.length !== 1 ? 's' : ''} selecionado{produtosFiltradosPorTipo.length !== 1 ? 's' : ''}
+            </span>
+          )}
+          <button
+            id="btn-selecionar-produtos-tipo"
+            onClick={() => setModalAberto(true)}
+            style={{
+              marginLeft: 'auto',
+              padding: '6px 14px',
+              background: '#4C1D95',
+              border: 'none',
+              borderRadius: '8px',
+              color: '#fff',
+              fontSize: '12px',
+              fontWeight: 700,
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+              transition: 'background 0.15s',
+              fontFamily: 'var(--font)',
+            }}
+            onMouseEnter={e => (e.currentTarget.style.background = '#3B0764')}
+            onMouseLeave={e => (e.currentTarget.style.background = '#4C1D95')}
+          >
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+              <polyline points="9 18 15 12 9 6" />
+            </svg>
+            {produtosFiltradosPorTipo.length > 0 ? 'Alterar seleção' : 'Selecionar produtos'}
+          </button>
+        </div>
+      )}
 
       {/* ── Etiquetas ativas ─────────────────────────────────────────────── */}
       {etiquetasVisiveis.length > 0 && (
@@ -316,13 +422,13 @@ export default function BuscaPage() {
         }}>
           {progresso.concluidos < progresso.total ? (
             <>
-              <span style={{ 
+              <span style={{
                 display: 'inline-block',
-                width: '14px', height: '14px', 
-                border: '2px solid var(--clr-primary)', 
-                borderTopColor: 'transparent', 
-                borderRadius: '50%', 
-                animation: 'spin 1s linear infinite' 
+                width: '14px', height: '14px',
+                border: '2px solid var(--clr-primary)',
+                borderTopColor: 'transparent',
+                borderRadius: '50%',
+                animation: 'spin 1s linear infinite'
               }} />
               <style>{`@keyframes spin { 100% { transform: rotate(360deg); } }`}</style>
               <span>Calculando KPIs e Gráficos... ({progresso.concluidos} de {progresso.total} períodos analisados)</span>
@@ -338,24 +444,24 @@ export default function BuscaPage() {
 
       {/* ── Estado vazio ─────────────────────────────────────────────────── */}
       {!buscando && !catalogoLoading && !erro && tokens && !temResultados &&
-       etiquetasVisiveis.length > 0 && (
-        <div style={{
-          textAlign: 'center',
-          padding: '60px 24px',
-          color: 'var(--clr-text-3)',
-          fontSize: '14px',
-        }}>
-          Nenhum resultado encontrado para os filtros aplicados no período selecionado.
-        </div>
-      )}
+        etiquetasVisiveis.length > 0 && (
+          <div style={{
+            textAlign: 'center',
+            padding: '60px 24px',
+            color: 'var(--clr-text-3)',
+            fontSize: '14px',
+          }}>
+            Nenhum resultado encontrado para os filtros aplicados no período selecionado.
+          </div>
+        )}
 
       {/* ── Resultados ───────────────────────────────────────────────────── */}
       {!buscando && temResultados && tokens && agregacoes && (
         <>
-          <SearchKpis 
-            agregacoes={agregacoes.kpis} 
-            tokens={tokens} 
-            carregando={progresso.total > 0 && progresso.concluidos < progresso.total} 
+          <SearchKpis
+            agregacoes={agregacoes.kpis}
+            tokens={tokens}
+            carregando={progresso.total > 0 && progresso.concluidos < progresso.total}
           />
           <ConformidadeChart dados={agregacoes.graficoConformidade} />
 
@@ -368,7 +474,7 @@ export default function BuscaPage() {
           ))}
 
           <TabelaResultados rows={rows} />
-          
+
           {temMais && (
             <div style={{ textAlign: 'center', marginTop: '20px' }}>
               <button

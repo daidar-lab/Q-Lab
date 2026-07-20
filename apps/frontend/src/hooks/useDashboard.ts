@@ -44,9 +44,9 @@ export function useDashboard(periodo: FiltroPeriodo) {
     ])
       .then(([k, p, pr, e]) => {
         setKpis(k);
-        setProcessos(p);
-        setProdutos(pr);
-        setEnsaios(e);
+        setProcessos(Array.isArray(p) ? p : []);
+        setProdutos(Array.isArray(pr) ? pr : []);
+        setEnsaios(Array.isArray(e) ? e : []);
       })
       .catch(err => setErro(err.message))
       .finally(() => setCarregando(false));

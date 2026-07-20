@@ -310,7 +310,11 @@ export async function getCentrosCustoPorEnsaio(params: {
   codEnsaio: number;
   dataInicio: string;
   dataFim: string;
+  filialId: number;
 }) {
+  const labs = await resolveFilialLaboratorios(params.filialId);
+  const labFilter = labs.length > 0 ? `AND cod_laboratorio IN (${labs.map(() => '?').join(', ')})` : '';
+
   return blabQuery(`
     SELECT
       cod_centro_de_custo,
@@ -324,9 +328,10 @@ export async function getCentrosCustoPorEnsaio(params: {
       AND cod_ensaio = ?
       AND cod_centro_de_custo IS NOT NULL
       AND data_resultado BETWEEN ? AND ?
+      ${labFilter}
     GROUP BY cod_centro_de_custo
     ORDER BY n_nao_conforme DESC
-  `, [params.codEnsaio, params.dataInicio, params.dataFim]);
+  `, [params.codEnsaio, params.dataInicio, params.dataFim, ...labs]);
 }
 
 // Obter centros de custo para um produto e ensaio específicos
@@ -335,7 +340,11 @@ export async function getCentrosCustoPorProdutoEEnsaio(params: {
   codEnsaio: number;
   dataInicio: string;
   dataFim: string;
+  filialId: number;
 }) {
+  const labs = await resolveFilialLaboratorios(params.filialId);
+  const labFilter = labs.length > 0 ? `AND cod_laboratorio IN (${labs.map(() => '?').join(', ')})` : '';
+
   return blabQuery(`
     SELECT
       cod_centro_de_custo,
@@ -350,9 +359,10 @@ export async function getCentrosCustoPorProdutoEEnsaio(params: {
       AND cod_ensaio = ?
       AND cod_centro_de_custo IS NOT NULL
       AND data_resultado BETWEEN ? AND ?
+      ${labFilter}
     GROUP BY cod_centro_de_custo
     ORDER BY n_amostras DESC
-  `, [params.codProduto, params.codEnsaio, params.dataInicio, params.dataFim]);
+  `, [params.codProduto, params.codEnsaio, params.dataInicio, params.dataFim, ...labs]);
 }
 
 // =========================================================================
@@ -364,7 +374,11 @@ export async function getOperacoesPorCentroCustoEEnsaio(params: {
   codCentroCusto: number;
   dataInicio: string;
   dataFim: string;
+  filialId: number;
 }) {
+  const labs = await resolveFilialLaboratorios(params.filialId);
+  const labFilter = labs.length > 0 ? `AND cod_laboratorio IN (${labs.map(() => '?').join(', ')})` : '';
+
   return blabQuery(`
     SELECT
       operacao,
@@ -379,9 +393,10 @@ export async function getOperacoesPorCentroCustoEEnsaio(params: {
       AND operacao IS NOT NULL
       AND operacao != ''
       AND data_resultado BETWEEN ? AND ?
+      ${labFilter}
     GROUP BY operacao
     ORDER BY n_amostras DESC
-  `, [params.codEnsaio, params.codCentroCusto, params.dataInicio, params.dataFim]);
+  `, [params.codEnsaio, params.codCentroCusto, params.dataInicio, params.dataFim, ...labs]);
 }
 
 export async function getBensPorOperacao(params: {
@@ -390,7 +405,11 @@ export async function getBensPorOperacao(params: {
   operacao: string;
   dataInicio: string;
   dataFim: string;
+  filialId: number;
 }) {
+  const labs = await resolveFilialLaboratorios(params.filialId);
+  const labFilter = labs.length > 0 ? `AND cod_laboratorio IN (${labs.map(() => '?').join(', ')})` : '';
+
   return blabQuery(`
     SELECT
       bem,
@@ -406,9 +425,10 @@ export async function getBensPorOperacao(params: {
       AND bem IS NOT NULL
       AND bem != ''
       AND data_resultado BETWEEN ? AND ?
+      ${labFilter}
     GROUP BY bem
     ORDER BY n_amostras DESC
-  `, [params.codEnsaio, params.codCentroCusto, params.operacao, params.dataInicio, params.dataFim]);
+  `, [params.codEnsaio, params.codCentroCusto, params.operacao, params.dataInicio, params.dataFim, ...labs]);
 }
 
 // =========================================================================

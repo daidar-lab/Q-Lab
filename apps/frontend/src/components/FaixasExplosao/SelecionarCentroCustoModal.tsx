@@ -19,6 +19,7 @@ interface SelecionarCentroCustoModalProps {
   dataInicio: string;
   dataFim: string;
   codProduto?: string;
+  filialId: number;
 }
 
 export default function SelecionarCentroCustoModal({
@@ -30,6 +31,7 @@ export default function SelecionarCentroCustoModal({
   dataInicio,
   dataFim,
   codProduto,
+  filialId,
 }: SelecionarCentroCustoModalProps) {
   const [opcoes, setOpcoes] = useState<CentroCustoOption[]>([]);
   const [carregando, setCarregando] = useState(false);
@@ -39,13 +41,13 @@ export default function SelecionarCentroCustoModal({
     setCarregando(true);
     
     const fetchOpcoes = codProduto
-      ? detalheApi.getCentrosCustoPorProdutoEEnsaio(codProduto, codEnsaio, dataInicio, dataFim)
-      : detalheApi.getCentrosCustoPorEnsaio(codEnsaio, dataInicio, dataFim);
+      ? detalheApi.getCentrosCustoPorProdutoEEnsaio(codProduto, codEnsaio, dataInicio, dataFim, filialId)
+      : detalheApi.getCentrosCustoPorEnsaio(codEnsaio, dataInicio, dataFim, filialId);
 
     fetchOpcoes
       .then(setOpcoes)
       .finally(() => setCarregando(false));
-  }, [isOpen, codEnsaio, dataInicio, dataFim, codProduto]);
+  }, [isOpen, codEnsaio, dataInicio, dataFim, codProduto, filialId]);
 
 
   if (!isOpen) return null;

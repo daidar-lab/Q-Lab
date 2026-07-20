@@ -25,27 +25,27 @@ export const detalheApi = {
         });
         return res.data;
     },
-    getCentrosCustoPorEnsaio: async (codEnsaio: string, dataInicio: string, dataFim: string) => {
+    getCentrosCustoPorEnsaio: async (codEnsaio: string, dataInicio: string, dataFim: string, filialId: number) => {
         const res = await request<{ ok: boolean; data: any }>(`/api/detalhe/ensaio/${codEnsaio}/centros-custo`, {
-            params: { dataInicio, dataFim },
+            params: { dataInicio, dataFim, filialId },
         });
         return res.data;
     },
-    getCentrosCustoPorProdutoEEnsaio: async (codProduto: string, codEnsaio: string, dataInicio: string, dataFim: string) => {
+    getCentrosCustoPorProdutoEEnsaio: async (codProduto: string, codEnsaio: string, dataInicio: string, dataFim: string, filialId: number) => {
         const res = await request<{ ok: boolean; data: any }>(`/api/detalhe/produto/${codProduto}/ensaio/${codEnsaio}/centros-custo`, {
-            params: { dataInicio, dataFim },
+            params: { dataInicio, dataFim, filialId },
         });
         return res.data;
     },
-    getOperacoesPorCentroCustoEEnsaio: async (codEnsaio: string, codCentroCusto: string, dataInicio: string, dataFim: string) => {
+    getOperacoesPorCentroCustoEEnsaio: async (codEnsaio: string, codCentroCusto: string, dataInicio: string, dataFim: string, filialId: number) => {
         const res = await request<{ ok: boolean; data: any }>(`/api/detalhe/ensaio/${codEnsaio}/centro-custo/${codCentroCusto}/operacoes`, {
-            params: { dataInicio, dataFim },
+            params: { dataInicio, dataFim, filialId },
         });
         return res.data;
     },
-    getBensPorOperacao: async (codEnsaio: string, codCentroCusto: string, operacao: string, dataInicio: string, dataFim: string) => {
+    getBensPorOperacao: async (codEnsaio: string, codCentroCusto: string, operacao: string, dataInicio: string, dataFim: string, filialId: number) => {
         const res = await request<{ ok: boolean; data: any }>(`/api/detalhe/ensaio/${codEnsaio}/centro-custo/${codCentroCusto}/operacao/${operacao}/bens`, {
-            params: { dataInicio, dataFim },
+            params: { dataInicio, dataFim, filialId },
         });
         return res.data;
     },

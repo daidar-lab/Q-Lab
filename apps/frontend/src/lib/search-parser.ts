@@ -8,14 +8,14 @@ import type { Catalogo } from '../services/busca.api';
 // ─── Tipos públicos ───────────────────────────────────────────────────────────
 
 export interface Etiqueta {
-  tipo: 'processo' | 'produto' | 'ensaio' | 'periodo' | 'desconhecido';
+  tipo: 'processo' | 'produto' | 'ensaio' | 'tipo-produto' | 'periodo' | 'desconhecido';
   label: string;   // texto exibido na tag
   rawText?: string; // texto exato digitado para remoção da query
   valor: string | number;
 }
 
 export interface Sugestao {
-  tipo: 'processo' | 'produto' | 'ensaio';
+  tipo: 'processo' | 'produto' | 'ensaio' | 'tipo-produto';
   label: string;
   valor: string | number;
 }
@@ -24,6 +24,7 @@ export interface SearchTokens {
   processos: string[];
   produtos: number[];
   ensaios: number[];
+  tipos: string[];  // tipos de produto selecionados via SearchBar
   periodo: { dataInicio: string; dataFim: string };
   rawTerms: string[];
   etiquetas: Etiqueta[];
@@ -242,7 +243,7 @@ function norm(s: string): string {
 
 export function parseSearchQuery(input: string, catalogo: Catalogo): SearchTokens {
   const tokens: SearchTokens = {
-    processos: [], produtos: [], ensaios: [],
+    processos: [], produtos: [], ensaios: [], tipos: [],
     periodo: periodoDefault(),
     rawTerms: [], etiquetas: [],
   };
@@ -286,7 +287,25 @@ export function parseSearchQuery(input: string, catalogo: Catalogo): SearchToken
       continue;
     }
 
-    // 2b. Exato produto
+    // 2b. Tipo de produto (exato primeiro, depois fuzzy)
+    const tipoExato = catalogo.tipos?.find(t => norm(t.tipo) === chave);
+    if (tipoExato) {
+      if (!tokens.tipos.includes(tipoExato.tipo)) {
+        tokens.tipos.push(tipoExato.tipo);
+        tokens.etiquetas.push({ tipo: 'tipo-produto', label: tipoExato.tipo, rawText: parte, valor: tipoExato.tipo });
+      }
+      continue;
+    }
+    const tipoFuzzy = catalogo.tipos?.find(t => norm(t.tipo).includes(chave) && chave.length >= 3);
+    if (tipoFuzzy) {
+      if (!tokens.tipos.includes(tipoFuzzy.tipo)) {
+        tokens.tipos.push(tipoFuzzy.tipo);
+        tokens.etiquetas.push({ tipo: 'tipo-produto', label: tipoFuzzy.tipo, rawText: parte, valor: tipoFuzzy.tipo });
+      }
+      continue;
+    }
+
+    // 2c. Exato produto
     const produtoExato = catalogo.produtos.find(p => norm(p.nome) === chave);
     if (produtoExato) {
       if (!tokens.produtos.includes(produtoExato.id)) {
@@ -355,6 +374,12 @@ export function gerarSugestoes(input: string, catalogo: Catalogo): Sugestao[] {
       resultado.push({ tipo: 'processo', label: labelBonita, valor: slug });
     }
   }
+
+  // Tipos de produto (máximo 5)
+  (catalogo.tipos ?? [])
+    .filter(t => norm(t.tipo).includes(chave))
+    .slice(0, 5)
+    .forEach(t => resultado.push({ tipo: 'tipo-produto', label: t.tipo, valor: t.tipo }));
 
   // Produtos (máximo 5)
   catalogo.produtos
