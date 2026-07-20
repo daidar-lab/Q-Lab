@@ -44,8 +44,8 @@ export const detalheApi = {
         return res.data;
     },
     getBensPorOperacao: async (codEnsaio: string, codCentroCusto: string, operacao: string, dataInicio: string, dataFim: string, filialId: number) => {
-        const res = await request<{ ok: boolean; data: any }>(`/api/detalhe/ensaio/${codEnsaio}/centro-custo/${codCentroCusto}/operacao/${operacao}/bens`, {
-            params: { dataInicio, dataFim, filialId },
+        const res = await request<{ ok: boolean; data: any }>(`/api/detalhe/ensaio/${codEnsaio}/centro-custo/${codCentroCusto}/bens`, {
+            params: { dataInicio, dataFim, filialId, operacao },
         });
         return res.data;
     },

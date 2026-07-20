@@ -116,6 +116,18 @@ export async function getSerieConformidade(params: DetalheParams) {
   return { granularidade, dados };
 }
 
+export interface ResumoMacroRow {
+  total: number;
+  nome_centro_custo: string | null;
+  nome_produto: string | null;
+  nome_ensaio: string | null;
+  n_nao_conforme: number;
+  pct_conforme: number;
+  total_lotes: number;
+  lotes_afetados: number;
+  nome?: string | null;
+}
+
 // 2. Resumo macro (conformidade, NC, lotes afetados)
 export async function getResumoMacro(params: DetalheParams) {
   const filter = buildFiltroDetalhe(params.tipo, params.id);
@@ -126,9 +138,12 @@ export async function getResumoMacro(params: DetalheParams) {
 
   const filterSql = prefixFilterDw(filter.sql);
 
-  const [resumo] = await blabQuery(`
+  const [resumo] = await blabQuery<ResumoMacroRow>(`
     SELECT
       COUNT(*)                                                        AS total,
+      MAX(R.centro_de_custo)                                          AS nome_centro_custo,
+      MAX(R.produto)                                                  AS nome_produto,
+      MAX(R.ensaio)                                                   AS nome_ensaio,
       SUM(R.conformidade != 'CONFORME')                                 AS n_nao_conforme,
       ROUND(SUM(R.conformidade = 'CONFORME') * 1.0 / COUNT(*) * 100, 1) AS pct_conforme,
       COUNT(DISTINCT R.lote_de_controle_de_qualidade)  AS total_lotes,
@@ -144,6 +159,16 @@ export async function getResumoMacro(params: DetalheParams) {
       AND R.data_resultado BETWEEN ? AND ?
       ${labFilter.replace(/cod_laboratorio/g, 'R.cod_laboratorio')}
   `, [...filter.params, params.dataInicio, params.dataFim, ...labs]);
+
+  if (resumo) {
+    if (params.tipo === 'processo') {
+      resumo.nome = resumo.nome_centro_custo;
+    } else if (params.tipo === 'produto') {
+      resumo.nome = resumo.nome_produto;
+    } else if (params.tipo === 'ensaio') {
+      resumo.nome = resumo.nome_ensaio;
+    }
+  }
 
   return resumo;
 }

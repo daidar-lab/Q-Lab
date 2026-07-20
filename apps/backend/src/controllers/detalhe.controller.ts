@@ -97,8 +97,8 @@ export async function getOperacoesPorCentroCustoEEnsaio(req: Request, res: Respo
 
 export async function getBensPorOperacao(req: Request, res: Response, next: NextFunction) {
   try {
-    const { codCentroCusto, codEnsaio, operacao } = req.params;
-    const { dataInicio, dataFim, filialId } = req.query;
+    const { codCentroCusto, codEnsaio } = req.params;
+    const { dataInicio, dataFim, filialId, operacao } = req.query;
 
     const data = await DetalheService.getBensPorOperacao({
       codCentroCusto: Number(codCentroCusto),

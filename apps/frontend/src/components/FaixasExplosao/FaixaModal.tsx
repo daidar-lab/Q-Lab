@@ -30,6 +30,7 @@ interface FaixaModalProps {
     operacao?: string;
     bem?: string;
     codProduto?: string;
+    processoNome?: string;
 }
 
 interface SamplePoint {
@@ -205,6 +206,7 @@ export const FaixaModal: React.FC<FaixaModalProps> = ({
     operacao,
     bem,
     codProduto,
+    processoNome,
 }) => {
     const { filialId, filialLabel } = useContexto();
     const [selectedSkus, setSelectedSkus] = useState<string[]>(codProduto ? [codProduto] : []);
@@ -278,6 +280,7 @@ export const FaixaModal: React.FC<FaixaModalProps> = ({
                         skusParaFetch,
                         filialId,
                         operacao,
+                        bem
                     );
                 } else {
                     // Ensaio com LIE/LSE: usa endpoint original sem especificar uma única faixa para carregar todas
@@ -291,6 +294,7 @@ export const FaixaModal: React.FC<FaixaModalProps> = ({
                         skusParaFetch,
                         filialId,
                         operacao,
+                        bem
                     );
                 }
 
@@ -433,7 +437,7 @@ export const FaixaModal: React.FC<FaixaModalProps> = ({
                                 dataInicio,
                                 dataFim,
                                 filialNome: filialLabel || 'Filial Q/Lab',
-                                processoNome: typeof id === 'string' && isNaN(Number(id)) ? id : 'Centro de Custo ' + id,
+                                processoNome: processoNome || (typeof id === 'string' && isNaN(Number(id)) ? id : 'Centro de Custo ' + id),
                                 operacao,
                                 bem
                             })}
