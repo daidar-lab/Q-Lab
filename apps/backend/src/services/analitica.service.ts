@@ -937,13 +937,13 @@ export function resolverFiltroPorId(id: string | number): { sql: string; params:
       params: [],
     },
     'microbiologia-estabilidade-micro': {
-      sql: `(cod_skip_lote NOT IN ('36', '54') OR cod_skip_lote IS NULL)
-            AND lote_de_controle_de_qualidade LIKE 'LCQMB%'`,
+      sql: `(cod_skip_lote NOT IN (36, 54) OR cod_skip_lote IS NULL)
+            AND cod_ensaio IN (10, 11, 12, 13)`,
       params: [],
     },
     'microbiologia-estabilidade-envase': {
-      sql: `cod_skip_lote IN ('36', '54')
-            AND lote_de_controle_de_qualidade LIKE 'LCQMB%'`,
+      sql: `cod_skip_lote IN (36, 54)
+            AND cod_ensaio IN (10, 11, 12, 13)`,
       params: [],
     },
     'microbiologia-agua-enxague': {
@@ -1004,8 +1004,9 @@ export function resolverFiltroPorId(id: string | number): { sql: string; params:
     },
     // Microbiologia — análise laboratorial direta
     'microbiologia-analise-microbiologia': {
-      sql: `cod_laboratorio IN (5, 17) AND cod_area IN (73, 75)
-            AND lote_de_controle_de_qualidade NOT LIKE 'LCQMB%'`,
+      sql: `lote_de_controle_de_qualidade LIKE 'LCQMB%'
+            AND cod_ensaio NOT IN (10, 11, 12, 13)
+            AND (cod_produto NOT IN (14, 15) OR cod_produto IS NULL)`,
       params: [],
     },
     // Físico
@@ -1219,12 +1220,12 @@ export async function getRankingProcessos(
     ['fermento', `cod_skip_lote IN ('68', '69')`, []],
 
     // Microbiologia
-    ['microbiologia-estabilidade-micro', `(cod_skip_lote NOT IN ('36', '54') OR cod_skip_lote IS NULL) AND lote_de_controle_de_qualidade LIKE 'LCQMB%'`, []],
-    ['microbiologia-estabilidade-envase', `cod_skip_lote IN ('36', '54') AND lote_de_controle_de_qualidade LIKE 'LCQMB%'`, []],
+    ['microbiologia-estabilidade-micro', `(cod_skip_lote NOT IN (36, 54) OR cod_skip_lote IS NULL) AND cod_ensaio IN (10, 11, 12, 13)`, []],
+    ['microbiologia-estabilidade-envase', `cod_skip_lote IN (36, 54) AND cod_ensaio IN (10, 11, 12, 13)`, []],
 
     ['microbiologia-agua-enxague', `cod_produto = 15`, []],
     ['microbiologia-swab', `cod_produto = 14`, []],
-    ['microbiologia-analise-microbiologia', `cod_laboratorio IN (5, 17) AND cod_area IN (73, 75) AND lote_de_controle_de_qualidade NOT LIKE 'LCQMB%'`, []],
+    ['microbiologia-analise-microbiologia', `lote_de_controle_de_qualidade LIKE 'LCQMB%' AND cod_ensaio NOT IN (10, 11, 12, 13) AND (cod_produto NOT IN (14, 15) OR cod_produto IS NULL)`, []],
 
     // Envase
     ['envase-produto-acabado', `lote_de_controle_de_qualidade LIKE 'LCQE%' AND (cod_skip_lote IN ('33') OR (cod_skip_lote IS NULL AND operacao IN ('EMBALAGEM', 'ENCHIMENTO')))`, []],
@@ -1258,14 +1259,14 @@ export async function getRankingProcessos(
     [
       'cip-processo',
       lotesCip.length > 0
-        ? `cod_laboratorio IN (1, 15, 25) AND cod_centro_de_custo IN (450050, 450070, 460000, 430000, 430010, 430020, 410010, 470020) AND lote_de_controle_de_qualidade COLLATE utf8mb4_unicode_ci IN (${placeholdersCip})`
+        ? `cod_laboratorio IN (1, 15, 25) AND cod_centro_de_custo IN (450050, 450070, 460000, 430000, 430010, 430020, 410010, 470020) AND lote_de_controle_de_qualidade IN (${placeholdersCip})`
         : `1=0`,
       lotesCip
     ],
     [
       'cip-envasamento-novo',
       lotesCip.length > 0
-        ? `cod_laboratorio IN (4, 16, 25) AND cod_centro_de_custo IN (450010, 450060,450030, 450040, 450020) AND lote_de_controle_de_qualidade COLLATE utf8mb4_unicode_ci IN (${placeholdersCip})`
+        ? `cod_laboratorio IN (4, 16, 25) AND cod_centro_de_custo IN (450010, 450060,450030, 450040, 450020) AND lote_de_controle_de_qualidade IN (${placeholdersCip})`
         : `1=0`,
       lotesCip
     ],
@@ -1310,7 +1311,8 @@ export async function getRankingProcessos(
       R.cod_amostra_interunidade,
       R.cod_cabecalho_de_especificacao,
       R.cod_operacao,
-      R.produto
+      R.produto,
+      R.cod_ensaio
     FROM DW_FAT_RESULTADO R
     -- LEFT JOIN para garantir que cod_skip_lote venha da dimensão, não da desnormalização
     LEFT JOIN DIM_CABECALHO_DE_ESPECIFICACAO CAB
