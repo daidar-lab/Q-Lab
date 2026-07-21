@@ -1060,16 +1060,29 @@ export function resolverFiltroPorId(id: string | number): { sql: string; params:
   if (slugDireto[idStr]) return slugDireto[idStr];
 
   // ── Grupo B: prefixo de lote_de_controle_de_qualidade ────────────────────
-  // Atenção à ordem: mais específico primeiro (LCQFI antes de LCQF, LCQCP antes de LCQC)
+  // fermentacao e maturacao usam NOT LIKE para evitar englobar sub-prefixos:
+  //   fermentacao: LCQF% mas NÃO LCQFI% (filtração)
+  //   maturacao:   LCQM% mas NÃO LCQMB% (microbiologia)
+  const compostoMap: Record<string, { sql: string; params: unknown[] }> = {
+    'fermentacao': {
+      sql: `lote_de_controle_de_qualidade LIKE 'LCQF%' AND lote_de_controle_de_qualidade NOT LIKE 'LCQFI%'`,
+      params: [],
+    },
+    'maturacao': {
+      sql: `lote_de_controle_de_qualidade LIKE 'LCQM%' AND lote_de_controle_de_qualidade NOT LIKE 'LCQMB%'`,
+      params: [],
+    },
+  };
+
+  if (compostoMap[idStr]) return compostoMap[idStr];
+
+  // Prefixo simples — sem sobreposição de sub-prefixos
   const prefixMap: Record<string, string> = {
-    'filtracao': 'LCQFI',   // deve vir antes de fermentacao
-    'fermentacao': 'LCQF',
+    'filtracao': 'LCQFI',
     'brassagem': 'LCQB',
-    'maturacao': 'LCQM',
     'captacao': 'LCQCA',
     'tratamento-efluentes': 'LCQTE',
     'envase-produto-acabado': 'LCQE',
-
     'envase-interunidades': 'LCQE',
   };
 
@@ -1401,8 +1414,8 @@ export async function getRankingProdutos(
 
     entry.produtos.push(produto);
     entry.amostras += produto.amostras;
-    entry.ensaios  += produto.ensaios;
-    entry.nc       += produto.nc;
+    entry.ensaios += produto.ensaios;
+    entry.nc += produto.nc;
   }
 
   // Ordenar tipos por nc desc; produtos já vêm ordenados por nc desc da query
