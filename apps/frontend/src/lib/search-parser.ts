@@ -239,6 +239,12 @@ function norm(s: string): string {
   return s.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
 }
 
+// Injeta os labels exatos da UI (normalizados) como aliases válidos
+// Garante que clicar numa sugestão do dropdown sempre resulte em match perfeito
+Object.entries(LABELS_CATEGORIA).forEach(([slug, label]) => {
+  PROCESSO_ALIASES[norm(label)] = slug;
+});
+
 // ─── parseSearchQuery ─────────────────────────────────────────────────────────
 
 export function parseSearchQuery(input: string, catalogo: Catalogo): SearchTokens {
