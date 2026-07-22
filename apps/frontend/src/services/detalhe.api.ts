@@ -13,6 +13,18 @@ export const detalheApi = {
         });
         return res.data;
     },
+    getReanalises: async (
+        tipo: string,
+        id: string,
+        dataInicio: string,
+        dataFim: string,
+        filialId: number
+    ) => {
+        const res = await request<{ ok: boolean; data: any[] }>(`/api/detalhe/${tipo}/${id}/reanalises`, {
+            params: { dataInicio, dataFim, filialId },
+        });
+        return res.data;
+    },
     getResumoIA: async (
         tipo: string,
         id: string,

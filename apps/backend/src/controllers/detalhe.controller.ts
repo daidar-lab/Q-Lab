@@ -217,4 +217,32 @@ export async function getAmostrasPorInformativoECentroEProdutoController(req: Re
     next(err);
   }
 }
+
+export async function getReanalisesController(req: Request, res: Response, next: NextFunction) {
+    try {
+        const { tipo, id } = req.params;
+        const { dataInicio, dataFim, filialId: filialIdStr } = req.query;
+        const filialId = parseInt(filialIdStr as string);
+
+        const tipoNormalizado = TIPO_MAP[tipo];
+        if (!tipoNormalizado) {
+            return res.status(400).json({ ok: false, error: 'Tipo inválido' });
+        }
+        if (!filialId || isNaN(filialId)) {
+            return res.status(400).json({ ok: false, error: 'filialId é obrigatório.' });
+        }
+
+        const data = await DetalheService.getReanalises({
+            tipo: tipoNormalizado,
+            id: isNaN(Number(id)) ? id : Number(id),
+            filialId,
+            dataInicio: String(dataInicio),
+            dataFim: String(dataFim),
+        });
+
+        res.json({ ok: true, data });
+    } catch (err) {
+        next(err);
+    }
+}
 
