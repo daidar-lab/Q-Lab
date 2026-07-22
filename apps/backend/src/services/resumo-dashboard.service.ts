@@ -78,7 +78,7 @@ export async function getResumoDashboard(params: ResumoParams) {
     'envase-arrolhamento', 'envase-provas-horarias', 'envase-assoprador',
     'envase-lubrificante', 'envase-recravacao', 'envase-pasteurizador',
     'envase-chopp', 'envase-produto-acabado',
-    'cip-processo', 'cip-envasamento-novo', 'cip-envasamento-antigo',
+    'cip-processo', 'cip-envasamento',
     'microbiologia-analise-microbiologia',
     'fisico-embalagem', 'fisico-materia-prima', 'fisico-quimicos',
     'desalcoolizacao', 'filtracao', 'fermentacao', 'brassagem',

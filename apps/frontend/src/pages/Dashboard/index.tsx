@@ -19,7 +19,7 @@ const MACRO_GRUPOS_CONFIG = [
   {
     id: 'cip',
     label: 'CIP',
-    subids: ['cip-processo', 'cip-envasamento-novo', 'cip-envasamento-antigo'],
+    subids: ['cip-processo', 'cip-envasamento'],
   },
   {
     id: 'envase',
