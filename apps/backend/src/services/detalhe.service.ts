@@ -125,6 +125,7 @@ export interface ResumoMacroRow {
   pct_conforme: number;
   total_lotes: number;
   lotes_afetados: number;
+  qtd_reanalises: number;
   nome?: string | null;
 }
 
@@ -149,10 +150,14 @@ export async function getResumoMacro(params: DetalheParams) {
       COUNT(DISTINCT R.lote_de_controle_de_qualidade)  AS total_lotes,
       COUNT(DISTINCT CASE
         WHEN R.conformidade != 'CONFORME' THEN R.lote_de_controle_de_qualidade
-      END)                                            AS lotes_afetados
+      END)                                            AS lotes_afetados,
+      SUM(CASE WHEN rar.cod_amostra_reanalise IS NOT NULL THEN 1 ELSE 0 END) AS qtd_reanalises
     FROM DW_FAT_RESULTADO R
     LEFT JOIN DIM_CABECALHO_DE_ESPECIFICACAO CAB
       ON CAB.cod_cabecalho_de_especificacao = R.cod_cabecalho_de_especificacao
+    LEFT JOIN FAT_AMOSTRAxAMOSTRA_REANALISE rar
+      ON rar.cod_amostra_reanalise = R.cod_amostra
+      AND rar.D_E_L_E_T IS NULL
     WHERE R.D_E_L_E_T IS NULL
       AND R.conformidade != 'NÃO AVALIADO'
       AND ${filterSql}
@@ -171,6 +176,40 @@ export async function getResumoMacro(params: DetalheParams) {
   }
 
   return resumo;
+}
+
+export async function getReanalises(params: DetalheParams) {
+  const filter = buildFiltroDetalhe(params.tipo, params.id);
+  const labs = await resolveFilialLaboratorios(params.filialId);
+  const labFilter = labs.length > 0
+    ? `AND R.cod_laboratorio IN (${labs.map(() => '?').join(', ')})`
+    : '';
+
+  const filterSql = prefixFilterDw(filter.sql);
+
+  return blabQuery(`
+    SELECT DISTINCT
+      R.cod_amostra,
+      R.numero_de_controle,
+      R.data_resultado,
+      R.hora_resultado,
+      R.ensaio,
+      R.produto,
+      R.conformidade,
+      R.valor
+    FROM DW_FAT_RESULTADO R
+    LEFT JOIN DIM_CABECALHO_DE_ESPECIFICACAO CAB
+      ON CAB.cod_cabecalho_de_especificacao = R.cod_cabecalho_de_especificacao
+    INNER JOIN FAT_AMOSTRAxAMOSTRA_REANALISE rar
+      ON rar.cod_amostra_reanalise = R.cod_amostra
+      AND rar.D_E_L_E_T IS NULL
+    WHERE R.D_E_L_E_T IS NULL
+      AND R.conformidade != 'NÃO AVALIADO'
+      AND ${filterSql}
+      AND R.data_resultado BETWEEN ? AND ?
+      ${labFilter}
+    ORDER BY R.data_resultado DESC, R.hora_resultado DESC
+  `, [...filter.params, params.dataInicio, params.dataFim, ...labs]);
 }
 
 // 3. Top N ensaios por volume (só para processo/produto — ensaio é fixo)

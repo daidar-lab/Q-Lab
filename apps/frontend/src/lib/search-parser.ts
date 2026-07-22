@@ -80,7 +80,7 @@ function mesNomeado(nomeMes: string, anoStr?: string): { dataInicio: string; dat
 export const PROCESSO_ALIASES: Record<string, string> = {
   // Bigramas primeiro
   'cip processo': 'cip-processo',
-  'cip envasamento': 'cip-envasamento-novo',
+  'cip envasamento': 'cip-envasamento',
   'produto acabado': 'envase-produto-acabado',
   'provas horarias': 'envase-provas-horarias',
   'provas horárias': 'envase-provas-horarias',
@@ -166,8 +166,7 @@ export const LABELS_CATEGORIA: Record<string, string> = {
   'ar-co2': 'Ar Comprimido e CO2',
   'co2-beneficiado': 'CO2 Beneficiado',
   'cip-processo': 'CIP — Processo',
-  'cip-envasamento-novo': 'CIP — Envasamento Novo',
-  'cip-envasamento-antigo': 'CIP — Envasamento Antigo',
+  'cip-envasamento': 'CIP — Envasamento',
   'fisico-embalagem': 'Físico — Embalagem',
   'fisico-materia-prima': 'Físico — Matéria-Prima',
   'fisico-quimicos': 'Físico — Químicos',

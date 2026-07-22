@@ -991,15 +991,11 @@ export function resolverFiltroPorId(id: string | number): { sql: string; params:
     },
     // CIP — amostras realizadas nos laboratórios de CIP (não âncora via lote)
     'cip-processo': {
-      sql: `cod_laboratorio IN (1, 15, 25) AND cod_centro_de_custo IN (450050, 450070, 460000, 430000, 430010, 430020, 410010, 470020)`,
+      sql: `cod_laboratorio IN (1, 15, 25) AND cod_operacao = 55 AND lote_de_controle_de_qualidade LIKE 'LCQC%'`,
       params: [],
     },
-    'cip-envasamento-novo': {
-      sql: `cod_laboratorio IN (4, 16, 25) AND cod_centro_de_custo IN (450010, 450060, 450030, 450040, 450020)`,
-      params: [],
-    },
-    'cip-envasamento-antigo': {
-      sql: `cod_laboratorio IN (4, 16, 25) AND cod_operacao IN (31, 55, 68, 27)`,
+    'cip-envasamento': {
+      sql: `cod_laboratorio IN (4, 16, 25) AND cod_operacao IN (27, 31, 55, 68)`,
       params: [],
     },
     // Microbiologia — análise laboratorial direta
@@ -1140,8 +1136,7 @@ const LABELS_CATEGORIA: Record<string, string> = {
 
   // CIP
   'cip-processo': 'CIP — Processo',
-  'cip-envasamento-novo': 'CIP — Envasamento Novo',
-  'cip-envasamento-antigo': 'CIP — Envasamento Antigo',
+  'cip-envasamento': 'CIP — Envasamento',
 
   // Físico
   'fisico-embalagem': 'Físico — Embalagem',
@@ -1155,8 +1150,6 @@ export async function getRankingProcessos(
   periodo: FiltroPeriodo,
 ): Promise<{ id: string; nome: string; amostras: number; ensaios: number; nc: number }[]> {
   const { dataInicio: di, dataFim: df } = periodo;
-  const diInt = Number(di.substring(0, 10).replace(/-/g, ''));
-  const dfInt = Number(df.substring(0, 10).replace(/-/g, ''));
 
   // Resolve labs da filial para filtro na CTE
   const labs = await resolveFilialLaboratorios(periodo.filialId);
@@ -1166,39 +1159,18 @@ export async function getRankingProcessos(
     : '';
 
   // Antes de montar o SQL, resolve os lotes pesados em paralelo
-  const [lotesDesalcoolizacao, lotesCip] = await Promise.all([
-    // desalcoolizacao — atributo 53
-    blabQuery<{ lote: string }>(`
-      SELECT L.lote_de_controle_de_qualidade AS lote
-      FROM FAT_ATRIBUTOS_DA_AMOSTRA ATR
-      INNER JOIN FAT_LOTE_DE_CONTROLE_DE_QUALIDADE L
-          ON CAST(ATR.valor AS UNSIGNED) = L.cod_lote_de_controle_de_qualidade
-      WHERE ATR.cod_atributo_da_amostra = 53
-        AND ATR.D_E_L_E_T IS NULL
-        AND L.D_E_L_E_T IS NULL
-    `, []).then(rows => rows.map(r => r.lote)),
-
-    // cip
-    blabQuery<{ lote: string }>(`
-      SELECT L.lote_de_controle_de_qualidade AS lote
-      FROM FAT_CIP C
-      INNER JOIN FAT_LOTE_DE_CONTROLE_DE_QUALIDADE L
-          ON L.cod_lote_de_controle_de_qualidade = C.cod_lote_de_controle_de_qualidade
-      WHERE C.tipo_cip IN ('CIP COMPLETO','CIP CAUSTICO','CIP COMPLETO ALCALINO CLORADO',
-          'ASSEPSIA ALCALINO CLORADO','ASSEPSIA ALCALINO','CIP COMPLETO (BRASSAGEM)',
-          'CIP PASSIVAÇÃO','CIP SANITIZAÇÃO')
-        AND C.data BETWEEN ? AND ?
-        AND C.D_E_L_E_T IS NULL
-        AND L.D_E_L_E_T IS NULL
-    `, [diInt, dfInt]).then(rows => rows.map(r => r.lote)),
-  ]);
+  const lotesDesalcoolizacao = await blabQuery<{ lote: string }>(`
+    SELECT L.lote_de_controle_de_qualidade AS lote
+    FROM FAT_ATRIBUTOS_DA_AMOSTRA ATR
+    INNER JOIN FAT_LOTE_DE_CONTROLE_DE_QUALIDADE L
+        ON CAST(ATR.valor AS UNSIGNED) = L.cod_lote_de_controle_de_qualidade
+    WHERE ATR.cod_atributo_da_amostra = 53
+      AND ATR.D_E_L_E_T IS NULL
+      AND L.D_E_L_E_T IS NULL
+  `, []).then(rows => rows.map(r => r.lote));
 
   const placeholdersDesalc = lotesDesalcoolizacao.length > 0
     ? lotesDesalcoolizacao.map(() => '?').join(',')
-    : 'NULL';
-
-  const placeholdersCip = lotesCip.length > 0
-    ? lotesCip.map(() => '?').join(',')
     : 'NULL';
 
   // Subquery reutilizável para Físico — resolve cod_cabecalho_de_especificacao
@@ -1246,7 +1218,7 @@ export async function getRankingProcessos(
     [
       'desalcoolizacao',
       lotesDesalcoolizacao.length > 0
-        ? `lote_de_controle_de_qualidade COLLATE utf8mb4_unicode_ci IN (${placeholdersDesalc})`
+        ? `lote_de_controle_de_qualidade IN (${placeholdersDesalc})`
         : `1=0`,
       lotesDesalcoolizacao
     ],
@@ -1255,22 +1227,9 @@ export async function getRankingProcessos(
     ['residuos', `cod_produto IN (303, 304)`, []],
     ['ar-co2', `cod_produto IN (153, 160) AND cod_laboratorio NOT IN (5, 17, 6, 20)`, []],
 
-    // CIP — três sub-tipos independentes
-    [
-      'cip-processo',
-      lotesCip.length > 0
-        ? `cod_laboratorio IN (1, 15, 25) AND cod_centro_de_custo IN (450050, 450070, 460000, 430000, 430010, 430020, 410010, 470020) AND lote_de_controle_de_qualidade IN (${placeholdersCip})`
-        : `1=0`,
-      lotesCip
-    ],
-    [
-      'cip-envasamento-novo',
-      lotesCip.length > 0
-        ? `cod_laboratorio IN (4, 16, 25) AND cod_centro_de_custo IN (450010, 450060,450030, 450040, 450020) AND lote_de_controle_de_qualidade IN (${placeholdersCip})`
-        : `1=0`,
-      lotesCip
-    ],
-    ['cip-envasamento-antigo', `cod_laboratorio IN (4, 16, 25) AND cod_operacao IN (31, 55, 68, 27)`, []],
+    // CIP
+    ['cip-processo', `cod_laboratorio IN (1, 15, 25) AND cod_operacao = 55 AND lote_de_controle_de_qualidade LIKE 'LCQC%'`, []],
+    ['cip-envasamento', `cod_laboratorio IN (4, 16, 25) AND cod_operacao IN (27, 31, 55, 68)`, []],
 
     // Físico — subquery inline sobre tabelas de dimensão (estáticas, pequenas)
     ['fisico-embalagem', FISICO_IN, ['%embalagem%']],

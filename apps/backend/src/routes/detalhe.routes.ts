@@ -18,6 +18,7 @@ router.get('/informativos/centros-custo',                                   cach
 router.get('/informativos/produtos',                                        cache, DetalheController.getProdutosPorInformativoECentroController);
 router.get('/informativos/amostras',                                        cache, DetalheController.getAmostrasPorInformativoECentroEProdutoController);
 router.get('/:tipo/:id/resumo-ia',                                          filialGuard, DetalheController.getResumoDetalheIAController);
+router.get('/:tipo/:id/reanalises',                                       cache, filialGuard, DetalheController.getReanalisesController);
 router.get('/:tipo/:id',                                                    cache, filialGuard, DetalheController.getDetalhe);
 
 export default router;

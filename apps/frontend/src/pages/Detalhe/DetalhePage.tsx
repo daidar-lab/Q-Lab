@@ -10,6 +10,7 @@ import SelecionarCentroCustoModal from '../../components/FaixasExplosao/Selecion
 import SelecionarOperacaoModal from '../../components/FaixasExplosao/SelecionarOperacaoModal';
 import SelecionarBemModal from '../../components/FaixasExplosao/SelecionarBemModal';
 import ResumoIADetalhe from '../../components/detalhe/ResumoIADetalhe';
+import ReanalisesModal from '../../components/detalhe/ReanalisesModal';
 import styles from './DetalhePage.module.css';
 import { useExportPDF } from '../../hooks/useExport';
 
@@ -35,6 +36,7 @@ export default function DetalhePage() {
     const [modalOperacaoAberto, setModalOperacaoAberto] = useState(false);
     const [modalBemAberto, setModalBemAberto] = useState(false);
     const [modalFaixaAberto, setModalFaixaAberto] = useState(false);
+    const [modalReanalisesAberto, setModalReanalisesAberto] = useState(false);
     const [centroCustoResolvido, setCentroCustoResolvido] = useState<{ id: number; nome: string } | null>(null);
     const [operacaoResolvida, setOperacaoResolvida] = useState<string | null>(null);
     const [bemResolvido, setBemResolvido] = useState<string | null>(null);
@@ -88,6 +90,7 @@ export default function DetalhePage() {
         setModalOperacaoAberto(false);
         setModalBemAberto(false);
         setModalFaixaAberto(false);
+        setModalReanalisesAberto(false);
         setFaixaSelecionadaObjeto(null);
         setFaixaAtiva(null);
         setCentroCustoResolvido(null);
@@ -274,6 +277,13 @@ export default function DetalhePage() {
                         {dados.resumo.lotes_afetados} de {dados.resumo.total_lotes}
                     </strong>
                 </div>
+                {dados.resumo.qtd_reanalises !== undefined && (
+                    <div className={styles.card} style={{ cursor: 'pointer', border: '1px solid var(--clr-primary, #3b82f6)' }} onClick={() => setModalReanalisesAberto(true)}>
+                        <span className={styles.label}>Reanálises</span>
+                        <strong className={styles.valor} style={{ color: 'var(--clr-primary, #3b82f6)' }}>{dados.resumo.qtd_reanalises}</strong>
+                        <span style={{ fontSize: '11px', color: 'var(--clr-primary, #3b82f6)', display: 'block', marginTop: '4px', textDecoration: 'underline' }}>Ver lista</span>
+                    </div>
+                )}
             </div>
 
             <ResumoIADetalhe
@@ -286,10 +296,10 @@ export default function DetalhePage() {
                 <SerieConformidade dados={dados.serie} limites={faixaAtiva} />
                 <div className={styles.faixasContainer}>
                     <span className={styles.label}>Faixas de especificação</span>
-                    {dados.faixas.map((faixa: any) => {
+                    {dados.faixas.map((faixa: any, idx: number) => {
                         const faixaKey = isBrassagem && faixa.operacao
-                            ? `${faixa.cod_ensaio}_${faixa.operacao}`
-                            : String(faixa.cod_ensaio);
+                            ? `${faixa.cod_ensaio}_${faixa.operacao}_${idx}`
+                            : `${faixa.cod_ensaio}_${idx}`;
 
                         const isActive = isBrassagem
                             ? faixaSelecionadaObjeto?.cod_ensaio === faixa.cod_ensaio &&
@@ -391,6 +401,14 @@ export default function DetalhePage() {
                     <p>Buscando processos associados...</p>
                 </div>
             )}
+            
+            <ReanalisesModal
+                isOpen={modalReanalisesAberto}
+                onClose={() => setModalReanalisesAberto(false)}
+                tipo={tipoNormalizado}
+                id={id!}
+                titulo={dados.resumo?.nome || 'Detalhe'}
+            />
         </div>
     );
 }
