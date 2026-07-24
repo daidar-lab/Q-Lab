@@ -270,10 +270,40 @@ export default function BuscaPage() {
     : tiposAtivos.length > 1 ? `${tiposAtivos.length} tipos` : null;
 
   const temResultados = agregacoes && agregacoes.kpis.totalResultados > 0;
+  
+  const temEtiquetaPeriodo = tokens?.etiquetas.some(e => e.tipo === 'periodo');
+  
+  function formataDataBR(iso: string) {
+    if (!iso) return '';
+    const [y, m, d] = iso.split('-');
+    return `${d}/${m}/${y}`;
+  }
+
+  const etiquetaPeriodoDefault = (!temEtiquetaPeriodo && tokens) ? {
+    tipo: 'periodo' as const,
+    label: `${formataDataBR(tokens.periodo.dataInicio)} - ${formataDataBR(tokens.periodo.dataFim)}`,
+    valor: 'default',
+  } : null;
+
   const etiquetasVisiveis = tokens?.etiquetas.filter(e => e.tipo !== 'desconhecido') ?? [];
+  if (etiquetaPeriodoDefault) {
+    etiquetasVisiveis.unshift(etiquetaPeriodoDefault);
+  }
 
   return (
-    <div style={{ padding: '28px 24px', maxWidth: '1200px', margin: '0 auto' }}>
+    <div className="busca-page-container">
+      <style>{`
+        .busca-page-container {
+          padding: 16px 24px;
+          max-width: 1400px;
+          margin: 0 auto;
+        }
+        @media (max-width: 768px) {
+          .busca-page-container {
+            padding: 12px 16px;
+          }
+        }
+      `}</style>
 
       {/* ── Modal de seleção de produtos por tipo ───────────────────────────── */}
       {modalAberto && tiposAtivos.length > 0 && (
@@ -298,74 +328,53 @@ export default function BuscaPage() {
         />
       </div>
 
-      {/* ── Botão contextual de tipo ─────────────────────────────────────────── */}
-      {tiposAtivos.length > 0 && (
-        <div style={{
-          display: 'flex',
-          alignItems: 'center',
-          gap: '10px',
-          marginBottom: '12px',
-          padding: '10px 14px',
-          background: '#F5F3FF',
-          border: '1px solid #C4B5FD',
-          borderRadius: 'var(--r-md)',
-          flexWrap: 'wrap',
-        }}>
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#4C1D95" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <rect x="3" y="3" width="7" height="7" /><rect x="14" y="3" width="7" height="7" /><rect x="14" y="14" width="7" height="7" /><rect x="3" y="14" width="7" height="7" />
-          </svg>
-          <span style={{ fontSize: '13px', color: '#4C1D95', fontWeight: 600 }}>
-            Tipo: {tipoLabel}
-          </span>
-          {produtosFiltradosPorTipo.length > 0 && (
-            <span style={{ fontSize: '12px', color: '#6D28D9', background: '#EDE9FE', padding: '1px 8px', borderRadius: '10px' }}>
-              {produtosFiltradosPorTipo.length} produto{produtosFiltradosPorTipo.length !== 1 ? 's' : ''} selecionado{produtosFiltradosPorTipo.length !== 1 ? 's' : ''}
-            </span>
-          )}
-          <button
-            id="btn-selecionar-produtos-tipo"
-            onClick={() => setModalAberto(true)}
-            style={{
-              marginLeft: 'auto',
-              padding: '6px 14px',
-              background: '#4C1D95',
-              border: 'none',
-              borderRadius: '8px',
-              color: '#fff',
-              fontSize: '12px',
-              fontWeight: 700,
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '6px',
-              transition: 'background 0.15s',
-              fontFamily: 'var(--font)',
-            }}
-            onMouseEnter={e => (e.currentTarget.style.background = '#3B0764')}
-            onMouseLeave={e => (e.currentTarget.style.background = '#4C1D95')}
-          >
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-              <polyline points="9 18 15 12 9 6" />
-            </svg>
-            {produtosFiltradosPorTipo.length > 0 ? 'Alterar seleção' : 'Selecionar produtos'}
-          </button>
-        </div>
-      )}
-
-      {/* ── Etiquetas ativas ─────────────────────────────────────────────── */}
-      {etiquetasVisiveis.length > 0 && (
+      {/* ── Etiquetas ativas e Ações Contextuais ─────────────────────────── */}
+      {(etiquetasVisiveis.length > 0 || tiposAtivos.length > 0) && (
         <div
           role="group"
           aria-label="Filtros ativos"
-          style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginBottom: '20px' }}
+          style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '8px', marginBottom: '20px' }}
         >
           {etiquetasVisiveis.map(etiqueta => (
             <EtiquetaRemovivel
               key={`${etiqueta.tipo}-${etiqueta.valor}`}
               etiqueta={etiqueta}
               qAtual={q}
+              removivel={!(etiqueta.tipo === 'periodo' && etiqueta.valor === 'default')}
             />
           ))}
+
+          {tiposAtivos.length > 0 && (
+            <button
+              id="btn-selecionar-produtos-tipo"
+              onClick={() => setModalAberto(true)}
+              style={{
+                padding: '4px 12px',
+                background: '#4C1D95',
+                border: 'none',
+                borderRadius: '20px',
+                color: '#fff',
+                fontSize: '12px',
+                fontWeight: 600,
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px',
+                transition: 'background 0.15s',
+                fontFamily: 'var(--font)',
+                boxShadow: '0 2px 4px rgba(76, 29, 149, 0.2)'
+              }}
+              onMouseEnter={e => (e.currentTarget.style.background = '#3B0764')}
+              onMouseLeave={e => (e.currentTarget.style.background = '#4C1D95')}
+            >
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                <rect x="3" y="3" width="7" height="7" rx="1" /><rect x="14" y="3" width="7" height="7" rx="1" /><rect x="14" y="14" width="7" height="7" rx="1" /><rect x="3" y="14" width="7" height="7" rx="1" />
+              </svg>
+              {produtosFiltradosPorTipo.length > 0 
+                ? `${produtosFiltradosPorTipo.length} produto${produtosFiltradosPorTipo.length !== 1 ? 's' : ''} selecionado${produtosFiltradosPorTipo.length !== 1 ? 's' : ''}` 
+                : 'Selecionar produtos'}
+            </button>
+          )}
         </div>
       )}
 

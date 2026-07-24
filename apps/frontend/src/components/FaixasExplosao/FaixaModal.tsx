@@ -692,133 +692,137 @@ export const FaixaModal: React.FC<FaixaModalProps> = ({
                                             </div>
                                         </div>
                                     ) : (
-                                        <ResponsiveContainer width="100%" height="100%">
-                                            <LineChart
-                                                data={chartData}
-                                                margin={{ top: 20, right: 30, left: 20, bottom: diffDias <= 7 ? 80 : 40 }}
-                                            >
-                                                <CartesianGrid strokeDasharray="3 3" stroke="var(--clr-border, #E7E5E4)" />
-                                                <XAxis
-                                                    dataKey="formattedTimestamp"
-                                                    tick={{ fontSize: 11, fill: 'var(--clr-text-2, #57534E)' }}
-                                                    angle={diffDias <= 7 ? -35 : 0}
-                                                    textAnchor={diffDias <= 7 ? 'end' : 'middle'}
-                                                    interval="preserveStartEnd"
-                                                />
-                                                <YAxis
-                                                    domain={yDomain}
-                                                    tick={{ fontSize: 11, fill: 'var(--clr-text-2, #57534E)' }}
-                                                    tickFormatter={(v: number) =>
-                                                        modoSemFaixa
-                                                            ? (v === 1 ? 'Conforme' : v === 0 ? 'NC' : '')
-                                                            : v.toFixed(2)
-                                                    }
-                                                />
-                                                <Tooltip
-                                                    content={
-                                                        <CustomTooltip
-                                                            diffDias={diffDias}
-                                                            rawTimestampMap={rawTimestampMap}
-                                                            productNamesMap={productNames}
+                                        <div className={styles.desktopScrollOuter}>
+                                            <div style={{ width: `max(100%, ${chartData.length * 10}px)`, height: '100%', paddingBottom: '10px' }}>
+                                                <ResponsiveContainer width="100%" height="100%">
+                                                    <LineChart
+                                                        data={chartData}
+                                                        margin={{ top: 20, right: 30, left: 20, bottom: diffDias <= 7 ? 80 : 40 }}
+                                                    >
+                                                        <CartesianGrid strokeDasharray="3 3" stroke="var(--clr-border, #E7E5E4)" />
+                                                        <XAxis
+                                                            dataKey="formattedTimestamp"
+                                                            tick={{ fontSize: 11, fill: 'var(--clr-text-2, #57534E)' }}
+                                                            angle={diffDias <= 7 ? -35 : 0}
+                                                            textAnchor={diffDias <= 7 ? 'end' : 'middle'}
+                                                            interval="preserveStartEnd"
                                                         />
-                                                    }
-                                                />
-                                                <Legend
-                                                    wrapperStyle={
-                                                        isMobile
-                                                            ? { fontSize: 10, paddingTop: 4, lineHeight: '14px' }
-                                                            : { fontSize: 12, paddingTop: 8 }
-                                                    }
-                                                />
-                                                {/* Linhas de especificação LIE / LSE — apenas no modo com faixa */}
-                                                {!modoSemFaixa && activeFaixas.map((limits, idx) => {
-                                                    const color = LIMIT_COLORS[idx % LIMIT_COLORS.length];
-                                                    return (
-                                                        <React.Fragment key={`${limits.lie}_${limits.lse}`}>
-                                                            <ReferenceLine
-                                                                y={Number(limits.lie)}
-                                                                stroke={color}
-                                                                strokeDasharray="5 3"
-                                                                strokeWidth={1.5}
-                                                                label={{
-                                                                    value: `LIE: ${Number(limits.lie)}`,
-                                                                    position: 'insideBottomLeft',
-                                                                    fill: color,
-                                                                    fontSize: 10,
-                                                                    fontWeight: 600,
-                                                                }}
-                                                            />
-                                                            <ReferenceLine
-                                                                y={Number(limits.lse)}
-                                                                stroke={color}
-                                                                strokeDasharray="5 3"
-                                                                strokeWidth={1.5}
-                                                                label={{
-                                                                    value: `LSE: ${Number(limits.lse)}`,
-                                                                    position: 'insideTopLeft',
-                                                                    fill: color,
-                                                                    fontSize: 10,
-                                                                    fontWeight: 600,
-                                                                }}
-                                                            />
-                                                        </React.Fragment>
-                                                    );
-                                                })}
-                                                {/* Linha de referência de conformidade — apenas no modo sem faixa */}
-                                                {modoSemFaixa && (
-                                                    <ReferenceLine
-                                                        y={0.5}
-                                                        stroke="#F59E0B"
-                                                        strokeDasharray="4 3"
-                                                        strokeWidth={1.5}
-                                                        label={{
-                                                            value: 'Limite',
-                                                            position: 'insideRight',
-                                                            fill: '#F59E0B',
-                                                            fontSize: 10,
-                                                            fontWeight: 600,
-                                                        }}
-                                                    />
-                                                )}
-                                                {/* Uma linha por SKU selecionado */}
-                                                {selectedSkus.map((sku, index) => (
-                                                    <Line
-                                                        key={sku}
-                                                        type="linear"
-                                                        dataKey={sku}
-                                                        name={truncarNomeLegenda(productNames[sku] || sku, isMobile ? 18 : 25)}
-                                                        stroke={COLORS[index % COLORS.length]}
-                                                        strokeWidth={2}
-                                                        dot={(dotProps: any) => {
-                                                            const { cx, cy, index: dotIdx, payload } = dotProps;
-                                                            if (cx == null || cy == null) return <g key={`dot-empty-${sku}-${dotIdx}`} />;
-                                                            const codAmostra = payload[`cod_amostra_${sku}`];
-                                                            const hasClick = !!codAmostra;
-                                                            return (
-                                                                <circle
-                                                                    key={`dot-${sku}-${dotIdx}`}
-                                                                    cx={cx}
-                                                                    cy={cy}
-                                                                    r={4}
-                                                                    fill={COLORS[index % COLORS.length]}
-                                                                    stroke="#fff"
-                                                                    strokeWidth={1.5}
-                                                                    style={{ cursor: hasClick ? 'pointer' : 'default' }}
-                                                                    onClick={(e) => {
-                                                                        e.stopPropagation();
-                                                                        if (!hasClick) return;
-                                                                        setSelectedCodAmostra(String(codAmostra));
-                                                                        setDrawerOpen(true);
-                                                                    }}
+                                                        <YAxis
+                                                            domain={yDomain}
+                                                            tick={{ fontSize: 11, fill: 'var(--clr-text-2, #57534E)' }}
+                                                            tickFormatter={(v: number) =>
+                                                                modoSemFaixa
+                                                                    ? (v === 1 ? 'Conforme' : v === 0 ? 'NC' : '')
+                                                                    : v.toFixed(2)
+                                                            }
+                                                        />
+                                                        <Tooltip
+                                                            content={
+                                                                <CustomTooltip
+                                                                    diffDias={diffDias}
+                                                                    rawTimestampMap={rawTimestampMap}
+                                                                    productNamesMap={productNames}
                                                                 />
+                                                            }
+                                                        />
+                                                        <Legend
+                                                            wrapperStyle={
+                                                                isMobile
+                                                                    ? { fontSize: 10, paddingTop: 4, lineHeight: '14px' }
+                                                                    : { fontSize: 12, paddingTop: 8 }
+                                                            }
+                                                        />
+                                                        {/* Linhas de especificação LIE / LSE — apenas no modo com faixa */}
+                                                        {!modoSemFaixa && activeFaixas.map((limits, idx) => {
+                                                            const color = LIMIT_COLORS[idx % LIMIT_COLORS.length];
+                                                            return (
+                                                                <React.Fragment key={`${limits.lie}_${limits.lse}`}>
+                                                                    <ReferenceLine
+                                                                        y={Number(limits.lie)}
+                                                                        stroke={color}
+                                                                        strokeDasharray="5 3"
+                                                                        strokeWidth={1.5}
+                                                                        label={{
+                                                                            value: `LIE: ${Number(limits.lie)}`,
+                                                                            position: 'insideBottomLeft',
+                                                                            fill: color,
+                                                                            fontSize: 10,
+                                                                            fontWeight: 600,
+                                                                        }}
+                                                                    />
+                                                                    <ReferenceLine
+                                                                        y={Number(limits.lse)}
+                                                                        stroke={color}
+                                                                        strokeDasharray="5 3"
+                                                                        strokeWidth={1.5}
+                                                                        label={{
+                                                                            value: `LSE: ${Number(limits.lse)}`,
+                                                                            position: 'insideTopLeft',
+                                                                            fill: color,
+                                                                            fontSize: 10,
+                                                                            fontWeight: 600,
+                                                                        }}
+                                                                    />
+                                                                </React.Fragment>
                                                             );
-                                                        }}
-                                                        activeDot={false}
-                                                        connectNulls={true}
-                                                    />
-                                                ))}
-                                            </LineChart>
-                                        </ResponsiveContainer>
+                                                        })}
+                                                        {/* Linha de referência de conformidade — apenas no modo sem faixa */}
+                                                        {modoSemFaixa && (
+                                                            <ReferenceLine
+                                                                y={0.5}
+                                                                stroke="#F59E0B"
+                                                                strokeDasharray="4 3"
+                                                                strokeWidth={1.5}
+                                                                label={{
+                                                                    value: 'Limite',
+                                                                    position: 'insideRight',
+                                                                    fill: '#F59E0B',
+                                                                    fontSize: 10,
+                                                                    fontWeight: 600,
+                                                                }}
+                                                            />
+                                                        )}
+                                                        {/* Uma linha por SKU selecionado */}
+                                                        {selectedSkus.map((sku, index) => (
+                                                            <Line
+                                                                key={sku}
+                                                                type="linear"
+                                                                dataKey={sku}
+                                                                name={truncarNomeLegenda(productNames[sku] || sku, isMobile ? 18 : 25)}
+                                                                stroke={COLORS[index % COLORS.length]}
+                                                                strokeWidth={2}
+                                                                dot={(dotProps: any) => {
+                                                                    const { cx, cy, index: dotIdx, payload } = dotProps;
+                                                                    if (cx == null || cy == null) return <g key={`dot-empty-${sku}-${dotIdx}`} />;
+                                                                    const codAmostra = payload[`cod_amostra_${sku}`];
+                                                                    const hasClick = !!codAmostra;
+                                                                    return (
+                                                                        <circle
+                                                                            key={`dot-${sku}-${dotIdx}`}
+                                                                            cx={cx}
+                                                                            cy={cy}
+                                                                            r={4}
+                                                                            fill={COLORS[index % COLORS.length]}
+                                                                            stroke="#fff"
+                                                                            strokeWidth={1.5}
+                                                                            style={{ cursor: hasClick ? 'pointer' : 'default' }}
+                                                                            onClick={(e) => {
+                                                                                e.stopPropagation();
+                                                                                if (!hasClick) return;
+                                                                                setSelectedCodAmostra(String(codAmostra));
+                                                                                setDrawerOpen(true);
+                                                                            }}
+                                                                        />
+                                                                    );
+                                                                }}
+                                                                activeDot={false}
+                                                                connectNulls={true}
+                                                            />
+                                                        ))}
+                                                    </LineChart>
+                                                </ResponsiveContainer>
+                                            </div>
+                                        </div>
                                     )}
                                 </div>
                             )}

@@ -52,6 +52,8 @@ function useBreadcrumb() {
 export default function MainLayout() {
   const { usuario, logout } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
+  const isBuscaPage = location.pathname.startsWith('/busca');
   const breadcrumb = useBreadcrumb();
   const isAdmin = usuario?.role === 'admin';
 
@@ -176,7 +178,7 @@ export default function MainLayout() {
           {/* Centro — seletores (desktop only) */}
           <div className="ml-selectors">
             <FilialSelector />
-            <PeriodSelector />
+            {!isBuscaPage && <PeriodSelector />}
           </div>
 
           {/* Direita — usuário + ações */}
@@ -205,7 +207,7 @@ export default function MainLayout() {
         {/* Linha 2 (mobile only): seletores full-width */}
         <div className="ml-header-sub">
           <FilialSelector />
-          <PeriodSelector />
+          {!isBuscaPage && <PeriodSelector />}
         </div>
       </header>
 

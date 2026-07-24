@@ -71,6 +71,47 @@ export default function SerieConformidade({ dados, limites }: SerieConformidadeP
 
   const chartTitle = titulos[granularidade] || titulos.month;
 
+  // Resumo Inteligente — pior período e média geral
+  let totalNC = 0;
+  let totalConf = 0;
+  let piorItem = listaDados[0] as SerieItem | undefined;
+  let maiorTaxaNC = -1;
+
+  listaDados.forEach((item) => {
+    totalNC += (item.total - item.n_conforme);
+    totalConf += item.n_conforme;
+
+    const nc = item.total - item.n_conforme;
+    const taxa = item.total > 0 ? nc / item.total : 0;
+    if (taxa > maiorTaxaNC) {
+      maiorTaxaNC = taxa;
+      piorItem = item;
+    }
+  });
+
+  // Usa pct_conforme do backend diretamente para a média (mais confiável)
+  const valoresValidos = listaDados.map(item => Number(item.pct_conforme)).filter(v => !isNaN(v));
+  const mediaConformidade = valoresValidos.length > 0
+    ? (valoresValidos.reduce((acc, v) => acc + v, 0) / valoresValidos.length).toFixed(1)
+    : null;
+
+  // Formata o label do pior período
+  const formatarPeriodo = (periodo: string) => {
+    if (granularidade === 'month') {
+      const [ano, mes] = periodo.split('-');
+      return mes && ano ? `${mes}/${ano}` : periodo;
+    }
+    if (granularidade === 'week') {
+      const [ano, sem] = periodo.split('-');
+      return ano && sem ? `W${sem}/${ano.slice(-2)}` : periodo;
+    }
+    if (granularidade === 'day') {
+      const parts = periodo.split('-');
+      return parts.length >= 3 ? `${parts[2]}/${parts[1]}` : periodo;
+    }
+    return periodo;
+  };
+
   // Se os limites estiverem definidos, podemos expandir o domínio do eixo Y para que apareçam
   const minLim = limites ? Math.min(0, limites.lie) : 0;
   const maxLim = limites ? Math.max(100, limites.lse) : 100;
@@ -78,7 +119,40 @@ export default function SerieConformidade({ dados, limites }: SerieConformidadeP
 
   return (
     <div className={styles.chartCard}>
-      <h3 className={styles.chartTitle}>{chartTitle}</h3>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '12px', marginBottom: '8px' }}>
+        <h3 className={styles.chartTitle} style={{ margin: 0 }}>{chartTitle}</h3>
+
+        {/* Resumo Inteligente */}
+        {listaDados.length > 0 && (
+          <div style={{ display: 'flex', gap: '16px', fontSize: '12px' }}>
+            {mediaConformidade !== null && (
+              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end' }}>
+                <span style={{ color: 'var(--clr-text-3)', fontSize: '10px', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                  Média Geral
+                </span>
+                <span style={{ fontWeight: 800, color: '#16A34A', fontSize: '14px' }}>
+                  {mediaConformidade}%
+                </span>
+              </div>
+            )}
+
+            {piorItem && totalNC > 0 && maiorTaxaNC > 0 && (
+              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', borderLeft: '1px solid var(--clr-border)', paddingLeft: '16px' }}>
+                <span style={{ color: 'var(--clr-text-3)', fontSize: '10px', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                  Pior período ({formatarPeriodo(piorItem.periodo)})
+                </span>
+                <span style={{ fontWeight: 800, color: '#DC2626', fontSize: '14px' }}>
+                  {piorItem.total - piorItem.n_conforme} NCs{' '}
+                  <span style={{ fontSize: '12px', fontWeight: 600, opacity: 0.8 }}>
+                    ({(maiorTaxaNC * 100).toFixed(1)}%)
+                  </span>
+                </span>
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+
       <div className={styles.chartContainer}>
         <ResponsiveContainer width="100%" height={280}>
           <AreaChart data={dadosFormatados} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>

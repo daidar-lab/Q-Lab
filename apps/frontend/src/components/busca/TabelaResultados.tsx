@@ -162,8 +162,8 @@ export function TabelaResultados({ rows }: TabelaResultadosProps) {
           gap: '12px',
           flexWrap: 'wrap',
           width: '100%',
-          justifyContent: 'space-between',
-          maxWidth: '550px'
+          justifyContent: 'flex-start',
+          flex: 1
         }}>
           <input
             type="text"
@@ -178,9 +178,31 @@ export function TabelaResultados({ rows }: TabelaResultadosProps) {
               background: 'var(--clr-surface-2)',
               color: 'var(--clr-text)',
               flex: '1 1 200px',
-              minWidth: '180px'
+              minWidth: '180px',
+              maxWidth: '350px'
             }}
           />
+          
+          <select 
+            value={filtroStatus}
+            onChange={e => setFiltroStatus(e.target.value as any)}
+            style={{
+              padding: '8px 12px',
+              fontSize: '13px',
+              border: '1px solid var(--clr-border)',
+              borderRadius: 'var(--r-md)',
+              background: 'var(--clr-surface-2)',
+              color: 'var(--clr-text)',
+              cursor: 'pointer'
+            }}
+          >
+            <option value="ALL">Status: Todos</option>
+            <option value="OK">Conformes</option>
+            <option value="NC">Não Conformes</option>
+          </select>
+          
+          <div style={{ flex: 1 }}></div>
+
           <span style={{ fontSize: '12px', color: 'var(--clr-text-3)', whiteSpace: 'nowrap' }}>
             {sortedRows.length.toLocaleString('pt-BR')} resultados
             {rows.length >= 5000 && ' (limitado)'}
@@ -223,19 +245,6 @@ export function TabelaResultados({ rows }: TabelaResultadosProps) {
               <th style={{ ...thStyle, minWidth: '90px' }} onClick={() => handleSort('valor')}>
                 Valor {renderSortIndicator('valor')}
               </th>
-              <th style={{ ...thStyle, minWidth: '100px' }}>
-                <div onClick={() => handleSort('conformidade')}>Status {renderSortIndicator('conformidade')}</div>
-                <select 
-                  value={filtroStatus}
-                  onChange={e => setFiltroStatus(e.target.value as any)}
-                  onClick={e => e.stopPropagation()}
-                  style={{...inputStyle, padding: '5px 8px'}}
-                >
-                  <option value="ALL">Todos</option>
-                  <option value="OK">OK</option>
-                  <option value="NC">NC</option>
-                </select>
-              </th>
             </tr>
           </thead>
           <tbody>
@@ -244,9 +253,12 @@ export function TabelaResultados({ rows }: TabelaResultadosProps) {
               return (
                 <tr
                   key={`${row.cod_amostra}-${row.cod_ensaio}-${i}`}
-                  style={{ transition: 'background 0.1s' }}
-                  onMouseEnter={e => (e.currentTarget.style.background = 'var(--clr-surface-2)')}
-                  onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
+                  style={{ 
+                    transition: 'background 0.1s',
+                    background: isNC ? 'var(--clr-danger-bg)' : 'transparent'
+                  }}
+                  onMouseEnter={e => (e.currentTarget.style.background = isNC ? 'rgba(220, 38, 38, 0.15)' : 'var(--clr-surface-2)')}
+                  onMouseLeave={e => (e.currentTarget.style.background = isNC ? 'var(--clr-danger-bg)' : 'transparent')}
                 >
                   <td style={tdStyle}>
                     {row.data_resultado.split(' ')[0].split('-').reverse().join('/')}
@@ -265,26 +277,13 @@ export function TabelaResultados({ rows }: TabelaResultadosProps) {
                   <td style={{ ...tdStyle, color: 'var(--clr-text-3)', fontFamily: 'monospace', fontSize: '12px' }}>
                     {row.lote_de_controle_de_qualidade}
                   </td>
-                  <td style={{ ...tdStyle, fontWeight: 600 }}>{row.valor}</td>
-                  <td style={tdStyle}>
-                    <span style={{
-                      display: 'inline-block',
-                      padding: '2px 8px',
-                      borderRadius: 'var(--r-full)',
-                      fontSize: '11px',
-                      fontWeight: 700,
-                      background: isNC ? 'var(--clr-danger-bg)' : 'var(--clr-success-bg)',
-                      color: isNC ? 'var(--clr-danger)' : 'var(--clr-success)',
-                    }}>
-                      {isNC ? 'NC' : 'OK'}
-                    </span>
-                  </td>
+                  <td style={{ ...tdStyle, fontWeight: 600, color: isNC ? 'var(--clr-danger)' : 'inherit' }}>{row.valor}</td>
                 </tr>
               );
             })}
             {fatia.length === 0 && (
               <tr>
-                <td colSpan={6} style={{ padding: '24px', textAlign: 'center', color: 'var(--clr-text-3)', fontSize: '13px' }}>
+                <td colSpan={5} style={{ padding: '24px', textAlign: 'center', color: 'var(--clr-text-3)', fontSize: '13px' }}>
                   Nenhum resultado encontrado com os filtros atuais.
                 </td>
               </tr>

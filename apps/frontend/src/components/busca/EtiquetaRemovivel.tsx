@@ -36,12 +36,14 @@ const COR_TEXTO: Record<Etiqueta['tipo'], string> = {
 interface EtiquetaRemovivelProps {
   etiqueta: Etiqueta;
   qAtual: string;
+  removivel?: boolean;
 }
 
-export function EtiquetaRemovivel({ etiqueta, qAtual }: EtiquetaRemovivelProps) {
+export function EtiquetaRemovivel({ etiqueta, qAtual, removivel = true }: EtiquetaRemovivelProps) {
   const navigate = useNavigate();
 
   function remover() {
+    if (!removivel) return;
     const textoRemover = etiqueta.rawText ?? etiqueta.label;
     const novoQ = qAtual
       .replace(textoRemover, '')
@@ -74,29 +76,31 @@ export function EtiquetaRemovivel({ etiqueta, qAtual }: EtiquetaRemovivelProps) 
     }}>
       <span style={{ fontSize: '12px' }}>{ICONE[etiqueta.tipo]}</span>
       {etiqueta.label}
-      <button
-        onClick={remover}
-        aria-label={`Remover filtro ${etiqueta.label}`}
-        style={{
-          display: 'inline-flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          width: '16px',
-          height: '16px',
-          border: 'none',
-          background: 'rgba(0,0,0,0.1)',
-          borderRadius: '50%',
-          cursor: 'pointer',
-          color: 'inherit',
-          fontSize: '11px',
-          lineHeight: 1,
-          padding: 0,
-          marginLeft: '2px',
-          transition: 'background 0.1s',
-        }}
-        onMouseEnter={e => (e.currentTarget.style.background = 'rgba(0,0,0,0.2)')}
-        onMouseLeave={e => (e.currentTarget.style.background = 'rgba(0,0,0,0.1)')}
-      >×</button>
+      {removivel && (
+        <button
+          onClick={remover}
+          aria-label={`Remover filtro ${etiqueta.label}`}
+          style={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            width: '16px',
+            height: '16px',
+            border: 'none',
+            background: 'rgba(0,0,0,0.1)',
+            borderRadius: '50%',
+            cursor: 'pointer',
+            color: 'inherit',
+            fontSize: '11px',
+            lineHeight: 1,
+            padding: 0,
+            marginLeft: '2px',
+            transition: 'background 0.1s',
+          }}
+          onMouseEnter={e => (e.currentTarget.style.background = 'rgba(0,0,0,0.2)')}
+          onMouseLeave={e => (e.currentTarget.style.background = 'rgba(0,0,0,0.1)')}
+        >×</button>
+      )}
     </span>
   );
 }

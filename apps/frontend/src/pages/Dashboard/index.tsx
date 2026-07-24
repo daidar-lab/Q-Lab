@@ -140,7 +140,9 @@ export default function DashboardPage() {
 
   const kpiCard: CSSProperties = {
     background: 'var(--clr-surface)', border: '1px solid var(--clr-border)',
-    borderRadius: 'var(--r-lg)', padding: '20px 24px', flex: 1,
+    borderRadius: 'var(--r-lg)', padding: '16px 20px', flex: 1,
+    display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', textAlign: 'center',
+    minHeight: '110px'
   };
 
   const catCard: CSSProperties = {
@@ -195,11 +197,11 @@ export default function DashboardPage() {
 
 
   return (
-    <div className="db-root" style={{ padding: '28px 24px', maxWidth: '1200px', margin: '0 auto' }}>
+    <div className="db-root" style={{ padding: '16px 24px', maxWidth: '1400px', margin: '0 auto' }}>
       <style>{`
         /* Dashboard mobile overrides */
-        @media (max-width: 640px) {
-          .db-root { padding: 16px 12px !important; }
+        @media (max-width: 768px) {
+          .db-root { padding: 12px 16px !important; }
           .db-kpi-grid { gap: 10px !important; }
           .db-kpi-grid > div { flex: 1 1 calc(50% - 5px) !important; min-width: 0 !important; padding: 14px 12px !important; }
           .db-kpi-grid > div > div:nth-child(2) { font-size: 24px !important; }
@@ -209,19 +211,7 @@ export default function DashboardPage() {
         }
       `}</style>
 
-      <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '16px' }}>
-        <button
-          onClick={() => exportar({ filialId, dataInicio: periodo.dataInicio, dataFim: periodo.dataFim, filialNome: filialLabel || 'Dashboard Q/Lab' })}
-          disabled={exportando}
-          style={{
-            padding: '8px 16px', background: 'var(--clr-primary)', color: '#fff',
-            border: 'none', borderRadius: 'var(--r-md)', cursor: 'pointer', fontWeight: 600,
-            opacity: exportando ? 0.7 : 1, fontSize: '13px',
-          }}
-        >
-          {exportando ? 'Gerando PDF...' : 'Exportar PDF'}
-        </button>
-      </div>
+
 
       {/* Buscador geral — acesso rápido a processos, produtos e ensaios */}
       <div style={{ marginBottom: '24px' }}>
@@ -256,17 +246,40 @@ export default function DashboardPage() {
               <div style={{ fontSize: '11px', fontWeight: 600, color: 'var(--clr-text-3)', letterSpacing: '0.06em', marginBottom: '8px' }}>
                 {k.label}
               </div>
-              <div style={{ fontSize: '32px', fontWeight: 800, color: 'var(--clr-text)', lineHeight: 1, marginBottom: '8px' }}>
+              <div style={{ fontSize: '28px', fontWeight: 800, color: 'var(--clr-text)', lineHeight: 1, marginBottom: '8px' }}>
                 {k.value}
               </div>
-              <div style={{ fontSize: '12px', color: k.delta.cor }}>{k.delta.texto}</div>
+              <div style={{ fontSize: '12px', color: k.delta.cor, fontWeight: 500 }}>{k.delta.texto}</div>
             </div>
           );
         })}
       </div>
 
       <div style={{ marginBottom: '28px' }}>
-        <ResumoAutomatico dataInicio={periodo.dataInicio} dataFim={periodo.dataFim} filialId={filialId} kpis={kpis} processos={processos} ensaios={ensaios} produtos={produtos} metaConformidade={metaConformidade} />
+        <ResumoAutomatico 
+          dataInicio={periodo.dataInicio} 
+          dataFim={periodo.dataFim} 
+          filialId={filialId} 
+          kpis={kpis} 
+          processos={processos} 
+          ensaios={ensaios} 
+          produtos={produtos} 
+          metaConformidade={metaConformidade}
+          actionNode={
+            <button
+              onClick={() => exportar({ filialId, dataInicio: periodo.dataInicio, dataFim: periodo.dataFim, filialNome: filialLabel || 'Dashboard Q/Lab' })}
+              disabled={exportando}
+              style={{
+                padding: '6px 14px', background: 'var(--clr-primary)', color: '#fff',
+                border: 'none', borderRadius: 'var(--r-md)', cursor: 'pointer', fontWeight: 600,
+                opacity: exportando ? 0.7 : 1, fontSize: '12px',
+                boxShadow: '0 1px 2px rgba(0,0,0,0.1)'
+              }}
+            >
+              {exportando ? 'Gerando PDF...' : 'Exportar PDF'}
+            </button>
+          }
+        />
       </div>
 
       {/* Categorias com dados reais */}
