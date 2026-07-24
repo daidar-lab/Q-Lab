@@ -1,4 +1,4 @@
-import { useState, type CSSProperties } from 'react';
+import { useState, useEffect, type CSSProperties } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useContexto } from '../../contexts/ContextoProvider';
 import { useDashboard } from '../../hooks/useDashboard';
@@ -77,8 +77,24 @@ const MACRO_GRUPOS_CONFIG = [
 
 export default function DashboardPage() {
   const navigate = useNavigate();
-  const { ctx, filialId, filialLabel, meta } = useContexto();
-  const periodo = { filialId, dataInicio: ctx.dataInicio ?? '', dataFim: ctx.dataFim ?? '' };
+  const { ctx, set, filialId, filialLabel, meta } = useContexto();
+
+  let safeDataInicio = ctx.dataInicio ?? '';
+  const safeDataFim = ctx.dataFim ?? '';
+  
+  const isOverLimit = safeDataInicio && safeDataFim && (Date.parse(safeDataFim) - Date.parse(safeDataInicio) > 90 * 86400000);
+  
+  if (isOverLimit) {
+    safeDataInicio = new Date(Date.parse(safeDataFim) - 30 * 86400000).toISOString().slice(0, 10);
+  }
+
+  useEffect(() => {
+    if (isOverLimit) {
+      set('dataInicio', safeDataInicio);
+    }
+  }, [isOverLimit, safeDataInicio, set]);
+
+  const periodo = { filialId, dataInicio: safeDataInicio, dataFim: safeDataFim };
   const { kpis, processos, produtos, ensaios, carregando, erro } = useDashboard(periodo);
   const dadosPorTipo: Record<string, typeof ensaios> = { processos, ensaios };
   const [expandedCategories, setExpandedCategories] = useState<Record<string, boolean>>({});

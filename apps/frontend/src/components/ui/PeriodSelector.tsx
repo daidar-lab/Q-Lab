@@ -1,4 +1,5 @@
 import { useState, useEffect, type CSSProperties } from 'react';
+import { useLocation } from 'react-router-dom';
 import { useContexto } from '../../contexts/ContextoProvider';
 import { DateRange } from './DateRange';
 
@@ -30,6 +31,7 @@ function calcularPeriodo(
 }
 
 export function PeriodSelector() {
+  const location = useLocation();
   const { ctx, set } = useContexto();
   const [aberto, setAberto] = useState(false);
   const [customInicio, setCustomInicio] = useState(ctx.dataInicio ?? '');
@@ -91,6 +93,11 @@ export function PeriodSelector() {
     fontFamily: 'var(--font)',
     transition: 'color var(--t-fast)',
   };
+
+  const isDashboard = location.pathname === '/';
+  const rangeInMs = (customInicio && customFim) ? Date.parse(customFim) - Date.parse(customInicio) : 0;
+  const excedeu90Dias = isDashboard && rangeInMs > 90 * 86400000;
+  const isInvalid = !customInicio || !customFim || customInicio > customFim || excedeu90Dias;
 
   return (
     <div style={{ position: 'relative', display: 'flex', alignItems: 'center', gap: '8px' }}>
@@ -207,29 +214,33 @@ export function PeriodSelector() {
                 A data de início não pode ser maior que a data de fim.
               </span>
             )}
+            {excedeu90Dias && (
+              <span style={{ color: 'var(--clr-warning, #f59e0b)', fontSize: '11px', fontWeight: 500 }}>
+                O período máximo para visualização na dashboard é de 90 dias.
+              </span>
+            )}
             <button
               onClick={aplicarCustom}
-              disabled={!customInicio || !customFim || customInicio > customFim}
+              disabled={isInvalid}
               style={{
                 padding: '8px 12px',
                 borderRadius: 'var(--r-md)',
                 fontSize: '13px',
                 fontWeight: 600,
-                background:
-                  customInicio && customFim && customInicio <= customFim ? 'var(--clr-primary)' : 'var(--clr-surface-2)',
-                color: customInicio && customFim && customInicio <= customFim ? '#fff' : 'var(--clr-text-3)',
+                background: !isInvalid ? 'var(--clr-primary)' : 'var(--clr-surface-2)',
+                color: !isInvalid ? '#fff' : 'var(--clr-text-3)',
                 border: 'none',
-                cursor: customInicio && customFim && customInicio <= customFim ? 'pointer' : 'not-allowed',
+                cursor: !isInvalid ? 'pointer' : 'not-allowed',
                 transition: 'all var(--t-fast)',
                 fontFamily: 'var(--font)',
               }}
               onMouseEnter={e => {
-                if (customInicio && customFim && customInicio <= customFim) {
+                if (!isInvalid) {
                   e.currentTarget.style.background = 'var(--clr-primary-dark)';
                 }
               }}
               onMouseLeave={e => {
-                if (customInicio && customFim && customInicio <= customFim) {
+                if (!isInvalid) {
                   e.currentTarget.style.background = 'var(--clr-primary)';
                 }
               }}
