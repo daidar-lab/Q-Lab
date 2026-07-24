@@ -240,26 +240,6 @@ export default function DetalhePage() {
                 <button onClick={() => navigate(-1)} className={styles.voltar} style={{ margin: 0 }}>
                     ← Voltar à visão geral
                 </button>
-
-                <button
-                    onClick={() => exportar({
-                        tipo: tipoNormalizado,
-                        id,
-                        filialId,
-                        dataInicio,
-                        dataFim,
-                        filialNome: filialLabel || 'Filial Q/Lab',
-                        processoNome: dados.resumo?.nome || 'Detalhe'
-                    })}
-                    disabled={exportando}
-                    style={{
-                        padding: '8px 16px', background: 'var(--clr-primary)', color: '#fff',
-                        border: 'none', borderRadius: 'var(--r-md)', cursor: 'pointer', fontWeight: 600,
-                        opacity: exportando ? 0.7 : 1
-                    }}
-                >
-                    {exportando ? 'Gerando PDF...' : 'Exportar PDF'}
-                </button>
             </div>
 
             <div className={styles.resumoCards}>
@@ -290,6 +270,28 @@ export default function DetalhePage() {
                 texto={resumoIA?.texto ?? ''}
                 destaques={resumoIA?.destaques}
                 carregando={carregandoIA}
+                actionNode={
+                    <button
+                        onClick={() => exportar({
+                            tipo: tipoNormalizado,
+                            id,
+                            filialId,
+                            dataInicio,
+                            dataFim,
+                            filialNome: filialLabel || 'Filial Q/Lab',
+                            processoNome: dados.resumo?.nome || 'Detalhe'
+                        })}
+                        disabled={exportando}
+                        style={{
+                            padding: '6px 14px', background: 'var(--clr-primary)', color: '#fff',
+                            border: 'none', borderRadius: 'var(--r-md)', cursor: 'pointer', fontWeight: 600,
+                            opacity: exportando ? 0.7 : 1, fontSize: '12px',
+                            boxShadow: '0 1px 2px rgba(0,0,0,0.1)'
+                        }}
+                    >
+                        {exportando ? 'Gerando PDF...' : 'Exportar PDF'}
+                    </button>
+                }
             />
 
             <div className={styles.graficosRow}>

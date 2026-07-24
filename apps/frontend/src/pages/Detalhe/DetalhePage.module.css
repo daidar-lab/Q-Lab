@@ -1,9 +1,9 @@
 .page {
-  padding: var(--sp-lg);
+  padding: 16px 24px;
   display: flex;
   flex-direction: column;
-  gap: var(--sp-lg);
-  max-width: 1200px;
+  gap: 24px;
+  max-width: 1400px;
   margin: 0 auto;
 }
 
@@ -29,24 +29,28 @@
 
 .resumoCards {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
-  gap: var(--sp-base);
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 24px;
 }
 
 .card {
   background: var(--clr-surface);
   border: 1px solid var(--clr-border);
-  border-radius: var(--r-xl);
-  padding: var(--sp-lg);
+  border-radius: var(--r-lg);
+  padding: 16px 20px;
   display: flex;
   flex-direction: column;
-  gap: var(--sp-xs);
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  min-height: 90px;
+  gap: 8px;
   box-shadow: var(--shadow-sm);
 }
 
 .label {
-  font-size: 12px;
-  font-weight: var(--fw-semibold);
+  font-size: 11px;
+  font-weight: 700;
   color: var(--clr-text-2);
   text-transform: uppercase;
   letter-spacing: 0.05em;
@@ -54,8 +58,9 @@
 
 .valor {
   font-size: 28px;
-  font-weight: var(--fw-extrabold);
+  font-weight: 800;
   color: var(--clr-text);
+  line-height: 1;
 }
 
 .graficosRow {
@@ -138,4 +143,20 @@
   to { transform: rotate(360deg); }
 }
 
-
+@media (max-width: 768px) {
+  .page {
+    padding: 12px 16px;
+    gap: 16px;
+  }
+  .resumoCards {
+    gap: 10px;
+    grid-template-columns: repeat(2, 1fr);
+  }
+  .card {
+    padding: 14px 12px;
+    min-height: auto;
+  }
+  .valor {
+    font-size: 24px;
+  }
+}
