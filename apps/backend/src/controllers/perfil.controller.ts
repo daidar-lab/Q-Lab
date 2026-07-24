@@ -23,6 +23,20 @@ export async function putMeta(req: Request, res: Response) {
   }
 }
 
+export async function putSenha(req: Request, res: Response) {
+  const { senhaAtual, novaSenha } = req.body;
+  if (!senhaAtual || !novaSenha || typeof novaSenha !== 'string' || novaSenha.trim() === '') {
+      res.status(400).json({ erro: 'Dados inválidos.' });
+      return;
+  }
+  try {
+    await svc.atualizarSenhaSegura(req.usuario!.sub, senhaAtual, novaSenha);
+    res.json({ ok: true });
+  } catch (e: any) {
+    res.status(400).json({ erro: e.message });
+  }
+}
+
 export async function putFilialPadrao(req: Request, res: Response) {
   const codFilial = parseInt(req.body.cod_filial, 10);
   if (isNaN(codFilial)) {

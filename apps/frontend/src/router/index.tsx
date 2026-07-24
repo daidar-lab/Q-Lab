@@ -20,12 +20,13 @@ export const router = createBrowserRouter([
         { path: '/', element: <DashboardPage /> },
         { path: '/detalhe/:tipo/:id', element: <DetalhePage /> },
         { path: '/busca', element: <BuscaPage /> },
+        { path: '/config', element: <ConfigPage /> },
         { path: '/macro-processo/:origem', element: <EscolhaNatureza /> },
         { path: '/detalhe/macro-processo/:origem/:natureza', element: <DetalhePage /> },
 
         {
           element: <AdminRoute />,
-          children: [{ path: '/config', element: <ConfigPage /> }]
+          children: []
         },
       ]
     }]

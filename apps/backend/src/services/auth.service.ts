@@ -132,6 +132,10 @@ export async function hashSenha(senha: string): Promise<string> {
     return bcrypt.hash(senha, 12);
 }
 
+export async function compareSenha(senha: string, hash: string): Promise<boolean> {
+    return bcrypt.compare(senha, hash);
+}
+
 // ─── Erro tipado ──────────────────────────────────────────────────────────────
 
 export class ErroAuth extends Error {

@@ -1,5 +1,6 @@
 import { qlabQuery, qlabPool } from '../db/qlab.pool';
 import { getFiliais } from './filiais.service';
+import { hashSenha, compareSenha } from './auth.service';
 import type { FilialDoUsuario } from '@qlab/types';
 
 export async function getMeuPerfil(codUsuario: number) {
@@ -44,6 +45,23 @@ export async function atualizarMeta(codUsuario: number, meta: number): Promise<v
   await qlabQuery(
     `UPDATE usuarios SET meta_conformidade = ? WHERE id = ?`,
     [meta, codUsuario],
+  );
+}
+
+export async function atualizarSenhaSegura(codUsuario: number, senhaAtual: string, novaSenha: string): Promise<void> {
+  const rows = await qlabQuery<{senha: string}>(
+    `SELECT senha FROM usuarios WHERE id = ? LIMIT 1`,
+    [codUsuario]
+  );
+  if (!rows[0]) throw new Error('Usuário não encontrado.');
+
+  const ok = await compareSenha(senhaAtual, rows[0].senha);
+  if (!ok) throw new Error('Senha atual incorreta.');
+
+  const hash = await hashSenha(novaSenha);
+  await qlabQuery(
+    `UPDATE usuarios SET senha = ? WHERE id = ?`,
+    [hash, codUsuario],
   );
 }
 
