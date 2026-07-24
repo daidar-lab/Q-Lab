@@ -55,7 +55,6 @@ export default function MainLayout() {
   const location = useLocation();
   const isBuscaPage = location.pathname.startsWith('/busca');
   const breadcrumb = useBreadcrumb();
-  const isAdmin = usuario?.role === 'admin';
 
   const ghostBtn: CSSProperties = {
     padding: '5px 12px',
@@ -188,13 +187,11 @@ export default function MainLayout() {
                 {usuario.nome}
               </span>
             )}
-            {isAdmin && (
               <button style={ghostBtn} onClick={() => navigate('/config')}
                 onMouseEnter={e => (e.currentTarget.style.background = 'rgba(255,255,255,0.14)')}
                 onMouseLeave={e => (e.currentTarget.style.background = 'rgba(255,255,255,0.08)')}>
                 Config
               </button>
-            )}
             <button style={{ ...ghostBtn, border: '1px solid rgba(220,38,38,0.4)', color: '#FCA5A5' }}
               onClick={logout}
               onMouseEnter={e => (e.currentTarget.style.background = 'rgba(220,38,38,0.15)')}

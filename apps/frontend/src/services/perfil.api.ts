@@ -18,6 +18,12 @@ export const atualizarMeta = (meta: number) =>
     body: { meta_conformidade: meta },
   });
 
+export const atualizarSenha = (senhaAtual: string, novaSenha: string) =>
+  request<{ ok: boolean }>('/api/perfil/senha', {
+    method: 'PUT',
+    body: { senhaAtual, novaSenha },
+  });
+
 export const atualizarFilialPadrao = (cod_filial: number) =>
   request<{ ok: boolean }>('/api/perfil/filial-padrao', {
     method: 'PUT',

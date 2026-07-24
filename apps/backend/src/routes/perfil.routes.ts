@@ -7,6 +7,7 @@ router.use(authMiddleware);
 
 router.get('/',              ctrl.getPerfil);
 router.put('/meta',          ctrl.putMeta);
+router.put('/senha',         ctrl.putSenha);
 router.put('/filial-padrao', ctrl.putFilialPadrao);
 
 export default router;

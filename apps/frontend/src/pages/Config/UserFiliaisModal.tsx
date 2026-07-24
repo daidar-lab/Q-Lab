@@ -90,7 +90,7 @@ export function UserFiliaisModal({ userId, userName, onClose }: Props) {
     padding: '24px', boxSizing: 'border-box',
   };
   const button: CSSProperties = {
-    padding: '8px 16px', borderRadius: '8px', border: 'none', background: '#2563eb',
+    padding: '8px 16px', borderRadius: '8px', border: 'none', background: '#D67808',
     color: '#fff', fontWeight: 600, cursor: 'pointer', fontSize: '13px',
   };
   const secondaryButton: CSSProperties = {
@@ -103,9 +103,12 @@ export function UserFiliaisModal({ userId, userName, onClose }: Props) {
   return (
     <div style={overlay}>
       <div style={modal}>
-        <h3 style={{ margin: '0 0 20px', fontSize: '18px', fontWeight: 700 }}>
-          Filiais do Usuário: {userName}
-        </h3>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '20px' }}>
+          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#D67808" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+          <h3 style={{ margin: 0, fontSize: '18px', fontWeight: 700, color: '#0f172a' }}>
+            Filiais de {userName}
+          </h3>
+        </div>
 
         {erro && (
           <p style={{ color: '#dc2626', background: '#fef2f2', padding: '8px 12px', borderRadius: '6px', fontSize: '13px', margin: '0 0 16px' }}>

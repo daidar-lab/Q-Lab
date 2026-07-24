@@ -1,6 +1,6 @@
 import { useState, useEffect, type FormEvent } from 'react';
 import { listar, criar, atualizar, desativar } from '../../services/usuarios.api';
-import { atualizarMeta as atualizarMetaApi } from '../../services/perfil.api';
+import { atualizarMeta as atualizarMetaApi, atualizarSenha as atualizarSenhaApi } from '../../services/perfil.api';
 import { useContexto } from '../../contexts/ContextoProvider';
 import { useAuth } from '../../contexts/AuthProvider';
 import { UserFiliaisModal } from './UserFiliaisModal';
@@ -11,7 +11,7 @@ type UsuarioSemSenha = Omit<Usuario, 'senha'>;
 
 export default function ConfigPage() {
     const { meta: metaContexto, setMeta: setMetaContexto } = useContexto();
-    const { refreshSession } = useAuth();
+    const { refreshSession, usuario } = useAuth();
     
     const [usuarios, setUsuarios] = useState<UsuarioSemSenha[]>([]);
     const [loading, setLoading] = useState(true);
@@ -37,10 +37,45 @@ export default function ConfigPage() {
     const [metaValue, setMetaValue] = useState(() => metaContexto.toString());
     const [msgMeta, setMsgMeta] = useState('');
     const [savingMeta, setSavingMeta] = useState(false);
+    
+    // Senha states
+    const [minhaSenhaAtualValue, setMinhaSenhaAtualValue] = useState('');
+    const [novaSenhaValue, setNovaSenhaValue] = useState('');
+    const [confirmarSenhaValue, setConfirmarSenhaValue] = useState('');
+    const [msgSenha, setMsgSenha] = useState('');
+    const [savingSenha, setSavingSenha] = useState(false);
 
     useEffect(() => {
         setMetaValue(metaContexto.toString());
     }, [metaContexto]);
+
+    async function handleSaveSenha() {
+        if (!minhaSenhaAtualValue.trim() || !novaSenhaValue.trim() || !confirmarSenhaValue.trim()) {
+            alert('Preencha todos os campos de senha.');
+            return;
+        }
+        if (novaSenhaValue.length < 8) {
+            alert('A nova senha deve ter no mínimo 8 caracteres.');
+            return;
+        }
+        if (novaSenhaValue !== confirmarSenhaValue) {
+            alert('A nova senha e a confirmação não conferem.');
+            return;
+        }
+        setSavingSenha(true);
+        try {
+            await atualizarSenhaApi(minhaSenhaAtualValue, novaSenhaValue);
+            setMsgSenha('Senha atualizada com sucesso!');
+            setMinhaSenhaAtualValue('');
+            setNovaSenhaValue('');
+            setConfirmarSenhaValue('');
+            setTimeout(() => setMsgSenha(''), 3000);
+        } catch (e: any) {
+            alert(e.message ?? 'Erro ao alterar senha.');
+        } finally {
+            setSavingSenha(false);
+        }
+    }
 
     async function handleSaveMeta() {
         const val = parseFloat(metaValue);
@@ -63,8 +98,10 @@ export default function ConfigPage() {
     }
 
     useEffect(() => {
-        carregarUsuarios();
-    }, []);
+        if (usuario?.role === 'admin') {
+            carregarUsuarios();
+        }
+    }, [usuario?.role]);
 
     async function carregarUsuarios() {
         setLoading(true);
@@ -178,7 +215,7 @@ export default function ConfigPage() {
         padding: '8px 16px',
         borderRadius: '8px',
         border: 'none',
-        background: '#2563eb',
+        background: '#D67808',
         color: '#fff',
         fontWeight: 600,
         cursor: 'pointer',
@@ -268,36 +305,95 @@ export default function ConfigPage() {
 
     return (
         <div style={container}>
+            <h2 style={{ ...title, marginBottom: '24px', fontSize: '24px' }}>Configurações da Conta</h2>
+
             {/* Seção Meta de Conformidade */}
             <div style={{ ...card, marginBottom: '28px', flexDirection: 'column', alignItems: 'flex-start', gap: '16px' }}>
-                <h3 style={{ margin: 0, fontSize: '16px', fontWeight: 700, color: '#0f172a' }}>Minha Meta de Conformidade</h3>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#D67808" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg>
+                    <h3 style={{ margin: 0, fontSize: '16px', fontWeight: 700, color: '#0f172a' }}>Minha Meta de Conformidade</h3>
+                </div>
                 <p style={{ fontSize: '13px', color: '#64748b', margin: '0 0 -8px' }}>Essa meta será o alvo para os cálculos no Dashboard.</p>
-                <div style={{ display: 'flex', gap: '12px', alignItems: 'center', width: '100%', flexWrap: 'wrap' }}>
-                    <input
-                        type="number"
-                        min="0"
-                        max="100"
-                        step="0.1"
-                        value={metaValue}
-                        onChange={e => setMetaValue(e.target.value)}
-                        style={{ ...input, width: isMobile ? '80px' : '120px', flexGrow: isMobile ? 1 : 0 }}
-                    />
-                    <span style={{ fontSize: '15px', color: '#64748b', fontWeight: 600 }}>%</span>
-                    <button style={{ ...button, flexGrow: isMobile ? 2 : 0 }} onClick={handleSaveMeta} disabled={savingMeta}>
+                <div style={{ display: 'flex', gap: '12px', alignItems: 'flex-end', width: '100%', flexWrap: 'wrap' }}>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                        <label style={label}>Meta Alvo</label>
+                        <div style={{ position: 'relative', width: isMobile ? '120px' : '140px' }}>
+                            <input
+                                type="number"
+                                min="0"
+                                max="100"
+                                step="0.1"
+                                value={metaValue}
+                                onChange={e => setMetaValue(e.target.value)}
+                                style={{ ...input, width: '100%', paddingRight: '28px', boxSizing: 'border-box' }}
+                            />
+                            <span style={{ position: 'absolute', right: '12px', top: '50%', transform: 'translateY(-50%)', fontSize: '14px', color: '#64748b', fontWeight: 600 }}>%</span>
+                        </div>
+                    </div>
+                    <button style={{ ...button, flexGrow: isMobile ? 1 : 0, height: '41px' }} onClick={handleSaveMeta} disabled={savingMeta}>
                         {savingMeta ? 'Salvando...' : 'Salvar Meta'}
                     </button>
                 </div>
                 {msgMeta && <span style={{ fontSize: '13px', color: '#166534', fontWeight: 500 }}>{msgMeta}</span>}
             </div>
 
-            <div style={{ ...header, flexDirection: isMobile ? 'column' : 'row', alignItems: isMobile ? 'stretch' : 'center', gap: '12px' }}>
-                <h2 style={title}>Gerenciar Usuários</h2>
-                <button style={{ ...button, alignSelf: isMobile ? 'stretch' : 'auto' }} onClick={handleAddNew}>
-                    + Novo Usuário
-                </button>
+            <div style={{ ...card, marginBottom: '28px', flexDirection: 'column', alignItems: 'flex-start', gap: '16px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#D67808" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+                    <h3 style={{ margin: 0, fontSize: '16px', fontWeight: 700, color: '#0f172a' }}>Alterar Minha Senha</h3>
+                </div>
+                <p style={{ fontSize: '13px', color: '#64748b', margin: '0 0 -8px' }}>Digite a senha atual e a nova senha para atualizar seu acesso.</p>
+                <div style={{ display: 'flex', gap: '12px', flexDirection: isMobile ? 'column' : 'row', alignItems: isMobile ? 'stretch' : 'flex-end', width: '100%', flexWrap: 'wrap' }}>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', flex: '1 1 180px', minWidth: 0 }}>
+                        <label style={label}>Senha Atual</label>
+                        <input
+                            type="password"
+                            value={minhaSenhaAtualValue}
+                            onChange={e => setMinhaSenhaAtualValue(e.target.value)}
+                            style={{ ...input, width: '100%', boxSizing: 'border-box' }}
+                        />
+                    </div>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', flex: '1 1 180px', minWidth: 0 }}>
+                        <label style={label}>Nova Senha</label>
+                        <input
+                            type="password"
+                            value={novaSenhaValue}
+                            onChange={e => setNovaSenhaValue(e.target.value)}
+                            style={{ ...input, width: '100%', boxSizing: 'border-box' }}
+                        />
+                    </div>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', flex: '1 1 180px', minWidth: 0 }}>
+                        <label style={label}>Confirmar Nova Senha</label>
+                        <input
+                            type="password"
+                            value={confirmarSenhaValue}
+                            onChange={e => setConfirmarSenhaValue(e.target.value)}
+                            style={{ ...input, width: '100%', boxSizing: 'border-box' }}
+                        />
+                    </div>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%', flexWrap: 'wrap', gap: '12px' }}>
+                    <span style={{ fontSize: '12px', color: '#94a3b8' }}>Mínimo 8 caracteres.</span>
+                    <button style={{ ...button, flexGrow: isMobile ? 1 : 0 }} onClick={handleSaveSenha} disabled={savingSenha}>
+                        {savingSenha ? 'Salvando...' : 'Salvar Senha'}
+                    </button>
+                </div>
+                {msgSenha && <span style={{ fontSize: '13px', color: '#166534', fontWeight: 500 }}>{msgSenha}</span>}
             </div>
 
-            {loading ? (
+            {usuario?.role === 'admin' && (
+                <>
+                    <div style={{ ...header, flexDirection: isMobile ? 'column' : 'row', alignItems: isMobile ? 'stretch' : 'center', gap: '12px' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#D67808" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+                            <h2 style={title}>Gerenciar Usuários</h2>
+                        </div>
+                        <button style={{ ...button, alignSelf: isMobile ? 'stretch' : 'auto' }} onClick={handleAddNew}>
+                            + Novo Usuário
+                        </button>
+                    </div>
+
+                    {loading ? (
                 <p style={{ textAlign: 'center', color: '#64748b', padding: '40px 0' }}>Carregando usuários...</p>
             ) : erro ? (
                 <div style={{ color: '#7f1d1d', background: '#fee2e2', padding: '12px', borderRadius: '8px' }}>{erro}</div>
@@ -320,9 +416,9 @@ export default function ConfigPage() {
                                         ...secondaryButton,
                                         flex: isMobile ? 1 : 'unset',
                                         padding: isMobile ? '8px 8px' : secondaryButton.padding,
-                                        borderColor: '#bfdbfe',
-                                        background: '#eff6ff',
-                                        color: '#1d4ed8',
+                                        borderColor: '#fdba74',
+                                        background: '#ffedd5',
+                                        color: '#c2410c',
                                         textAlign: 'center'
                                     }}
                                     onClick={() => setShowFiliaisModal(user)}
@@ -361,6 +457,8 @@ export default function ConfigPage() {
                         <p style={{ textAlign: 'center', color: '#a1a1aa' }}>Nenhum usuário cadastrado.</p>
                     )}
                 </div>
+            )}
+            </>
             )}
 
             {showForm && (
